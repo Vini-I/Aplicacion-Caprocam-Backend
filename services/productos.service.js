@@ -7,7 +7,8 @@ Autor: Jose Espinoza
 Fecha: 28/06/2026
 Modulo: Productos
 Descripcion:
-Servicio encargado de la logica de negocio del modulo de productos.
+Servicio encargado de la lógica de negocio, armado de respuestas
+JSON y comunicación con el modelo de datos.
 //////////////////////////////////////////////////////////
 */
 
@@ -20,70 +21,78 @@ import {
 } from "../models/productos.model.js";
 
 import { productoDTO, listaProductosDTO } from "../dtos/productos.dto.js";
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
-*/
+import { MENSAJES_PRODUCTO } from "../common/productos.constants.js";
 
 export async function listarProductos() {
-    try {
-        const productos = await obtenerTodosLosProductos();
-        return listaProductosDTO(productos);
-    } catch (error) {
-        throw error;
-    }
+    const productos = await obtenerTodosLosProductos();
+    return {
+        status: 200,
+        body: {
+            success: true,
+            message: MENSAJES_PRODUCTO.PRODUCTOS_OBTENIDOS,
+            data: listaProductosDTO(productos)
+        }
+    };
 }
 
 export async function obtenerProducto(id) {
-    try {
-        validarId(id);
-        const producto = await obtenerProductoPorId(id);
-        if (!producto) return null;
-        return productoDTO(producto);
-    } catch (error) {
-        throw error;
+    const producto = await obtenerProductoPorId(id);
+    if (!producto) {
+        return {
+            status: 404,
+            body: { success: false, message: MENSAJES_PRODUCTO.PRODUCTO_NO_ENCONTRADO }
+        };
     }
+    return {
+        status: 200,
+        body: {
+            success: true,
+            message: MENSAJES_PRODUCTO.PRODUCTO_OBTENIDO,
+            data: productoDTO(producto)
+        }
+    };
 }
 
 export async function registrarProducto(datos) {
-    try {
-        const nuevoProducto = await crearProducto(datos);
-        return productoDTO(nuevoProducto);
-    } catch (error) {
-        throw error;
-    }
+    const nuevoProducto = await crearProducto(datos);
+    return {
+        status: 201,
+        body: {
+            success: true,
+            message: MENSAJES_PRODUCTO.PRODUCTO_CREADO,
+            data: productoDTO(nuevoProducto)
+        }
+    };
 }
 
 export async function editarProducto(id, datos) {
-    try {
-        validarId(id);
-        const producto = await actualizarProducto(id, datos);
-        if (!producto) return null;
-        return productoDTO(producto);
-    } catch (error) {
-        throw error;
+    const producto = await actualizarProducto(id, datos);
+    if (!producto) {
+        return {
+            status: 404,
+            body: { success: false, message: MENSAJES_PRODUCTO.PRODUCTO_NO_ENCONTRADO }
+        };
     }
+    return {
+        status: 200,
+        body: {
+            success: true,
+            message: MENSAJES_PRODUCTO.PRODUCTO_ACTUALIZADO,
+            data: productoDTO(producto)
+        }
+    };
 }
 
 export async function desactivarProducto(id) {
-    try {
-        validarId(id);
-        return await eliminarProducto(id);
-    } catch (error) {
-        throw error;
+    const eliminado = await eliminarProducto(id);
+    if (!eliminado) {
+        return {
+            status: 404,
+            body: { success: false, message: MENSAJES_PRODUCTO.PRODUCTO_NO_ENCONTRADO }
+        };
     }
-}
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
-*/
-
-function validarId(id) {
-    if (!id || Number(id) <= 0) {
-        throw new Error("El identificador del producto no es valido.");
-    }
+    return {
+        status: 200,
+        body: { success: true, message: MENSAJES_PRODUCTO.PRODUCTO_ELIMINADO }
+    };
 }

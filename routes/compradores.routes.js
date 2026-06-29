@@ -7,7 +7,7 @@ Autor: Jose Espinoza
 Fecha: 28/06/2026
 Modulo: Compradores
 Descripcion:
-Define las rutas HTTP del modulo de compradores usando el estandar PUT /:id/activo.
+Define las rutas HTTP del modulo de compradores en el orden correcto.
 //////////////////////////////////////////////////////////
 */
 
@@ -26,9 +26,8 @@ const router = Router();
 router.get("/", obtenerCompradores);
 router.get("/:id", obtenerCompradorPorId);
 router.post("/", validarCompradorRequest, crearComprador);
-router.put("/:id", validarCompradorRequest, actualizarComprador);
 
-// Borrado logico ajustado al estandar del lider
+// IMPORTANTE: Ruta específica arriba para evitar conflictos con /:id
 router.put("/:id/activo", eliminarComprador);
 router.put("/:id", validarCompradorRequest, actualizarComprador);
 

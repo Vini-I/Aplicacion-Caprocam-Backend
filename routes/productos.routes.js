@@ -7,7 +7,7 @@ Autor: Jose Espinoza
 Fecha: 28/06/2026
 Modulo: Productos
 Descripcion:
-Define las rutas HTTP del modulo de productos usando el estandar PUT /:id/activo.
+Define las rutas HTTP del modulo de productos en el orden correcto.
 //////////////////////////////////////////////////////////
 */
 
@@ -26,9 +26,8 @@ const router = Router();
 router.get("/", obtenerProductos);
 router.get("/:id", obtenerProductoPorId);
 router.post("/", validarProductoRequest, crearProducto);
-router.put("/:id", validarProductoRequest, actualizarProducto);
 
-// Borrado logico ajustado al estandar del lider
+// IMPORTANTE: Ruta específica arriba para evitar conflictos con /:id
 router.put("/:id/activo", eliminarProducto);
 router.put("/:id", validarProductoRequest, actualizarProducto);
 
