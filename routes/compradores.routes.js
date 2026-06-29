@@ -30,5 +30,6 @@ router.put("/:id", validarCompradorRequest, actualizarComprador);
 
 // Borrado logico ajustado al estandar del lider
 router.put("/:id/activo", eliminarComprador);
+router.put("/:id", validarCompradorRequest, actualizarComprador);
 
 export default router;
