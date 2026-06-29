@@ -23,6 +23,7 @@ import express from 'express';
 
 // Rutas
 import colaboradoresRouter from './routes/colaborador.routes.js';
+import estanquesRouter from "./routes/estanques.routes.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -48,6 +49,7 @@ RUTAS
 */
 
 app.use('/api/v0/colaboradores', colaboradoresRouter);
+app.use("/api/v1/estanques", estanquesRouter);
 
 /*
 //////////////////////////////////////////////////////////
