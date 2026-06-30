@@ -7,18 +7,10 @@ Autor: Greivin Arguedas
 Fecha: 28/06/2026
 Modulo: Crecimiento
 Descripcion:
-Define las reglas de negocio de crecimiento.
+Define las validaciones de logica de negocio del modulo
+de crecimiento. No orquesta, solo valida.
 //////////////////////////////////////////////////////////
 */
-
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-*/
-import {obtenerFincas, obtenerEstanquesPorFinca, obtenerEstanquePorId,
-    guardarCrecimiento, actualizarPesoEstanque
-} from "../models/mantCrecimiento.model.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -29,100 +21,45 @@ Contiene las funciones exportables de validacion
 que utiliza el controller para verificar los datos.
 */
 
-export async function listarFincas() {
+export function esEstanqueValido(estanque) {
     /*
     Descripcion:
-    Obtiene la lista de fincas desde el modelo.
+    Verifica si un estanque existe (no es null ni undefined).
 
     Parametros:
-    No posee.
+    - estanque: Objeto del estanque a verificar.
 
     Retorna:
-    - Array de fincas
+    - true si el estanque existe, false si no.
     */
-    return await obtenerFincas();
+    return estanque !== null && estanque !== undefined;
 }
 
-export async function listarEstanquesPorFinca(fincaId) {
+export function esPesoValido(peso) {
     /*
     Descripcion:
-    Obtiene la lista de estanques para una finca específica.
+    Verifica que el peso sea un numero mayor que cero.
 
     Parametros:
-    - fincaId: ID de la finca.
+    - peso: Valor a verificar.
 
     Retorna:
-    - Array de estanques por finca
+    - true si el peso es valido, false si no.
     */
-    return await obtenerEstanquesPorFinca(fincaId);
+    return !isNaN(peso) && Number(peso) > 0;
 }
 
-export async function obtenerInformacionEstanque(estanqueId) {
+export function calcularIncremento(pesoAnterior, pesoActual) {
     /*
     Descripcion:
-    Obtiene la información de un estanque específico.
+    Calcula el incremento de peso entre dos mediciones.
 
     Parametros:
-    - estanqueId: ID del estanque.
+    - pesoAnterior: Peso previo del estanque.
+    - pesoActual:   Nuevo peso registrado.
 
     Retorna:
-    - Objeto con la información del estanque
+    - Incremento redondeado a 2 decimales.
     */
-    const estanque = await obtenerEstanquePorId(estanqueId);
-
-    if (!estanque) {
-        throw new Error("El estanque no existe.");
-    }
-
-    return {
-        id: estanque.id,
-        codigo: estanque.codigo,
-        nombre: estanque.nombre,
-        diasCultivo: estanque.diasCultivo,
-        pesoAnterior: estanque.pesoActual,
-        estado: estanque.estado
-    };
-}
-
-export async function registrarCrecimiento(datos) {
-    /*
-    Descripcion:
-    Registra un nuevo crecimiento para un estanque específico.
-
-    Parametros:
-    - datos: Objeto con los datos del crecimiento (estanqueId, pesoActual, observacion).
-
-    Retorna:
-    - Objeto con el ID del crecimiento registrado.
-    */
-
-    const estanque = await obtenerEstanquePorId(datos.estanqueId);
-
-    if (!estanque) {
-        throw new Error("El estanque no existe.");
-    }
-
-    if (datos.pesoActual <= 0) {
-        throw new Error("El peso actual debe ser mayor que cero.");
-    }
-
-    const pesoAnterior = Number(estanque.pesoActual);
-    const pesoActual = Number(datos.pesoActual);
-
-    const incremento = Number((pesoActual - pesoAnterior).toFixed(2));
-
-    const crecimiento = {
-        estanqueId: datos.estanqueId,
-        pesoAnterior,
-        pesoActual,
-        incremento,
-        fechaRegistro: new Date(),
-        observacion: datos.observacion || null
-    };
-
-    const id = await guardarCrecimiento(crecimiento);
-
-    await actualizarPesoEstanque(datos.estanqueId,pesoActual);
-
-    return {id, ...crecimiento};
+    return Number((Number(pesoActual) - Number(pesoAnterior)).toFixed(2));
 }
