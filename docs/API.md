@@ -131,7 +131,7 @@ Respuesta de error:
 
 
 # Crecimiento
-## GET /api/v1/crecimiento/fincas
+## GET /api/v0/crecimiento/fincas
 Obtiene la lista de todas las fincas activas.
 
 Respuesta exitosa:
@@ -163,11 +163,11 @@ Respuesta de error:
 
 ---
 
-## GET /api/v1/crecimiento/fincas/:fincaId/estanques
-Obtiene todos los estanques asociados a una finca específica.
+## GET /api/v0/crecimiento/fincas/:fincaId/estanques
+Obtiene todos los estanques asociados a una finca especifica.
 
 Parametros URL:
-- fincaId: ID numérico de la finca.
+- fincaId: ID numerico de la finca.
 
 Respuesta exitosa:
 200 OK
@@ -197,17 +197,18 @@ Respuesta de error:
 
 ---
 
-## GET /api/v1/crecimiento/estanque/:id
-Obtiene la información detallada de un estanque específico junto con el peso de la última lectura (peso anterior).
+## GET /api/v0/crecimiento/estanque/:id
+Obtiene la informacion detallada de un estanque especifico junto
+con el peso de la ultima lectura (peso anterior).
 
 Parametros URL:
-- id: ID numérico del estanque.
+- id: ID numerico del estanque.
 
 Respuesta exitosa:
 200 OK
 {
     "success": true,
-    "message": "Información del estanque obtenida correctamente.",
+    "message": "Informacion del estanque obtenida correctamente.",
     "data": {
         "id": 1,
         "codigo": "EST001",
@@ -219,17 +220,18 @@ Respuesta exitosa:
 }
 
 Respuesta de error:
-500 Internal Server Error
+404 Not Found
 {
     "success": false,
-    "message": "Error al obtener la información del estanque.",
-    "error": "El estanque no existe."
+    "message": "El estanque no existe.",
+    "error": null
 }
 
 ---
 
-## POST /api/v1/crecimiento/
-Registra un nuevo control de crecimiento para un estanque y actualiza de manera automática su peso actual.
+## POST /api/v0/crecimiento
+Registra un nuevo control de crecimiento para un estanque y
+actualiza de manera automatica su peso actual.
 
 Body (JSON):
 {
@@ -254,10 +256,18 @@ Respuesta exitosa:
     }
 }
 
-Respuesta de error (Validación):
+Respuesta de error (Estanque no encontrado):
+404 Not Found
+{
+    "success": false,
+    "message": "El estanque no existe.",
+    "error": null
+}
+
+Respuesta de error (Peso invalido):
 400 Bad Request
 {
     "success": false,
-    "message": "El peso actual debe ser mayor que cero.",
+    "message": "El peso actual debe ser un numero mayor que cero.",
     "error": null
 }
