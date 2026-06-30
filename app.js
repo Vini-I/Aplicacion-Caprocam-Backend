@@ -2,13 +2,14 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: app.js
-Autor: Marco Vásquez
-Fecha: 28/06/2026
-Modulo: Core
+Archivo:     app.js
+Autor:       Marco Vásquez
+Fecha:       29/06/2026
+Modulo:      Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
-monta los middlewares globales y registra las rutas.
+monta los middlewares globales y registra las rutas
+de todos los modulos del proyecto.
 //////////////////////////////////////////////////////////
 */
 
@@ -19,10 +20,16 @@ IMPORTS
 
 Librerias externas
 */
+
 import express from 'express';
 
-// Rutas
-import colaboradoresRouter from './routes/colaborador.routes.js';
+// Rutas — modulo Colaboradores
+import colaboradoresRouter
+    from './routes/colaborador.routes.js';
+
+// Rutas — modulo Alimentacion
+import alimentacionRouter
+    from './alimentacion/routes/alimentacion.routes.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -47,7 +54,8 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-app.use('/api/v0/colaboradores', colaboradoresRouter);
+app.use('/api/v1/colaboradores',        colaboradoresRouter);
+app.use('/api/v1/alimentaciones',       alimentacionRouter);
 
 /*
 //////////////////////////////////////////////////////////
@@ -56,5 +64,7 @@ SERVER
 */
 
 app.listen(PORT, () => {
-    console.log(`El server esta corriendo en http://localhost:${PORT}`);
+    console.log(
+        `El server esta corriendo en http://localhost:${PORT}`
+    );
 });
