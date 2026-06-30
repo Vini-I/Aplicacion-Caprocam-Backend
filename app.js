@@ -3,12 +3,13 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
-Autor: Marco Vásquez,Eduard Salas
-Fecha: 28/06/2026
+Autor: Marco Vásquez
+Fecha: 29/06/2026
 Modulo: Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
-monta los middlewares globales y registra las rutas.
+monta los middlewares globales y registra las rutas
+de todos los modulos del proyecto.
 //////////////////////////////////////////////////////////
 */
 
@@ -20,12 +21,9 @@ IMPORTS
 
 import express from 'express';
 
-// Rutas
-import colaboradoresRouter from
-    './routes/colaborador.routes.js';
-
-import densidadPoblacionalRouter from
-    './routes/densidadPoblacional.routes.js';
+// Rutas — modulo Colaboradores
+import colaboradoresRouter
+    from './routes/colaborador.routes.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -50,16 +48,9 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-// Colaboradores
 app.use(
     '/api/v1/colaboradores',
     colaboradoresRouter
-);
-
-// Densidad Poblacional
-app.use(
-    '/api/v1/densidades-poblacionales',
-    densidadPoblacionalRouter
 );
 
 /*
@@ -70,6 +61,6 @@ SERVER
 
 app.listen(PORT, () => {
     console.log(
-        `Servidor corriendo en http://localhost:${PORT}`
+        `El server esta corriendo en http://localhost:${PORT}`
     );
 });
