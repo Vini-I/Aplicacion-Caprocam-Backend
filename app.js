@@ -3,7 +3,7 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
-Autor: Marco Vásquez
+Autor: Marco Vásquez,Eduard Salas
 Fecha: 28/06/2026
 Modulo: Core
 Descripcion:
@@ -16,13 +16,16 @@ monta los middlewares globales y registra las rutas.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
-
-Librerias externas
 */
+
 import express from 'express';
 
 // Rutas
-import colaboradoresRouter from './routes/colaborador.routes.js';
+import colaboradoresRouter from
+    './routes/colaborador.routes.js';
+
+import densidadPoblacionalRouter from
+    './routes/densidadPoblacional.routes.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -30,7 +33,7 @@ CONSTANTES
 //////////////////////////////////////////////////////////
 */
 
-const app  = express();
+const app = express();
 const PORT = 4000;
 
 /*
@@ -47,7 +50,17 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-app.use('/api/v0/colaboradores', colaboradoresRouter);
+// Colaboradores
+app.use(
+    '/api/v1/colaboradores',
+    colaboradoresRouter
+);
+
+// Densidad Poblacional
+app.use(
+    '/api/v1/densidades-poblacionales',
+    densidadPoblacionalRouter
+);
 
 /*
 //////////////////////////////////////////////////////////
@@ -56,5 +69,7 @@ SERVER
 */
 
 app.listen(PORT, () => {
-    console.log(`El server esta corriendo en http://localhost:${PORT}`);
+    console.log(
+        `Servidor corriendo en http://localhost:${PORT}`
+    );
 });
