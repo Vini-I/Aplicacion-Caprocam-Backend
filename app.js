@@ -20,10 +20,16 @@ IMPORTS
 Librerias externas
 */
 import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+
+// Cargar variables de entorno
+dotenv.config();
 
 // Rutas
 import colaboradoresRouter from './routes/colaborador.routes.js';
 import estanquesRouter from "./routes/estanques.routes.js";
+import loginRouter from "./routes/loginUsuarios.routes.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -41,6 +47,7 @@ MIDDLEWARES GLOBALES
 */
 
 app.use(express.json());
+app.use(cors());
 
 /*
 //////////////////////////////////////////////////////////
@@ -50,6 +57,7 @@ RUTAS
 
 app.use('/api/v0/colaboradores', colaboradoresRouter);
 app.use("/api/v1/estanques", estanquesRouter);
+app.use("/api/v1/login", loginRouter);
 
 /*
 //////////////////////////////////////////////////////////
