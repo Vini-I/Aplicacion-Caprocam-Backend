@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
-Autor: Marco Vásquez
-Fecha: 28/06/2026
+Autor: Greivin Arguedas
+Fecha: 29/06/2026
 Modulo: Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
@@ -19,10 +19,12 @@ IMPORTS
 
 Librerias externas
 */
-import express from 'express';
+import express from "express";
+import cors from "cors";
 
 // Rutas
-import colaboradoresRouter from './routes/colaborador.routes.js';
+import colaboradoresRouter from "./routes/colaborador.routes.js";
+import crecimientoRouter from "./routes/mantCrecimiento.routes.js";
 import estanquesRouter from "./routes/estanques.routes.js";
 
 /*
@@ -31,8 +33,7 @@ CONSTANTES
 //////////////////////////////////////////////////////////
 */
 
-const app  = express();
-const PORT = 4000;
+const app = express();
 
 /*
 //////////////////////////////////////////////////////////
@@ -40,6 +41,7 @@ MIDDLEWARES GLOBALES
 //////////////////////////////////////////////////////////
 */
 
+app.use(cors());
 app.use(express.json());
 
 /*
@@ -48,15 +50,30 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-app.use('/api/v0/colaboradores', colaboradoresRouter);
+app.use("/api/v0/colaboradores", colaboradoresRouter);
+app.use("/api/v0/crecimiento", crecimientoRouter);
 app.use("/api/v1/estanques", estanquesRouter);
 
 /*
 //////////////////////////////////////////////////////////
-SERVER
+ENDPOINT DE VERIFICACION
+//////////////////////////////////////////////////////////
+Permite comprobar que la API se 
+encuentra ejecutándose correctamente.
+*/
+
+app.get("/", (req, res) => {
+    res.json({
+        success: true,
+        message: "API CAPROCAM funcionando correctamente."
+    });
+
+});
+
+/*
+//////////////////////////////////////////////////////////
+EXPORTACION
 //////////////////////////////////////////////////////////
 */
 
-app.listen(PORT, () => {
-    console.log(`El server esta corriendo en http://localhost:${PORT}`);
-});
+export default app;

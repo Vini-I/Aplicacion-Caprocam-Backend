@@ -296,3 +296,146 @@ Respuesta de error:
     "message": "Estanque no encontrado.",
     "error": null
 }
+
+
+# Crecimiento
+## GET /api/v0/crecimiento/fincas
+Obtiene la lista de todas las fincas activas.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Fincas obtenidas correctamente.",
+    "data": [
+        {
+            "id": 1,
+            "codigo": "FIN001",
+            "nombre": "Finca Central"
+        },
+        {
+            "id": 2,
+            "codigo": "FIN002",
+            "nombre": "Finca Norte"
+        }
+    ]
+}
+
+Respuesta de error:
+500 Internal Server Error
+{
+    "success": false,
+    "message": "Error al obtener las fincas.",
+    "error": "Mensaje detallado del error"
+}
+
+---
+
+## GET /api/v0/crecimiento/fincas/:fincaId/estanques
+Obtiene todos los estanques asociados a una finca especifica.
+
+Parametros URL:
+- fincaId: ID numerico de la finca.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Estanques obtenidos correctamente.",
+    "data": [
+        {
+            "id": 1,
+            "fincaId": 1,
+            "codigo": "EST001",
+            "nombre": "Estanque A",
+            "diasCultivo": 45,
+            "pesoActual": 180,
+            "estado": "ACTIVO"
+        }
+    ]
+}
+
+Respuesta de error:
+500 Internal Server Error
+{
+    "success": false,
+    "message": "Error al obtener los estanques.",
+    "error": "Mensaje detallado del error"
+}
+
+---
+
+## GET /api/v0/crecimiento/estanque/:id
+Obtiene la informacion detallada de un estanque especifico junto
+con el peso de la ultima lectura (peso anterior).
+
+Parametros URL:
+- id: ID numerico del estanque.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Informacion del estanque obtenida correctamente.",
+    "data": {
+        "id": 1,
+        "codigo": "EST001",
+        "nombre": "Estanque A",
+        "diasCultivo": 45,
+        "pesoAnterior": 180,
+        "estado": "ACTIVO"
+    }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "El estanque no existe.",
+    "error": null
+}
+
+---
+
+## POST /api/v0/crecimiento
+Registra un nuevo control de crecimiento para un estanque y
+actualiza de manera automatica su peso actual.
+
+Body (JSON):
+{
+    "estanqueId": 1,
+    "pesoActual": 195.5,
+    "observacion": "Los peces muestran buena actividad y desarrollo alimenticio."
+}
+
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Crecimiento registrado correctamente.",
+    "data": {
+        "id": 1,
+        "estanqueId": 1,
+        "pesoAnterior": 180,
+        "pesoActual": 195.5,
+        "incremento": 15.5,
+        "fechaRegistro": "2026-06-29T08:30:00.000Z",
+        "observacion": "Los peces muestran buena actividad y desarrollo alimenticio."
+    }
+}
+
+Respuesta de error (Estanque no encontrado):
+404 Not Found
+{
+    "success": false,
+    "message": "El estanque no existe.",
+    "error": null
+}
+
+Respuesta de error (Peso invalido):
+400 Bad Request
+{
+    "success": false,
+    "message": "El peso actual debe ser un numero mayor que cero.",
+    "error": null
+}
