@@ -25,6 +25,7 @@ import cors from "cors";
 // Rutas
 import colaboradoresRouter from "./routes/colaborador.routes.js";
 import crecimientoRouter from "./routes/mantCrecimiento.routes.js";
+import estanquesRouter from "./routes/estanques.routes.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -51,6 +52,7 @@ RUTAS
 
 app.use("/api/v0/colaboradores", colaboradoresRouter);
 app.use("/api/v0/crecimiento", crecimientoRouter);
+app.use("/api/v1/estanques", estanquesRouter);
 
 /*
 //////////////////////////////////////////////////////////
