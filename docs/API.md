@@ -133,12 +133,19 @@ Respuesta de error:
 
 ## GET /api/v1/productos
 Obtiene todos los productos en estado ACTIVO.
+---
+
+# Estanques
+
+## GET /api/v1/estanques
+Obtiene todos los estanques registrados.
 
 Respuesta:
 200 OK
 {
     "success": true,
     "message": "Productos obtenidos correctamente.",
+    "message": "Estanques obtenidos correctamente.",
     "data": [ ... ]
 }
 
@@ -150,11 +157,18 @@ Obtiene un producto activo por su ID.
 Parametros URL:
 - id: ID numerico del producto.
 
+## GET /api/v1/estanques/:id
+Obtiene un estanque por su ID.
+
+Parametros URL:
+- id: ID numerico del estanque.
+
 Respuesta exitosa:
 200 OK
 {
     "success": true,
     "message": "Producto obtenido correctamente.",
+    "message": "Estanque obtenido correctamente.",
     "data": { ... }
 }
 
@@ -163,6 +177,7 @@ Respuesta de error:
 {
     "success": false,
     "message": "Producto no encontrado.",
+    "message": "Estanque no encontrado.",
     "error": null
 }
 
@@ -178,6 +193,29 @@ Body (JSON):
     "cantidad": 50,
     "stockMinimo": 10,
     "precioUnidad": 3500
+## POST /api/v1/estanques
+Crea un nuevo estanque.
+
+Body (JSON):
+{
+    "idFinca": 1,
+    "codigo": "EST-003",
+    "tipoEstanque": "Engorde",
+    "estado": "Activo",
+    "largo": 100,
+    "ancho": 80,
+    "profundidad": 1,
+    "fuenteAgua": "Pozo",
+    "especie": "Litopenaeus vannamei - Camaron blanco",
+    "fechaSiembra": "29/06/2026",
+    "fechaInicioEngorde": "29/06/2026",
+    "fechaMantenimiento": "29/06/2026",
+    "densidadSiembra": 12,
+    "usaPrecria": false,
+    "metodoAlimentacion": "Manual",
+    "proveedorAlimento": "Biomar",
+    "numeroAireadores": 2,
+    "tieneAlimentadorAutomatico": false
 }
 
 Respuesta exitosa:
@@ -185,6 +223,7 @@ Respuesta exitosa:
 {
     "success": true,
     "message": "Producto creado correctamente.",
+    "message": "Estanque creado correctamente.",
     "data": { ... }
 }
 
@@ -217,6 +256,15 @@ Respuesta de error:
 {
     "success": false,
     "message": "Producto no encontrado.",
+    "message": "Faltan campos requeridos: codigo.",
+    "error": null
+}
+
+Respuesta de error:
+409 Conflict
+{
+    "success": false,
+    "message": "Ya existe un estanque con ese codigo en la finca.",
     "error": null
 }
 
@@ -235,6 +283,32 @@ Body (JSON):
     "cantidad": 45,
     "stockMinimo": 10,
     "precioUnidad": 3800
+## PUT /api/v1/estanques/:id
+Actualiza un estanque existente.
+
+Parametros URL:
+- id: ID numerico del estanque.
+
+Body (JSON):
+{
+    "idFinca": 1,
+    "codigo": "EST-003",
+    "tipoEstanque": "Engorde",
+    "estado": "Mantenimiento",
+    "largo": 100,
+    "ancho": 80,
+    "profundidad": 1,
+    "fuenteAgua": "Pozo",
+    "especie": "Litopenaeus vannamei - Camaron blanco",
+    "fechaSiembra": "29/06/2026",
+    "fechaInicioEngorde": "29/06/2026",
+    "fechaMantenimiento": "29/06/2026",
+    "densidadSiembra": 12,
+    "usaPrecria": false,
+    "metodoAlimentacion": "Manual",
+    "proveedorAlimento": "Biomar",
+    "numeroAireadores": 2,
+    "tieneAlimentadorAutomatico": false
 }
 
 Respuesta exitosa:
@@ -242,6 +316,7 @@ Respuesta exitosa:
 {
     "success": true,
     "message": "Producto actualizado correctamente.",
+    "message": "Estanque actualizado correctamente.",
     "data": { ... }
 }
 
@@ -250,11 +325,21 @@ Respuesta de error:
 {
     "success": false,
     "message": "Producto no encontrado.",
+    "message": "Estanque no encontrado.",
+    "error": null
+}
+
+Respuesta de error:
+409 Conflict
+{
+    "success": false,
+    "message": "Ya existe otro estanque con ese codigo en la finca.",
     "error": null
 }
 
 ---
 
+<<<<<<< HEAD
 # Compradores
 
 ## GET /api/v1/compradores
@@ -275,12 +360,19 @@ Obtiene un comprador activo por su ID.
 
 Parametros URL:
 - id: ID numerico del comprador.
+=======
+## DELETE /api/v1/estanques/:id
+Elimina un estanque por su ID.
+
+Parametros URL:
+- id: ID numerico del estanque.
 
 Respuesta exitosa:
 200 OK
 {
     "success": true,
     "message": "Comprador obtenido correctamente.",
+    "message": "Estanque eliminado correctamente.",
     "data": { ... }
 }
 
@@ -372,5 +464,6 @@ Respuesta de error:
 {
     "success": false,
     "message": "Comprador no encontrado.",
+    "message": "Estanque no encontrado.",
     "error": null
 }

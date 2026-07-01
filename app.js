@@ -13,16 +13,16 @@ Integra los middlewares globales y enruta todos los modulos.
 */
 
 // Librerias externas
-import express from 'express';
-import cors from 'cors';
+import express from "express";
+import cors from "cors";
 
-// RUTAS DE LOS MODULOS
-// Rutas agregadas por el equipo (Mantener los de develop)
-// (Si tus compañeros tenian rutas como colaboradores, auth, etc., Express las cargara aqui)
+// Rutas existentes
+import colaboradoresRouter from "./routes/colaborador.routes.js";
+import estanquesRouter from "./routes/estanques.routes.js";
 
-// Tus rutas de este Sprint bajo el estandar
-import productosRoutes from './routes/producto.routes.js';
-import compradoresRoutes from './routes/comprador.routes.js';
+// Rutas Team 6
+import productoRouter from "./routes/producto.routes.js";
+import compradorRouter from "./routes/comprador.routes.js";
 
 const app = express();
 
@@ -31,6 +31,7 @@ const app = express();
 MIDDLEWARES GLOBALES
 //////////////////////////////////////////////////////////
 */
+
 app.use(cors());
 app.use(express.json());
 
@@ -39,20 +40,30 @@ app.use(express.json());
 INYECCION DE RUTAS
 //////////////////////////////////////////////////////////
 */
-// Rutas de tus modulos asignados
-app.use('/api/v1/productos', productosRoutes);
-app.use('/api/v1/compradores', compradoresRoutes);
+
+// Modulos existentes
+app.use("/api/v1/colaboradores", colaboradoresRouter);
+app.use("/api/v1/estanques", estanquesRouter);
+
+// Modulos Team 6
+app.use("/api/v1/productos", productoRouter);
+app.use("/api/v1/compradores", compradorRouter);
 
 /*
 //////////////////////////////////////////////////////////
-MANEJO DE RUTAS NO ENCONTRADAS (404)
+MANEJO DE RUTAS NO ENCONTRADAS
 //////////////////////////////////////////////////////////
 */
+
 app.use((req, res) => {
+
     res.status(404).json({
+
         success: false,
-        message: 'La ruta solicitada no existe en el servidor.'
+        message: "La ruta solicitada no existe."
+
     });
+
 });
 
 export default app;
