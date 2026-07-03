@@ -2,13 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: index.js
+Archivo: mantCrecimiento.routes.js
 Autor: Greivin Arguedas
-Fecha: 29/06/2026
-Modulo: Core
+Fecha: 28/06/2026
+Modulo: Crecimiento
 Descripcion:
-Punto de arranque de la aplicacion. Carga las variables
-de entorno e inicia la escucha del servidor en el puerto configurado.
+Define las rutas HTTP del modulo de crecimiento.
 //////////////////////////////////////////////////////////
 */
 
@@ -19,36 +18,40 @@ IMPORTS
 
 Librerias externas
 */
-import dotenv from "dotenv";
+import { Router } from "express";
 
-// Instancia de Express configurada
-import app from "./app.js";
+// Middlewares
+import { validarMantCrecimiento } from "../middlewares/mantCrecimiento.middleware.js";
 
-/*
-//////////////////////////////////////////////////////////
-CONFIGURACIONES
-//////////////////////////////////////////////////////////
-Inicializa el uso de las variables de entorno definidas
-en el archivo .env
-*/
-dotenv.config();
+// Controladores
+import {
+  obtenerFincas,
+  obtenerEstanques,
+  obtenerEstanque,
+  crearCrecimiento,
+} from "../controllers/mantCrecimiento.controller.js";
 
 /*
 //////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
-Define el puerto de ejecucion tomando la variable de entorno
-o usando el puerto 4000 por defecto.
 */
-const PORT = process.env.PORT || 4000;
+const router = Router();
 
 /*
 //////////////////////////////////////////////////////////
-INICIALIZACION DEL SERVIDOR
+RUTAS
 //////////////////////////////////////////////////////////
-Levanta el servicio HTTP para comenzar a escuchar las
-peticiones entrantes.
 */
-app.listen(PORT, () => {
-    console.log(`Servidor ejecutándose en puerto http://localhost:${PORT}`);
-});
+
+router.get("/fincas", obtenerFincas);
+router.get("/fincas/:fincaId/estanques", obtenerEstanques);
+router.get("/estanque/:id", obtenerEstanque);
+router.post("/", validarMantCrecimiento, crearCrecimiento);
+
+/*
+//////////////////////////////////////////////////////////
+EXPORT
+//////////////////////////////////////////////////////////
+*/
+export default router;
