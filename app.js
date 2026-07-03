@@ -3,12 +3,13 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
-Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas
+Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas, Felipe Salas
 Fecha: 29/06/2026
 Modulo: Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
-monta los middlewares globales y registra las rutas.
+monta los middlewares globales y registra las rutas
+de todos los módulos del proyecto.
 //////////////////////////////////////////////////////////
 */
 
@@ -26,6 +27,7 @@ import colaboradoresRouter from "./routes/colaborador.routes.js";
 import crecimientoRouter from "./routes/mantCrecimiento.routes.js";
 import estanquesRouter from "./routes/estanques.routes.js";
 import densidadPoblacionalRouter from "./routes/densidadPoblacional.routes.js";
+import alimentacionRouter from "./alimentacion/routes/alimentacion.routes.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -51,10 +53,13 @@ RUTAS
 */
 
 // Colaboradores
-app.use("/api/v0/colaboradores", colaboradoresRouter);
+app.use("/api/v1/colaboradores", colaboradoresRouter);
 
-// Mantenimiento de Crecimiento
-app.use("/api/v0/crecimiento", crecimientoRouter);
+// Alimentación
+app.use("/api/v1/alimentaciones", alimentacionRouter);
+
+// Crecimiento
+app.use("/api/v1/crecimiento", crecimientoRouter);
 
 // Estanques
 app.use("/api/v1/estanques", estanquesRouter);
