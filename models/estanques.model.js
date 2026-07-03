@@ -4,290 +4,440 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.model.js
 Autor: Gerald Alfaro
-Fecha: 29/06/2026
+Fecha: 03/07/2026
 Modulo: Estanques
 Descripcion:
 Capa de datos del modulo de estanques.
-Por ahora trabaja con datos mock. Cuando haya DB,
-solo este archivo cambia.
+Trabaja con la base de datos principal MySQL.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
+import pool from "../config/database.js";
 
-DTOs
-*/
+export async function findAll(filtros) {
+    let sql = `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            codigo,
+            tipo_estanque,
+            estado,
+            largo,
+            ancho,
+            profundidad,
+            fuente_agua,
+            especie,
+            fecha_siembra,
+            fecha_inicio_engorde,
+            fecha_mantenimiento,
+            densidad_siembra,
+            usa_precria,
+            metodo_alimentacion,
+            proveedor_alimento,
+            numero_aireadores,
+            tiene_alimentador_automatico,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM estanques
+        WHERE deleted_at IS NULL
+        AND activo = TRUE
+    `;
 
-import { EstadoEstanque } from "../dtos/estanques.dto.js";
+    const params = [];
 
-/*
-//////////////////////////////////////////////////////////
-MOCK DATA
-//////////////////////////////////////////////////////////
-
-Datos de prueba que simulan la base de datos.
-Cuando se conecte una DB real, esta seccion desaparece.
-*/
-
-let siguienteId = 3;
-
-let estanques = [
-    {
-        id: 1,
-        idFinca: 1,
-        codigo: "EST-001",
-        tipoEstanque: "Precria",
-        estado: EstadoEstanque.ACTIVO,
-        largo: 100,
-        ancho: 80,
-        profundidad: 0.8,
-        fuenteAgua: "Pozo",
-        especie: "Litopenaeus vannamei - Camaron blanco",
-        fechaSiembra: "25/06/2026",
-        fechaInicioEngorde: "25/06/2026",
-        fechaMantenimiento: "25/06/2026",
-        densidadSiembra: 12,
-        usaPrecria: false,
-        metodoAlimentacion: "Manual",
-        proveedorAlimento: "Biomar",
-        numeroAireadores: 0,
-        tieneAlimentadorAutomatico: false,
-        fechaCreacion: "2026-06-25T00:00:00.000Z",
-        fechaActualizacion: "2026-06-25T00:00:00.000Z"
-    },
-    {
-        id: 2,
-        idFinca: 1,
-        codigo: "EST-002",
-        tipoEstanque: "Engorde",
-        estado: EstadoEstanque.EN_PREPARACION,
-        largo: 90,
-        ancho: 70,
-        profundidad: 1,
-        fuenteAgua: "Canal",
-        especie: "Litopenaeus vannamei - Camaron blanco",
-        fechaSiembra: "25/06/2026",
-        fechaInicioEngorde: "25/06/2026",
-        fechaMantenimiento: "25/06/2026",
-        densidadSiembra: 10,
-        usaPrecria: true,
-        metodoAlimentacion: "Automatico",
-        proveedorAlimento: "Biomar",
-        numeroAireadores: 2,
-        tieneAlimentadorAutomatico: true,
-        fechaCreacion: "2026-06-25T00:00:00.000Z",
-        fechaActualizacion: "2026-06-25T00:00:00.000Z"
-    }
-];
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
-
-Contiene las funciones exportables que interactuan
-con la fuente de datos del modulo de estanques.
-*/
-
-export function findAll(filtros) {
-    /*
-    Descripcion:
-    Obtiene todos los estanques.
-    Permite filtrar por idFinca.
-
-    Parametros:
-    - filtros: Filtros opcionales
-
-    Retorna:
-    - Lista de estanques
-    */
     if (filtros) {
         if (filtros.idFinca) {
-            return filtrarPorFinca(filtros.idFinca);
+            sql = sql + " AND finca_id = ?";
+            params.push(filtros.idFinca);
+        }
+
+        if (filtros.grupoDatos) {
+            sql = sql + " AND grupo_datos = ?";
+            params.push(filtros.grupoDatos);
         }
     }
 
-    return estanques;
+    sql = sql + " ORDER BY id DESC";
+
+    const [rows] = await pool.execute(sql, params);
+
+    return mapearLista(rows);
 }
 
-export function findById(id) {
-    /*
-    Descripcion:
-    Busca un estanque por su ID.
+export async function findById(id) {
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            codigo,
+            tipo_estanque,
+            estado,
+            largo,
+            ancho,
+            profundidad,
+            fuente_agua,
+            especie,
+            fecha_siembra,
+            fecha_inicio_engorde,
+            fecha_mantenimiento,
+            densidad_siembra,
+            usa_precria,
+            metodo_alimentacion,
+            proveedor_alimento,
+            numero_aireadores,
+            tiene_alimentador_automatico,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM estanques
+        WHERE id = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        LIMIT 1
+        `,
+        [id]
+    );
 
-    Parametros:
-    - id: ID del estanque a buscar
-
-    Retorna:
-    - El estanque encontrado, o null si no existe
-    */
-    const numeroId = Number(id);
-
-    for (let i = 0; i < estanques.length; i++) {
-        if (estanques[i].id === numeroId) {
-            return estanques[i];
-        }
+    if (rows.length === 0) {
+        return null;
     }
 
-    return null;
+    return mapearFila(rows[0]);
 }
 
-export function findByCodigoAndFinca(codigo, idFinca, idIgnorado) {
-    /*
-    Descripcion:
-    Busca un estanque por codigo y finca.
-    Permite ignorar un id cuando se actualiza.
+export async function findByCodigoAndFinca(codigo, idFinca, idIgnorado) {
+    let sql = `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            codigo,
+            tipo_estanque,
+            estado,
+            largo,
+            ancho,
+            profundidad,
+            fuente_agua,
+            especie,
+            fecha_siembra,
+            fecha_inicio_engorde,
+            fecha_mantenimiento,
+            densidad_siembra,
+            usa_precria,
+            metodo_alimentacion,
+            proveedor_alimento,
+            numero_aireadores,
+            tiene_alimentador_automatico,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM estanques
+        WHERE LOWER(TRIM(codigo)) = LOWER(TRIM(?))
+        AND finca_id = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+    `;
 
-    Parametros:
-    - codigo: Codigo del estanque
-    - idFinca: ID de la finca
-    - idIgnorado: ID que se desea ignorar
-
-    Retorna:
-    - El estanque encontrado, o null si no existe
-    */
-    const codigoBuscado = String(codigo).trim().toLowerCase();
-    const numeroFinca = Number(idFinca);
-    let numeroIgnorado = null;
+    const params = [codigo, idFinca];
 
     if (idIgnorado !== null) {
         if (idIgnorado !== undefined) {
-            numeroIgnorado = Number(idIgnorado);
+            sql = sql + " AND id <> ?";
+            params.push(idIgnorado);
         }
     }
 
-    for (let i = 0; i < estanques.length; i++) {
-        const estanque = estanques[i];
-        const codigoActual = String(estanque.codigo).trim().toLowerCase();
+    sql = sql + " LIMIT 1";
 
-        if (codigoActual === codigoBuscado) {
-            if (estanque.idFinca === numeroFinca) {
-                if (estanque.id !== numeroIgnorado) {
-                    return estanque;
-                }
-            }
-        }
-    }
+    const [rows] = await pool.execute(sql, params);
 
-    return null;
-}
-
-export function create(dto) {
-    /*
-    Descripcion:
-    Agrega un nuevo estanque a la lista.
-
-    Parametros:
-    - dto: Objeto EstanqueDTO con los datos del nuevo estanque
-
-    Retorna:
-    - nuevo: El estanque recien creado con su ID asignado
-    */
-    const fechaActual = new Date().toISOString();
-
-    const nuevo = {
-        ...dto,
-        id: siguienteId,
-        fechaCreacion: fechaActual,
-        fechaActualizacion: fechaActual
-    };
-
-    siguienteId = siguienteId + 1;
-    estanques.push(nuevo);
-
-    return nuevo;
-}
-
-export function update(id, dto) {
-    /*
-    Descripcion:
-    Actualiza un estanque existente por su ID.
-
-    Parametros:
-    - id: ID del estanque a actualizar
-    - dto: Objeto EstanqueDTO con los nuevos datos
-
-    Retorna:
-    - El estanque actualizado, o null si no existe
-    */
-    const numeroId = Number(id);
-    const index = buscarIndicePorId(numeroId);
-
-    if (index === -1) {
+    if (rows.length === 0) {
         return null;
     }
 
-    const fechaActual = new Date().toISOString();
-    const estanqueActual = estanques[index];
-
-    const actualizado = {
-        ...estanqueActual,
-        ...dto,
-        id: estanqueActual.id,
-        fechaCreacion: estanqueActual.fechaCreacion,
-        fechaActualizacion: fechaActual
-    };
-
-    estanques[index] = actualizado;
-
-    return actualizado;
+    return mapearFila(rows[0]);
 }
 
-export function remove(id) {
-    /*
-    Descripcion:
-    Elimina un estanque por su ID.
+export async function create(dto) {
+    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
+    const fechaSiembra = normalizarFechaMysqlOpcional(dto.fechaSiembra);
+    const fechaInicioEngorde = normalizarFechaMysqlOpcional(dto.fechaInicioEngorde);
+    const fechaMantenimiento = normalizarFechaMysqlOpcional(dto.fechaMantenimiento);
 
-    Parametros:
-    - id: ID del estanque a eliminar
+    const [result] = await pool.execute(
+        `
+        INSERT INTO estanques (
+            grupo_datos,
+            finca_id,
+            codigo,
+            tipo_estanque,
+            estado,
+            largo,
+            ancho,
+            profundidad,
+            fuente_agua,
+            especie,
+            fecha_siembra,
+            fecha_inicio_engorde,
+            fecha_mantenimiento,
+            densidad_siembra,
+            usa_precria,
+            metodo_alimentacion,
+            proveedor_alimento,
+            numero_aireadores,
+            tiene_alimentador_automatico
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+            grupoDatos,
+            dto.idFinca,
+            dto.codigo,
+            dto.tipoEstanque,
+            dto.estado,
+            dto.largo,
+            dto.ancho,
+            dto.profundidad,
+            dto.fuenteAgua,
+            dto.especie,
+            fechaSiembra,
+            fechaInicioEngorde,
+            fechaMantenimiento,
+            dto.densidadSiembra,
+            dto.usaPrecria,
+            dto.metodoAlimentacion,
+            dto.proveedorAlimento,
+            dto.numeroAireadores,
+            dto.tieneAlimentadorAutomatico
+        ]
+    );
 
-    Retorna:
-    - El estanque eliminado, o null si no existe
-    */
-    const numeroId = Number(id);
-    const index = buscarIndicePorId(numeroId);
+    return await findById(result.insertId);
+}
 
-    if (index === -1) {
+export async function update(id, dto) {
+    const actual = await findById(id);
+
+    if (!actual) {
         return null;
     }
 
-    const eliminado = estanques[index];
+    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
+    const fechaSiembra = normalizarFechaMysqlOpcional(dto.fechaSiembra);
+    const fechaInicioEngorde = normalizarFechaMysqlOpcional(dto.fechaInicioEngorde);
+    const fechaMantenimiento = normalizarFechaMysqlOpcional(dto.fechaMantenimiento);
 
-    estanques.splice(index, 1);
+    await pool.execute(
+        `
+        UPDATE estanques
+        SET
+            grupo_datos = ?,
+            finca_id = ?,
+            codigo = ?,
+            tipo_estanque = ?,
+            estado = ?,
+            largo = ?,
+            ancho = ?,
+            profundidad = ?,
+            fuente_agua = ?,
+            especie = ?,
+            fecha_siembra = ?,
+            fecha_inicio_engorde = ?,
+            fecha_mantenimiento = ?,
+            densidad_siembra = ?,
+            usa_precria = ?,
+            metodo_alimentacion = ?,
+            proveedor_alimento = ?,
+            numero_aireadores = ?,
+            tiene_alimentador_automatico = ?,
+            version = version + 1
+        WHERE id = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        `,
+        [
+            grupoDatos,
+            dto.idFinca,
+            dto.codigo,
+            dto.tipoEstanque,
+            dto.estado,
+            dto.largo,
+            dto.ancho,
+            dto.profundidad,
+            dto.fuenteAgua,
+            dto.especie,
+            fechaSiembra,
+            fechaInicioEngorde,
+            fechaMantenimiento,
+            dto.densidadSiembra,
+            dto.usaPrecria,
+            dto.metodoAlimentacion,
+            dto.proveedorAlimento,
+            dto.numeroAireadores,
+            dto.tieneAlimentadorAutomatico,
+            id
+        ]
+    );
 
-    return eliminado;
+    return await findById(id);
 }
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
+export async function remove(id) {
+    const actual = await findById(id);
 
-Contiene funciones internas usadas por el modelo.
-*/
+    if (!actual) {
+        return null;
+    }
 
-function filtrarPorFinca(idFinca) {
-    const numeroFinca = Number(idFinca);
+    await pool.execute(
+        `
+        UPDATE estanques
+        SET
+            activo = FALSE,
+            deleted_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE id = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        `,
+        [id]
+    );
+
+    return actual;
+}
+
+function mapearLista(rows) {
     const resultado = [];
 
-    for (let i = 0; i < estanques.length; i++) {
-        if (estanques[i].idFinca === numeroFinca) {
-            resultado.push(estanques[i]);
-        }
+    for (let i = 0; i < rows.length; i++) {
+        resultado.push(mapearFila(rows[i]));
     }
 
     return resultado;
 }
 
-function buscarIndicePorId(id) {
-    for (let i = 0; i < estanques.length; i++) {
-        if (estanques[i].id === id) {
-            return i;
+function mapearFila(row) {
+    return {
+        id: row.id,
+        uuid: row.uuid,
+        grupoDatos: row.grupo_datos,
+        idFinca: row.finca_id,
+        codigo: row.codigo,
+        tipoEstanque: row.tipo_estanque,
+        estado: row.estado,
+        largo: Number(row.largo),
+        ancho: Number(row.ancho),
+        profundidad: Number(row.profundidad),
+        fuenteAgua: row.fuente_agua,
+        especie: row.especie,
+        fechaSiembra: formatearFecha(row.fecha_siembra),
+        fechaInicioEngorde: formatearFecha(row.fecha_inicio_engorde),
+        fechaMantenimiento: formatearFecha(row.fecha_mantenimiento),
+        densidadSiembra: convertirNumero(row.densidad_siembra),
+        usaPrecria: Boolean(row.usa_precria),
+        metodoAlimentacion: row.metodo_alimentacion,
+        proveedorAlimento: row.proveedor_alimento,
+        numeroAireadores: row.numero_aireadores,
+        tieneAlimentadorAutomatico: Boolean(row.tiene_alimentador_automatico),
+        activo: Boolean(row.activo),
+        fechaCreacion: row.fecha_creacion,
+        fechaActualizacion: row.fecha_actualizacion,
+        deletedAt: row.deleted_at,
+        version: row.version
+    };
+}
+
+function obtenerGrupoDatos(valor) {
+    if (valor === undefined) {
+        return 1;
+    }
+
+    if (valor === null) {
+        return 1;
+    }
+
+    if (String(valor).trim() === "") {
+        return 1;
+    }
+
+    return Number(valor);
+}
+
+function normalizarFechaMysqlOpcional(valor) {
+    if (valor === undefined) {
+        return null;
+    }
+
+    if (valor === null) {
+        return null;
+    }
+
+    if (String(valor).trim() === "") {
+        return null;
+    }
+
+    return normalizarFechaMysql(valor);
+}
+
+function normalizarFechaMysql(valor) {
+    if (valor instanceof Date) {
+        return valor.toISOString().slice(0, 10);
+    }
+
+    const texto = String(valor).trim();
+
+    if (texto.includes("/")) {
+        const partes = texto.split("/");
+
+        if (partes.length === 3) {
+            const dia = partes[0].padStart(2, "0");
+            const mes = partes[1].padStart(2, "0");
+            const anio = partes[2];
+
+            return anio + "-" + mes + "-" + dia;
         }
     }
 
-    return -1;
+    return texto;
+}
+
+function formatearFecha(valor) {
+    if (valor === undefined) {
+        return null;
+    }
+
+    if (valor === null) {
+        return null;
+    }
+
+    if (valor instanceof Date) {
+        return valor.toISOString().slice(0, 10);
+    }
+
+    return String(valor);
+}
+
+function convertirNumero(valor) {
+    if (valor === undefined) {
+        return null;
+    }
+
+    if (valor === null) {
+        return null;
+    }
+
+    return Number(valor);
 }

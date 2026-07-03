@@ -133,7 +133,7 @@ Respuesta de error:
 
 # Estanques
 
-## GET /api/v1/estanques
+## GET /api/v0/estanques
 Obtiene todos los estanques registrados.
 
 Respuesta:
@@ -146,7 +146,7 @@ Respuesta:
 
 ---
 
-## GET /api/v1/estanques/:id
+## GET /api/v0/estanques/:id
 Obtiene un estanque por su ID.
 
 Parametros URL:
@@ -170,7 +170,7 @@ Respuesta de error:
 
 ---
 
-## POST /api/v1/estanques
+## POST /api/v0/estanques
 Crea un nuevo estanque.
 
 Body (JSON):
@@ -221,7 +221,7 @@ Respuesta de error:
 
 ---
 
-## PUT /api/v1/estanques/:id
+## PUT /api/v0/estanques/:id
 Actualiza un estanque existente.
 
 Parametros URL:
@@ -275,7 +275,7 @@ Respuesta de error:
 
 ---
 
-## DELETE /api/v1/estanques/:id
+## DELETE /api/v0/estanques/:id
 Elimina un estanque por su ID.
 
 Parametros URL:

@@ -4,20 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.dto.js
 Autor: Gerald Alfaro
-Fecha: 29/06/2026
+Fecha: 03/07/2026
 Modulo: Estanques
 Descripcion:
 Archivo de transferencia de datos para estanques.
 Transforma y normaliza los datos recibidos.
 //////////////////////////////////////////////////////////
-*/
-
-/*
-//////////////////////////////////////////////////////////
-ENUM
-//////////////////////////////////////////////////////////
-
-Define los valores permitidos para el campo estado.
 */
 
 export const EstadoEstanque = Object.freeze({
@@ -28,18 +20,13 @@ export const EstadoEstanque = Object.freeze({
     COSECHADO: "Cosechado"
 });
 
-/*
-//////////////////////////////////////////////////////////
-DTO
-//////////////////////////////////////////////////////////
-
-Caparazon de datos para el modulo de estanques.
-*/
-
 export class EstanqueDTO {
     constructor({
         id,
+        uuid,
+        grupoDatos,
         idFinca,
+        fincaId,
         codigo,
         tipoEstanque,
         estado,
@@ -57,38 +44,27 @@ export class EstanqueDTO {
         proveedorAlimento,
         numeroAireadores,
         tieneAlimentadorAutomatico,
+        activo,
         fechaCreacion,
-        fechaActualizacion
+        fechaActualizacion,
+        deletedAt,
+        version
     }) {
-        /*
-        Descripcion:
-        Construye un objeto EstanqueDTO con los datos recibidos.
-
-        Parametros:
-        - id: Identificador unico
-        - idFinca: Identificador de la finca
-        - codigo: Codigo del estanque
-        - tipoEstanque: Tipo de estanque
-        - estado: Estado actual del estanque
-        - largo: Largo del estanque
-        - ancho: Ancho del estanque
-        - profundidad: Profundidad del estanque
-        - fuenteAgua: Fuente de agua
-        - especie: Especie sembrada
-        - fechaSiembra: Fecha de siembra
-        - fechaInicioEngorde: Fecha de inicio de engorde
-        - fechaMantenimiento: Fecha de mantenimiento
-        - densidadSiembra: Densidad de siembra
-        - usaPrecria: Indica si usa precria
-        - metodoAlimentacion: Metodo de alimentacion
-        - proveedorAlimento: Proveedor de alimento
-        - numeroAireadores: Numero de aireadores
-        - tieneAlimentadorAutomatico: Indica si tiene alimentador automatico
-        - fechaCreacion: Fecha de creacion
-        - fechaActualizacion: Fecha de actualizacion
-        */
         this.id = id;
-        this.idFinca = Number(idFinca);
+        this.uuid = uuid;
+
+        if (grupoDatos === undefined || grupoDatos === null || String(grupoDatos).trim() === "") {
+            this.grupoDatos = 1;
+        } else {
+            this.grupoDatos = Number(grupoDatos);
+        }
+
+        if (idFinca !== undefined && idFinca !== null && String(idFinca).trim() !== "") {
+            this.idFinca = Number(idFinca);
+        } else {
+            this.idFinca = Number(fincaId);
+        }
+
         this.codigo = normalizarTexto(codigo);
         this.tipoEstanque = normalizarTexto(tipoEstanque);
         this.estado = normalizarTexto(estado);
@@ -97,27 +73,28 @@ export class EstanqueDTO {
         this.profundidad = Number(profundidad);
         this.fuenteAgua = normalizarTextoOpcional(fuenteAgua);
         this.especie = normalizarTextoOpcional(especie);
-        this.fechaSiembra = normalizarTexto(fechaSiembra);
+        this.fechaSiembra = normalizarTextoOpcional(fechaSiembra);
         this.fechaInicioEngorde = normalizarTextoOpcional(fechaInicioEngorde);
         this.fechaMantenimiento = normalizarTextoOpcional(fechaMantenimiento);
-        this.densidadSiembra = Number(densidadSiembra);
+        this.densidadSiembra = normalizarNumeroOpcional(densidadSiembra);
         this.usaPrecria = normalizarBooleano(usaPrecria);
         this.metodoAlimentacion = normalizarTextoOpcional(metodoAlimentacion);
         this.proveedorAlimento = normalizarTextoOpcional(proveedorAlimento);
         this.numeroAireadores = normalizarNumeroOpcional(numeroAireadores);
         this.tieneAlimentadorAutomatico = normalizarBooleano(tieneAlimentadorAutomatico);
+
+        if (activo === undefined || activo === null) {
+            this.activo = true;
+        } else {
+            this.activo = normalizarBooleano(activo);
+        }
+
         this.fechaCreacion = fechaCreacion;
         this.fechaActualizacion = fechaActualizacion;
+        this.deletedAt = deletedAt;
+        this.version = version;
     }
 }
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
-
-Contiene funciones internas para normalizar datos.
-*/
 
 function normalizarTexto(valor) {
     return String(valor).trim();
@@ -141,15 +118,15 @@ function normalizarTextoOpcional(valor) {
 
 function normalizarNumeroOpcional(valor) {
     if (valor === undefined) {
-        return 0;
+        return null;
     }
 
     if (valor === null) {
-        return 0;
+        return null;
     }
 
     if (String(valor).trim() === "") {
-        return 0;
+        return null;
     }
 
     return Number(valor);

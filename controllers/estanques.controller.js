@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.controller.js
 Autor: Gerald Alfaro
-Fecha: 29/06/2026
+Fecha: 03/07/2026
 Modulo: Estanques
 Descripcion:
 Recibe las peticiones HTTP, delega al modelo,
@@ -12,17 +12,8 @@ y devuelve la respuesta al cliente.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-DTOs
-*/
-
 import { EstanqueDTO, EstadoEstanque } from "../dtos/estanques.dto.js";
 
-// Servicios
 import {
     isEmpty,
     isNumeroMayorCero,
@@ -32,33 +23,11 @@ import {
     isIdValido
 } from "../services/estanques.service.js";
 
-// Modelos
 import * as EstanqueModel from "../models/estanques.model.js";
 
-// Common
 import { exito, error } from "../common/respuestaJson.js";
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
-
-Las funciones createEstanque() y updateEstanque()
-dependen de esta funcion para trabajar.
-*/
-
 function validarCuerpo(body, res) {
-    /*
-    Descripcion:
-    Valida los campos del body antes de construir el DTO.
-
-    Parametros:
-    - body: Campos del body
-    - res: Objeto response de Express
-
-    Retorna:
-    - Una respuesta de error si algo falla, null si todo esta bien
-    */
     const errores = [];
 
     if (isEmpty(body.idFinca)) {
@@ -89,14 +58,6 @@ function validarCuerpo(body, res) {
         errores.push("El campo profundidad es requerido.");
     }
 
-    if (isEmpty(body.fechaSiembra)) {
-        errores.push("El campo fechaSiembra es requerido.");
-    }
-
-    if (isEmpty(body.densidadSiembra)) {
-        errores.push("El campo densidadSiembra es requerido.");
-    }
-
     if (!isNumeroMayorCero(body.idFinca)) {
         errores.push("El campo idFinca debe ser numerico y mayor que cero.");
     }
@@ -113,8 +74,16 @@ function validarCuerpo(body, res) {
         errores.push("El campo profundidad debe ser numerico y mayor que cero.");
     }
 
-    if (!isNumeroMayorIgualCero(body.densidadSiembra)) {
-        errores.push("El campo densidadSiembra debe ser numerico y mayor o igual que cero.");
+    if (!isEmpty(body.grupoDatos)) {
+        if (!isNumeroMayorCero(body.grupoDatos)) {
+            errores.push("El campo grupoDatos debe ser numerico y mayor que cero.");
+        }
+    }
+
+    if (!isEmpty(body.densidadSiembra)) {
+        if (!isNumeroMayorIgualCero(body.densidadSiembra)) {
+            errores.push("El campo densidadSiembra debe ser numerico y mayor o igual que cero.");
+        }
     }
 
     if (!isNumeroOpcionalMayorIgualCero(body.numeroAireadores)) {
@@ -135,17 +104,6 @@ function validarCuerpo(body, res) {
 }
 
 function validarIdParametro(id, res) {
-    /*
-    Descripcion:
-    Valida que el parametro id sea numerico y mayor a cero.
-
-    Parametros:
-    - id: ID recibido por params
-    - res: Objeto response de Express
-
-    Retorna:
-    - Una respuesta de error si algo falla, null si todo esta bien
-    */
     if (!isIdValido(id)) {
         return error(res, "El id debe ser numerico y mayor que cero.", null, 400);
     }
@@ -153,184 +111,133 @@ function validarIdParametro(id, res) {
     return null;
 }
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
+export async function getEstanques(req, res) {
+    try {
+        const filtros = {
+            idFinca: req.query.idFinca,
+            grupoDatos: req.query.grupoDatos
+        };
 
-Contiene las funciones exportables que manejan cada
-ruta del modulo de estanques.
-*/
+        const data = await EstanqueModel.findAll(filtros);
 
-export function getEstanques(req, res) {
-    /*
-    Descripcion:
-    Obtiene todos los estanques.
-    Permite filtrar por idFinca con query params.
-
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con lista de estanques
-    */
-    const filtros = {
-        idFinca: req.query.idFinca
-    };
-
-    const data = EstanqueModel.findAll(filtros);
-
-    return exito(res, "Estanques obtenidos correctamente.", data);
+        return exito(res, "Estanques obtenidos correctamente.", data);
+    } catch (err) {
+        return error(res, "Error al obtener los estanques.", err, 500);
+    }
 }
 
-export function getEstanqueById(req, res) {
-    /*
-    Descripcion:
-    Obtiene un estanque por su ID.
+export async function getEstanqueById(req, res) {
+    try {
+        const errId = validarIdParametro(req.params.id, res);
 
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+        if (errId) {
+            return errId;
+        }
 
-    Retorna:
-    - 200 con el estanque encontrado
-    - 404 si no existe
-    */
-    const errId = validarIdParametro(req.params.id, res);
+        const estanque = await EstanqueModel.findById(req.params.id);
 
-    if (errId) {
-        return errId;
+        if (!estanque) {
+            return error(res, "Estanque no encontrado.", null, 404);
+        }
+
+        return exito(res, "Estanque obtenido correctamente.", estanque);
+    } catch (err) {
+        return error(res, "Error al obtener el estanque.", err, 500);
     }
-
-    const estanque = EstanqueModel.findById(req.params.id);
-
-    if (!estanque) {
-        return error(res, "Estanque no encontrado.", null, 404);
-    }
-
-    return exito(res, "Estanque obtenido correctamente.", estanque);
 }
 
-export function createEstanque(req, res) {
-    /*
-    Descripcion:
-    Crea un nuevo estanque.
+export async function createEstanque(req, res) {
+    try {
+        const err = validarCuerpo(req.body, res);
 
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+        if (err) {
+            return err;
+        }
 
-    Retorna:
-    - 201 con el estanque creado
-    - 400/422 si hay errores de validacion
-    - 409 si el codigo ya existe en la finca
-    */
-    const err = validarCuerpo(req.body, res);
-
-    if (err) {
-        return err;
-    }
-
-    const existente = EstanqueModel.findByCodigoAndFinca(
-        req.body.codigo,
-        req.body.idFinca,
-        null
-    );
-
-    if (existente) {
-        return error(
-            res,
-            "Ya existe un estanque con ese codigo en la finca.",
-            null,
-            409
+        const existente = await EstanqueModel.findByCodigoAndFinca(
+            req.body.codigo,
+            req.body.idFinca,
+            null
         );
+
+        if (existente) {
+            return error(
+                res,
+                "Ya existe un estanque con ese codigo en la finca.",
+                null,
+                409
+            );
+        }
+
+        const dto = new EstanqueDTO(req.body);
+        const nuevo = await EstanqueModel.create(dto);
+
+        return exito(res, "Estanque creado correctamente.", nuevo, 201);
+    } catch (err) {
+        return error(res, "Error al crear el estanque.", err, 500);
     }
-
-    const dto = new EstanqueDTO(req.body);
-    const nuevo = EstanqueModel.create(dto);
-
-    return exito(res, "Estanque creado correctamente.", nuevo, 201);
 }
 
-export function updateEstanque(req, res) {
-    /*
-    Descripcion:
-    Actualiza un estanque existente por su ID.
+export async function updateEstanque(req, res) {
+    try {
+        const errId = validarIdParametro(req.params.id, res);
 
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+        if (errId) {
+            return errId;
+        }
 
-    Retorna:
-    - 200 con el estanque actualizado
-    - 400/422 si hay errores de validacion
-    - 404 si no existe
-    - 409 si el codigo ya existe en la finca
-    */
-    const errId = validarIdParametro(req.params.id, res);
+        const err = validarCuerpo(req.body, res);
 
-    if (errId) {
-        return errId;
-    }
+        if (err) {
+            return err;
+        }
 
-    const err = validarCuerpo(req.body, res);
+        const estanqueActual = await EstanqueModel.findById(req.params.id);
 
-    if (err) {
-        return err;
-    }
+        if (!estanqueActual) {
+            return error(res, "Estanque no encontrado.", null, 404);
+        }
 
-    const estanqueActual = EstanqueModel.findById(req.params.id);
-
-    if (!estanqueActual) {
-        return error(res, "Estanque no encontrado.", null, 404);
-    }
-
-    const existente = EstanqueModel.findByCodigoAndFinca(
-        req.body.codigo,
-        req.body.idFinca,
-        req.params.id
-    );
-
-    if (existente) {
-        return error(
-            res,
-            "Ya existe otro estanque con ese codigo en la finca.",
-            null,
-            409
+        const existente = await EstanqueModel.findByCodigoAndFinca(
+            req.body.codigo,
+            req.body.idFinca,
+            req.params.id
         );
+
+        if (existente) {
+            return error(
+                res,
+                "Ya existe otro estanque con ese codigo en la finca.",
+                null,
+                409
+            );
+        }
+
+        const dto = new EstanqueDTO(req.body);
+        const actualizado = await EstanqueModel.update(req.params.id, dto);
+
+        return exito(res, "Estanque actualizado correctamente.", actualizado);
+    } catch (err) {
+        return error(res, "Error al actualizar el estanque.", err, 500);
     }
-
-    const dto = new EstanqueDTO(req.body);
-    const actualizado = EstanqueModel.update(req.params.id, dto);
-
-    return exito(res, "Estanque actualizado correctamente.", actualizado);
 }
 
-export function deleteEstanque(req, res) {
-    /*
-    Descripcion:
-    Elimina un estanque por su ID.
+export async function deleteEstanque(req, res) {
+    try {
+        const errId = validarIdParametro(req.params.id, res);
 
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+        if (errId) {
+            return errId;
+        }
 
-    Retorna:
-    - 200 con el estanque eliminado
-    - 404 si no existe
-    */
-    const errId = validarIdParametro(req.params.id, res);
+        const eliminado = await EstanqueModel.remove(req.params.id);
 
-    if (errId) {
-        return errId;
+        if (!eliminado) {
+            return error(res, "Estanque no encontrado.", null, 404);
+        }
+
+        return exito(res, "Estanque eliminado correctamente.", eliminado);
+    } catch (err) {
+        return error(res, "Error al eliminar el estanque.", err, 500);
     }
-
-    const eliminado = EstanqueModel.remove(req.params.id);
-
-    if (!eliminado) {
-        return error(res, "Estanque no encontrado.", null, 404);
-    }
-
-    return exito(res, "Estanque eliminado correctamente.", eliminado);
 }

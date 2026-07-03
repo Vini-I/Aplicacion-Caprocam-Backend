@@ -52,7 +52,7 @@ RUTAS
 
 app.use("/api/v0/colaboradores", colaboradoresRouter);
 app.use("/api/v0/crecimiento", crecimientoRouter);
-app.use("/api/v1/estanques", estanquesRouter);
+app.use("/api/v0/estanques", estanquesRouter);
 
 /*
 //////////////////////////////////////////////////////////
