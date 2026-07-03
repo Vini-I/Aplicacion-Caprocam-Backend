@@ -2,17 +2,14 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-
-Archivo:     app.js
-Autor:       Marco Vásquez
-Fecha:       29/06/2026
-Modulo:      Core
-
+Archivo: app.js
+Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas, Felipe Salas
+Fecha: 29/06/2026
+Modulo: Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
 monta los middlewares globales y registra las rutas
-de todos los modulos del proyecto.
-
+de todos los módulos del proyecto.
 //////////////////////////////////////////////////////////
 */
 
@@ -20,8 +17,6 @@ de todos los modulos del proyecto.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
-
-Librerias externas
 */
 
 import express from "express";
@@ -29,6 +24,10 @@ import cors from "cors";
 
 // Rutas
 import colaboradoresRouter from "./routes/colaborador.routes.js";
+import crecimientoRouter from "./routes/mantCrecimiento.routes.js";
+import estanquesRouter from "./routes/estanques.routes.js";
+import densidadPoblacionalRouter from "./routes/densidadPoblacional.routes.js";
+import alimentacionRouter from "./alimentacion/routes/alimentacion.routes.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -53,7 +52,20 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
+// Colaboradores
 app.use("/api/v1/colaboradores", colaboradoresRouter);
+
+// Alimentación
+app.use("/api/v1/alimentaciones", alimentacionRouter);
+
+// Crecimiento
+app.use("/api/v1/crecimiento", crecimientoRouter);
+
+// Estanques
+app.use("/api/v1/estanques", estanquesRouter);
+
+// Densidad Poblacional
+app.use("/api/v1/densidades-poblacionales", densidadPoblacionalRouter);
 
 /*
 //////////////////////////////////////////////////////////
