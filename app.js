@@ -3,12 +3,13 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
-Autor: Marco Vásquez
-Fecha: 28/06/2026
+Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas, Felipe Salas
+Fecha: 29/06/2026
 Modulo: Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
-monta los middlewares globales y registra las rutas.
+monta los middlewares globales y registra las rutas
+de todos los módulos del proyecto.
 //////////////////////////////////////////////////////////
 */
 
@@ -16,8 +17,6 @@ monta los middlewares globales y registra las rutas.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
-
-Librerias externas
 */
 import express from 'express';
 import cors from 'cors';
@@ -27,9 +26,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Rutas
-import colaboradoresRouter from './routes/colaborador.routes.js';
+import colaboradoresRouter from "./routes/colaborador.routes.js";
+import crecimientoRouter from "./routes/mantCrecimiento.routes.js";
 import estanquesRouter from "./routes/estanques.routes.js";
 import loginRouter from "./routes/loginUsuarios.routes.js";
+import densidadPoblacionalRouter from "./routes/densidadPoblacional.routes.js";
+import alimentacionRouter from "./alimentacion/routes/alimentacion.routes.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -37,8 +39,7 @@ CONSTANTES
 //////////////////////////////////////////////////////////
 */
 
-const app  = express();
-const PORT = 4000;
+const app = express();
 
 /*
 //////////////////////////////////////////////////////////
@@ -46,6 +47,7 @@ MIDDLEWARES GLOBALES
 //////////////////////////////////////////////////////////
 */
 
+app.use(cors());
 app.use(express.json());
 app.use(cors());
 
@@ -55,16 +57,41 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-app.use('/api/v0/colaboradores', colaboradoresRouter);
+// Colaboradores
+app.use("/api/v1/colaboradores", colaboradoresRouter);
+
+// Alimentación
+app.use("/api/v1/alimentaciones", alimentacionRouter);
+
+// Crecimiento
+app.use("/api/v1/crecimiento", crecimientoRouter);
+
+// Estanques
 app.use("/api/v1/estanques", estanquesRouter);
 app.use("/api/v1/login", loginRouter);
 
+// Densidad Poblacional
+app.use("/api/v1/densidades-poblacionales", densidadPoblacionalRouter);
+
 /*
 //////////////////////////////////////////////////////////
-SERVER
+ENDPOINT DE VERIFICACION
+//////////////////////////////////////////////////////////
+Permite comprobar que la API se
+encuentra ejecutándose correctamente.
+*/
+
+app.get("/", (req, res) => {
+    res.json({
+        success: true,
+        message: "API CAPROCAM funcionando correctamente."
+    });
+});
+
+/*
+//////////////////////////////////////////////////////////
+EXPORTACION
 //////////////////////////////////////////////////////////
 */
 
-app.listen(PORT, () => {
-    console.log(`El server esta corriendo en http://localhost:${PORT}`);
-});
+export default app;
