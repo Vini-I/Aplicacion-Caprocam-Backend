@@ -27,6 +27,7 @@ import colaboradoresRouter from "./routes/colaborador.routes.js";
 import crecimientoRouter from "./routes/mantCrecimiento.routes.js";
 import estanquesRouter from "./routes/estanques.routes.js";
 import parasitologiasRouter from "./routes/parasitologias.routes.js";
+import enfermedadesRouter from "./routes/enfermedades.routes.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -55,6 +56,7 @@ app.use("/api/v0/colaboradores", colaboradoresRouter);
 app.use("/api/v0/crecimiento", crecimientoRouter);
 app.use("/api/v0/estanques", estanquesRouter);
 app.use("/api/v0/parasitologias", parasitologiasRouter);
+app.use("/api/v0/enfermedades", enfermedadesRouter);
 
 /*
 //////////////////////////////////////////////////////////
