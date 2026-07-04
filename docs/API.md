@@ -365,7 +365,6 @@ Respuesta de error:
     "error": null
 }
 
-
 # Crecimiento
 ## GET /api/v0/crecimiento/fincas
 Obtiene la lista de todas las fincas activas.
