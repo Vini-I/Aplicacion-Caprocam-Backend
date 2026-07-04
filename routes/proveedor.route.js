@@ -18,13 +18,14 @@ IMPORTS
 //////////////////////////////////////////////////////////
 */
 
-// imports librerias externas
 import { Router } from "express";
 
-// imports de validacion de middlewares
+// Importar en PLURAL (carpeta oficial del proyecto)
+import { verificarAuth } from "../middlewares/auth.middleware.js";
+
+// Importar en SINGULAR (carpeta local de proveedores)
 import { validarBodyProveedor } from "../middleware/proveedor.middleware.js";
 
-// imports de controladores
 import {
     listarProveedores,
     obtenerProveedor,
@@ -47,11 +48,11 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get("/", listarProveedores);
-router.get("/:id", obtenerProveedor);
-router.post("/", validarBodyProveedor, crearProveedor);
-router.put("/:id", validarBodyProveedor, actualizarProveedor);
-router.delete("/:id", eliminarProveedor);
+router.get("/", verificarAuth, listarProveedores);
+router.get("/:id", verificarAuth, obtenerProveedor);
+router.post("/", verificarAuth, validarBodyProveedor, crearProveedor);
+router.put("/:id", verificarAuth, validarBodyProveedor, actualizarProveedor);
+router.delete("/:id", verificarAuth, eliminarProveedor);
 
 /*
 //////////////////////////////////////////////////////////

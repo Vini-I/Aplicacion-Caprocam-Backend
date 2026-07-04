@@ -19,7 +19,12 @@ IMPORTS
 */
 
 // DTOs
-import { proveedorDto, tipoProductos, proveedorDTO, proveedoresDTO } from "../dtos/proveedor.dto.js";
+import {
+    proveedorDto,
+    tipoProductos,
+    proveedorDTO,
+    proveedoresDTO
+} from "../dtos/proveedor.dto.js";
 
 // Servicios (Validaciones)
 import {
@@ -43,6 +48,17 @@ FUNCIONES SECUNDARIAS
 */
 
 function validarCuerpo(body, res) {
+    /*
+    Descripcion:
+    Valida los campos obligatorios y formatos del body de proveedores.
+
+    Parametros:
+    - body: Objeto body del request.
+    - res: Objeto response de Express.
+
+    Retorna:
+    - Objeto error de Express si falla, o null si es correcto.
+    */
     const errores = [];
 
     if (isEmpty(body.nombre)) {
@@ -74,6 +90,17 @@ function validarCuerpo(body, res) {
 }
 
 function validarIdParametro(id, res) {
+    /*
+    Descripcion:
+    Valida que el ID recibido como parametro sea correcto.
+
+    Parametros:
+    - id: ID del parametro.
+    - res: Objeto response de Express.
+
+    Retorna:
+    - Objeto error si es invalido, o null si es correcto.
+    */
     if (!isIdValido(id)) {
         return error(res, "El id debe ser numerico y mayor que cero.", null, 400);
     }
@@ -81,6 +108,16 @@ function validarIdParametro(id, res) {
 }
 
 function generarIniciales(nombre) {
+    /*
+    Descripcion:
+    Genera iniciales basadas en el nombre del proveedor.
+
+    Parametros:
+    - nombre: Nombre completo del proveedor.
+
+    Retorna:
+    - String de iniciales de 3 letras en mayusculas.
+    */
     if (!nombre) return "";
     return nombre
         .split(" ")
@@ -98,6 +135,17 @@ FUNCIONES PRINCIPALES
 */
 
 export function listarProveedores(req, res) {
+    /*
+    Descripcion:
+    Controlador para obtener todos los proveedores activos.
+
+    Parametros:
+    - req: Objeto request de Express
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con la lista de proveedores DTO
+    */
     const proveedores = proveedorModel.findAll();
     return exito(
         res,
@@ -107,6 +155,17 @@ export function listarProveedores(req, res) {
 }
 
 export function obtenerProveedor(req, res) {
+    /*
+    Descripcion:
+    Controlador para obtener un proveedor activo por su ID.
+
+    Parametros:
+    - req: Objeto request de Express
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el proveedor DTO o 404 si no se encuentra
+    */
     const errId = validarIdParametro(req.params.id, res);
     if (errId) return errId;
 
@@ -123,6 +182,17 @@ export function obtenerProveedor(req, res) {
 }
 
 export function crearProveedor(req, res) {
+    /*
+    Descripcion:
+    Controlador para crear un nuevo proveedor.
+
+    Parametros:
+    - req: Objeto request de Express
+    - res: Objeto response de Express
+
+    Retorna:
+    - 201 con el proveedor creado en formato DTO
+    */
     const err = validarCuerpo(req.body, res);
     if (err) return err;
 
@@ -151,6 +221,17 @@ export function crearProveedor(req, res) {
 }
 
 export function actualizarProveedor(req, res) {
+    /*
+    Descripcion:
+    Controlador para actualizar un proveedor existente.
+
+    Parametros:
+    - req: Objeto request de Express
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el proveedor actualizado en formato DTO
+    */
     const errId = validarIdParametro(req.params.id, res);
     if (errId) return errId;
 
@@ -189,6 +270,17 @@ export function actualizarProveedor(req, res) {
 }
 
 export function eliminarProveedor(req, res) {
+    /*
+    Descripcion:
+    Controlador para desactivar (borrado logico) un proveedor.
+
+    Parametros:
+    - req: Objeto request de Express
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el proveedor eliminado en formato DTO
+    */
     const errId = validarIdParametro(req.params.id, res);
     if (errId) return errId;
 
