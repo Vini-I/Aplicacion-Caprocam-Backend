@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantCrecimiento.model.js
 Autor: Greivin Arguedas
-Fecha: 28/06/2026
+Fecha: 04/07/2026
 Modulo: Crecimiento
 Descripcion:
 Capa de datos del modulo de crecimiento.
@@ -31,50 +31,20 @@ Datos de prueba que simulan la base de datos.
 Cuando se conecte una DB real, esta seccion desaparece.
 */
 
-let fincas = [
+let crecimientos = [
     {
-        id: 1,
-        codigo: "FIN001",
-        nombre: "Finca Central"
+        id: '1',
+        finca: 'Finca La Perla',
+        estanque: 'EST-01',
+        pesoActual: 2.5
     },
     {
-        id: 2,
-        codigo: "FIN002",
-        nombre: "Finca Norte"
+        id: '2',
+        finca: 'Finca La Perla',
+        estanque: 'EST-02',
+        pesoActual: 3.1
     }
 ];
-
-let estanques = [
-    {
-        id: 1,
-        fincaId: 1,
-        codigo: "EST001",
-        nombre: "Estanque A",
-        diasCultivo: 45,
-        pesoActual: 180,
-        estado: "ACTIVO"
-    },
-    {
-        id: 2,
-        fincaId: 1,
-        codigo: "EST002",
-        nombre: "Estanque B",
-        diasCultivo: 60,
-        pesoActual: 250,
-        estado: "ACTIVO"
-    },
-    {
-        id: 3,
-        fincaId: 2,
-        codigo: "EST003",
-        nombre: "Estanque C",
-        diasCultivo: 30,
-        pesoActual: 120,
-        estado: "ACTIVO"
-    }
-];
-
-let crecimientos = [];
 
 /*
 //////////////////////////////////////////////////////////
@@ -84,128 +54,80 @@ FUNCIONES PRINCIPALES
 Contiene las funciones exportables que interactuan
 con la fuente de datos del modulo de crecimiento.
 */
-export function obtenerFincas() {
+export function findAll() {
     /*
     Descripcion:
-    Obtiene todas los fincas.
-
+    Obtiene todos los registros de crecimiento.
     Parametros:
     No posee.
-
     Retorna:
-    - fincas: Lista con todas las fincas.
+    - crecimientos: Lista con todos los registros.
     */
-
-    return fincas;
+    return crecimientos;
 }
-
-export function obtenerEstanquesPorFinca(fincaId) {
+export function findById(id) {
     /*
     Descripcion:
-    Obtiene todos los estanques para una finca específica.
-
+    Busca un registro de crecimiento por su ID.
     Parametros:
-    - fincaId: ID de la finca.
-
+    - id: ID del registro a buscar.
     Retorna:
-    - estanques: Lista con todos los estanques para la finca específica.
+    - El registro encontrado, o null si no existe.
     */
-
-    return estanques.filter(e => e.fincaId === Number(fincaId));
+    return crecimientos.find(c => c.id === id) || null;
 }
 
-export function obtenerEstanquePorId(id) {
+export function create(dto) {
     /*
     Descripcion:
-    Obtiene un estanque por su ID.
-
+    Agrega un nuevo registro de crecimiento a la lista.
     Parametros:
-    - id: ID del estanque.
-
+    - dto: Objeto CrecimientoDTO con los datos del nuevo registro.
     Retorna:
-    - estanque: El estanque encontrado o null.
+    - nuevo: El registro recien creado.
     */
-
-    return estanques.find(e => e.id === Number(id)) || null;
-}
-
-export function guardarCrecimiento(datos){
-    /*
-    Descripcion:
-    Guarda un nuevo registro de crecimiento.
-
-    Parametros:
-    - datos: Objeto con los datos del crecimiento.
-
-    Retorna:
-    - crecimientos: Lista con todos los registros de crecimiento.
-    */
-
-    const nuevo = {
-        id: crecimientos.length + 1,
-        ...datos
+    const nuevoRegistro = {
+        id: dto.id,
+        finca: dto.finca,
+        estanque: dto.estanque,
+        pesoActual: dto.pesoActual
     };
-    crecimientos.push(nuevo);
-    return nuevo.id;
+    crecimientos.push(nuevoRegistro);
+    return nuevoRegistro;
 }
 
-export function actualizarPesoEstanque(estanqueId,pesoActual){
+export function update(id, dto) {
     /*
     Descripcion:
-    Actualiza el peso actual de un estanque específico.
-
+    Actualiza los datos de un registro de crecimiento existente.
     Parametros:
-    - estanqueId: ID del estanque.
-    - pesoActual: Nuevo peso actual del estanque.
-
+    - id: ID del registro a actualizar.
+    - dto: Objeto CrecimientoDTO con los nuevos datos.
     Retorna:
-    - estanque: El estanque encontrado o null.
+    - El registro actualizado, o null si no se encontro.
     */
-
-    const estanque = obtenerEstanquePorId(estanqueId);
-    if(estanque){
-        estanque.pesoActual = pesoActual;
-    }
+    const index = crecimientos.findIndex(c => c.id === id);
+    if (index === -1) return null;
+    crecimientos[index] = {
+        ...crecimientos[index],
+        finca: dto.finca || crecimientos[index].finca,
+        estanque: dto.estanque || crecimientos[index].estanque,
+        pesoActual: dto.pesoActual !== undefined ? dto.pesoActual : crecimientos[index].pesoActual
+    };
+    return crecimientos[index];
 }
 
-
-
-/*
-    export async function  obtenerFincas() {
-        const [rows] = await pool.query(`
-            SELECT id, codigo, nombre FROM finca WHERE estado = 'ACTIVA' ORDER BY nombre`);
-        return rows;
-    }
-
-    export async function obtenerEstanquesPorFinca(fincaId) {
-        const [rows] = await pool.query(`
-            SELECT id, codigo, nombre, diasCultivo, pesoActual, estado FROM estanque
-            WHERE fincaId = ? ORDER BY codigo`, [fincaId]);
-        return rows;
-    }
-
-    export async function obtenerEstanquePorId(id) {
-        const [rows] = await pool.query(`SELECT * FROM estanque WHERE id = ?`, [id]);
-        return rows[0];
-    }
-
-    export async function guardarCrecimiento(datos) {
-        const [result] = await pool.query(`
-            INSERT INTO mantCrecimiento (estanqueId,pesoAnterior,pesoActual,incremento,
-                fechaRegistro,observacion) VALUES (?, ?, ?, ?, ?, ?)`, 
-        [
-            datos.estanqueId,
-            datos.pesoAnterior,
-            datos.pesoActual,
-            datos.incremento,
-            datos.fechaRegistro,
-            datos.observacion
-        ]);
-        return result.insertId;
-    }
-
-    export async function actualizarPesoEstanque(estanqueId, pesoActual) {
-        await pool.query(`UPDATE estanque SET pesoActual = ? WHERE id = ?`, 
-            [pesoActual, estanqueId]);
-    }
-*/
+export function remove(id) {
+    /*
+    Descripcion:
+    Elimina un registro de crecimiento por su ID.
+    Parametros:
+    - id: ID del registro a eliminar.
+    Retorna:
+    - El registro eliminado, o null si no se encontro.
+    */
+    const index = crecimientos.findIndex(c => c.id === id);
+    if (index === -1) return null;
+    const eliminado = crecimientos.splice(index, 1);
+    return eliminado[0];
+}
