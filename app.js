@@ -54,23 +54,12 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-// Enfermedades
-app.use("/api/v1/enfermedades", enfermedadesRouter);
-
-// Colaboradores
-app.use("/api/v1/colaboradores", colaboradoresRouter);
-
-// Alimentación
-app.use("/api/v1/alimentaciones", alimentacionRouter);
-
-// Crecimiento
-app.use("/api/v1/crecimiento", crecimientoRouter);
-
-// Estanques
-app.use("/api/v1/estanques", estanquesRouter);
-
-// Parasitologías
-app.use("/api/v1/parasitologias", parasitologiasRouter);
+app.use("/api/v0/colaboradores", colaboradoresRouter);
+app.use("/api/v0/crecimiento", crecimientoRouter);
+app.use("/api/v0/estanques", estanquesRouter);
+app.use("/api/v0/parasitologias", parasitologiasRouter);
+app.use("/api/v0/enfermedades", enfermedadesRouter);
+app.use("/api/v0alimentaciones", alimentacionRouter);
 
 // Densidad Poblacional
 app.use("/api/v1/densidades-poblacionales", densidadPoblacionalRouter);
