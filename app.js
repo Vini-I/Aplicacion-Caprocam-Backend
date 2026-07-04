@@ -29,6 +29,7 @@ import estanquesRouter from "./routes/estanques.routes.js";
 import parasitologiasRouter from "./routes/parasitologias.routes.js";
 import densidadPoblacionalRouter from "./routes/densidadPoblacional.routes.js";
 import alimentacionRouter from "./alimentacion/routes/alimentacion.routes.js";
+import raleoRouter from "./routes/raleo.routes.js"
 
 /*
 //////////////////////////////////////////////////////////
@@ -61,6 +62,9 @@ app.use("/api/v0alimentaciones", alimentacionRouter);
 
 // Densidad Poblacional
 app.use("/api/v1/densidades-poblacionales", densidadPoblacionalRouter);
+
+// Raleo
+app.use("/api/v1/raleo", raleoRouter);
 
 /*
 //////////////////////////////////////////////////////////
