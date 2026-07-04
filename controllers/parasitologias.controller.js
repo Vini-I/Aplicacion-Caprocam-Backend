@@ -7,8 +7,8 @@ Autor: Andres Gutierrez
 Fecha: 30/06/2026
 Modulo: Parasitologias
 Descripcion:
-Recibe las peticiones HTTP del modulo de parasitologias,
-delega la logica al servicio y devuelve la respuesta al cliente.
+Recibe las peticiones HTTP, delega al servicio y modelo,
+y devuelve la respuesta al cliente.
 //////////////////////////////////////////////////////////
 */
 
@@ -20,46 +20,202 @@ IMPORTS
 DTOs
 */
 
-import {
-    actualizarParasitologiaEntradaDTO,
-    crearParasitologiaEntradaDTO
-} from "../dtos/parasitologias.dto.js";
+import { ParasitologiaDTO } from '../dtos/parasitologias.dto.js';
 
 // Servicios
-import parasitologiasService from "../services/parasitologias.service.js";
+import {
+    isEmpty,
+    isIdValido,
+    isNumeroMayorCero,
+    isNumeroMayorIgualCero,
+    isFechaValida,
+    isParasitoValido,
+    isInfectadosValido,
+    calcularPorcentajeInfeccion,
+    calcularGradoInfeccion,
+    obtenerNombreGradoInfeccion,
+    obtenerNombreParasito,
+    obtenerCatalogoParasitos as obtenerCatalogoParasitosService,
+    construirResumenParasitologias,
+} from '../services/parasitologias.service.js';
+
+// Modelos
+import * as ParasitologiaModel from '../models/parasitologias.model.js';
 
 // Common
-import { exito, error } from "../common/respuestaJson.js";
+import { exito, error } from '../common/respuestaJson.js';
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 
-Las funciones principales dependen de esta funcion para
-manejar errores enviados por el servicio.
+Las funciones crearParasitologia() y actualizarParasitologia()
+dependen de estas funciones para trabajar.
 */
 
-function manejarError(res, err, mensaje) {
+function validarCuerpo(body, res) {
     /*
     Descripcion:
-    Maneja los errores generados en el controlador o servicio.
+    Valida los campos del body antes de construir el DTO.
 
     Parametros:
-    - res: Objeto response de Express
-    - err: Error capturado
-    - mensaje: Mensaje personalizado para la respuesta
+    - body: Campos del body.
+    - res:  Objeto response de Express.
 
     Retorna:
-    - Una respuesta JSON de error con su respectivo status
+    - Una respuesta de error si algo falla, null si todo esta bien.
     */
-    let status = 500;
+    const errores = [];
 
-    if (err !== null && err !== undefined && err.status !== undefined) {
-        status = err.status;
+    if (!body) {
+        return error(res, 'El body no puede estar vacio.', null, 400);
     }
 
-    return error(res, mensaje, err, status);
+    if (isEmpty(body.finca)) {
+        errores.push('El campo finca es requerido.');
+    }
+
+    if (isEmpty(body.estanque)) {
+        errores.push('El campo estanque es requerido.');
+    }
+
+    if (isEmpty(body.fechaReporte)) {
+        errores.push('El campo fechaReporte es requerido.');
+    }
+
+    if (isEmpty(body.parasito)) {
+        errores.push('El campo parasito es requerido.');
+    }
+
+    if (isEmpty(body.camaronesMuestreados)) {
+        errores.push('El campo camaronesMuestreados es requerido.');
+    }
+
+    if (isEmpty(body.camaronesInfectados)) {
+        errores.push('El campo camaronesInfectados es requerido.');
+    }
+
+    if (!isEmpty(body.fechaReporte)) {
+        if (!isFechaValida(body.fechaReporte)) {
+            errores.push('El campo fechaReporte debe tener formato yyyy-mm-dd o dd/mm/aaaa.');
+        }
+    }
+
+    if (!isEmpty(body.parasito)) {
+        if (!isParasitoValido(body.parasito)) {
+            errores.push('El campo parasito no es valido.');
+        }
+    }
+
+    if (!isEmpty(body.camaronesMuestreados)) {
+        if (!isNumeroMayorCero(body.camaronesMuestreados)) {
+            errores.push('El campo camaronesMuestreados debe ser numerico y mayor que cero.');
+        }
+    }
+
+    if (!isEmpty(body.camaronesInfectados)) {
+        if (!isNumeroMayorIgualCero(body.camaronesInfectados)) {
+            errores.push('El campo camaronesInfectados debe ser numerico y mayor o igual que cero.');
+        }
+    }
+
+    if (
+        isNumeroMayorCero(body.camaronesMuestreados) &&
+        isNumeroMayorIgualCero(body.camaronesInfectados)
+    ) {
+        if (!isInfectadosValido(body.camaronesMuestreados, body.camaronesInfectados)) {
+            errores.push('Los camarones infectados no pueden ser mayores que los muestreados.');
+        }
+    }
+
+    if (errores.length > 0) {
+        return error(res, 'Datos invalidos para la parasitologia.', errores, 422);
+    }
+
+    return null;
+}
+
+function validarIdParametro(id, res) {
+    /*
+    Descripcion:
+    Valida que el parametro id sea numerico y mayor a cero.
+
+    Parametros:
+    - id:  ID recibido por params.
+    - res: Objeto response de Express.
+
+    Retorna:
+    - Una respuesta de error si algo falla, null si todo esta bien.
+    */
+    if (!isIdValido(id)) {
+        return error(res, 'El id debe ser numerico y mayor que cero.', null, 400);
+    }
+
+    return null;
+}
+
+function construirDTO(body) {
+    /*
+    Descripcion:
+    Construye el DTO de parasitologia con los datos recibidos
+    y los datos calculados.
+
+    Parametros:
+    - body: Campos del body.
+
+    Retorna:
+    - Objeto ParasitologiaDTO.
+    */
+    const parasitoLimpio = String(body.parasito).trim();
+
+    const porcentajeInfeccion = calcularPorcentajeInfeccion(
+        body.camaronesMuestreados,
+        body.camaronesInfectados
+    );
+
+    const gradoInfeccion = calcularGradoInfeccion(porcentajeInfeccion);
+
+    const dto = new ParasitologiaDTO({
+        tipoRegistro:         'parasitologia',
+        finca:                String(body.finca).trim(),
+        fincaNombre:          limpiarTextoOpcional(body.fincaNombre),
+        estanque:             String(body.estanque).trim(),
+        fechaReporte:         String(body.fechaReporte).trim(),
+        responsable:          limpiarTextoOpcional(body.responsable),
+        parasito:             parasitoLimpio,
+        parasitoNombre:       obtenerNombreParasito(parasitoLimpio),
+        camaronesMuestreados: Number(body.camaronesMuestreados),
+        camaronesInfectados:  Number(body.camaronesInfectados),
+        porcentajeInfeccion:  porcentajeInfeccion,
+        gradoInfeccion:       gradoInfeccion,
+        gradoInfeccionNombre: obtenerNombreGradoInfeccion(gradoInfeccion),
+        observaciones:        limpiarTextoOpcional(body.observaciones),
+    });
+
+    return dto;
+}
+
+function limpiarTextoOpcional(valor) {
+    /*
+    Descripcion:
+    Limpia un texto opcional recibido en el body.
+
+    Parametros:
+    - valor: Valor recibido.
+
+    Retorna:
+    - Texto limpio o string vacio.
+    */
+    if (valor === undefined) {
+        return '';
+    }
+
+    if (valor === null) {
+        return '';
+    }
+
+    return String(valor).trim();
 }
 
 /*
@@ -71,273 +227,189 @@ Contiene las funciones exportables que manejan cada
 ruta del modulo de parasitologias.
 */
 
-export async function obtenerParasitologias(req, res) {
+export function obtenerParasitologias(req, res) {
     /*
     Descripcion:
     Obtiene todos los registros de parasitologias.
     Permite filtrar por finca, estanque, parasito y fechaReporte.
 
     Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
 
     Retorna:
-    - 200 con lista de registros de parasitologias
+    - 200 con lista de registros.
     */
-    try {
-        const filtros = {
-            finca: req.query.finca,
-            estanque: req.query.estanque,
-            parasito: req.query.parasito,
-            fechaReporte: req.query.fechaReporte
-        };
+    const filtros = {
+        finca:        req.query.finca,
+        estanque:     req.query.estanque,
+        parasito:     req.query.parasito,
+        fechaReporte: req.query.fechaReporte,
+    };
 
-        const data = await parasitologiasService.obtenerParasitologias(filtros);
+    const data = ParasitologiaModel.findAll(filtros);
 
-        return exito(
-            res,
-            "Parasitologias obtenidas correctamente.",
-            data,
-            200
-        );
-    } catch (err) {
-        return manejarError(
-            res,
-            err,
-            "No se pudieron obtener las parasitologias."
-        );
-    }
+    return exito(res, 'Parasitologias obtenidas correctamente.', data);
 }
 
-export async function obtenerParasitologiaPorId(req, res) {
+export function obtenerParasitologiaPorId(req, res) {
     /*
     Descripcion:
     Obtiene un registro de parasitologia por su ID.
 
     Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
 
     Retorna:
-    - 200 con el registro encontrado
-    - 400 si el ID no es valido
-    - 404 si el registro no existe
+    - 200 con el registro encontrado.
+    - 400 si el id es invalido.
+    - 404 si no existe.
     */
-    try {
-        const id = req.params.id;
-        const data = await parasitologiasService.obtenerParasitologiaPorId(id);
+    const errId = validarIdParametro(req.params.id, res);
 
-        return exito(
-            res,
-            "Parasitologia obtenida correctamente.",
-            data,
-            200
-        );
-    } catch (err) {
-        return manejarError(
-            res,
-            err,
-            "No se pudo obtener la parasitologia."
-        );
+    if (errId) {
+        return errId;
     }
+
+    const registro = ParasitologiaModel.findById(req.params.id);
+
+    if (!registro) {
+        return error(res, 'Parasitologia no encontrada.', null, 404);
+    }
+
+    return exito(res, 'Parasitologia obtenida correctamente.', registro);
 }
 
-export async function crearParasitologia(req, res) {
+export function crearParasitologia(req, res) {
     /*
     Descripcion:
     Crea un nuevo registro de parasitologia.
 
     Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
 
     Retorna:
-    - 201 con el registro creado
-    - 400 si hay errores de validacion
+    - 201 con el registro creado.
+    - 400/422 si hay errores de validacion.
     */
-    try {
-        const validacion = parasitologiasService.validarDatosParasitologia(
-            req.body
-        );
+    const err = validarCuerpo(req.body, res);
 
-        if (validacion.valido === false) {
-            return error(
-                res,
-                "Datos invalidos para crear la parasitologia.",
-                validacion.errores,
-                400
-            );
-        }
-
-        const datos = crearParasitologiaEntradaDTO(req.body);
-        const data = await parasitologiasService.crearParasitologia(datos);
-
-        return exito(
-            res,
-            "Parasitologia creada correctamente.",
-            data,
-            201
-        );
-    } catch (err) {
-        return manejarError(
-            res,
-            err,
-            "No se pudo crear la parasitologia."
-        );
+    if (err) {
+        return err;
     }
+
+    const dto = construirDTO(req.body);
+    const nuevo = ParasitologiaModel.create(dto);
+
+    return exito(res, 'Parasitologia creada correctamente.', nuevo, 201);
 }
 
-export async function actualizarParasitologia(req, res) {
+export function actualizarParasitologia(req, res) {
     /*
     Descripcion:
     Actualiza un registro de parasitologia existente por su ID.
 
     Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
 
     Retorna:
-    - 200 con el registro actualizado
-    - 400 si el ID no es valido o hay errores de validacion
-    - 404 si el registro no existe
+    - 200 con el registro actualizado.
+    - 400/422 si hay errores de validacion.
+    - 404 si no existe.
     */
-    try {
-        const validacion = parasitologiasService.validarDatosParasitologia(
-            req.body
-        );
+    const errId = validarIdParametro(req.params.id, res);
 
-        if (validacion.valido === false) {
-            return error(
-                res,
-                "Datos invalidos para actualizar la parasitologia.",
-                validacion.errores,
-                400
-            );
-        }
-
-        const id = req.params.id;
-        const datos = actualizarParasitologiaEntradaDTO(req.body);
-
-        const data = await parasitologiasService.actualizarParasitologia(
-            id,
-            datos
-        );
-
-        return exito(
-            res,
-            "Parasitologia actualizada correctamente.",
-            data,
-            200
-        );
-    } catch (err) {
-        return manejarError(
-            res,
-            err,
-            "No se pudo actualizar la parasitologia."
-        );
+    if (errId) {
+        return errId;
     }
+
+    const err = validarCuerpo(req.body, res);
+
+    if (err) {
+        return err;
+    }
+
+    const dto = construirDTO(req.body);
+    const actualizado = ParasitologiaModel.update(req.params.id, dto);
+
+    if (!actualizado) {
+        return error(res, 'Parasitologia no encontrada.', null, 404);
+    }
+
+    return exito(res, 'Parasitologia actualizada correctamente.', actualizado);
 }
 
-export async function eliminarParasitologia(req, res) {
+export function eliminarParasitologia(req, res) {
     /*
     Descripcion:
-    Elimina un registro de parasitologia por su ID.
+    Elimina logicamente un registro de parasitologia por su ID.
 
     Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
 
     Retorna:
-    - 200 con el registro eliminado
-    - 400 si el ID no es valido
-    - 404 si el registro no existe
+    - 200 con el registro eliminado.
+    - 400 si el id es invalido.
+    - 404 si no existe.
     */
-    try {
-        const id = req.params.id;
-        const data = await parasitologiasService.eliminarParasitologia(id);
+    const errId = validarIdParametro(req.params.id, res);
 
-        return exito(
-            res,
-            "Parasitologia eliminada correctamente.",
-            data,
-            200
-        );
-    } catch (err) {
-        return manejarError(
-            res,
-            err,
-            "No se pudo eliminar la parasitologia."
-        );
+    if (errId) {
+        return errId;
     }
+
+    const eliminado = ParasitologiaModel.remove(req.params.id);
+
+    if (!eliminado) {
+        return error(res, 'Parasitologia no encontrada.', null, 404);
+    }
+
+    return exito(res, 'Parasitologia eliminada correctamente.', eliminado);
 }
 
-export async function obtenerResumenParasitologias(req, res) {
+export function obtenerResumenParasitologias(req, res) {
     /*
     Descripcion:
     Obtiene un resumen general de los registros de parasitologias.
     Permite filtrar por finca, estanque, parasito y fechaReporte.
 
     Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
 
     Retorna:
-    - 200 con el resumen de parasitologias
+    - 200 con resumen de parasitologias.
     */
-    try {
-        const filtros = {
-            finca: req.query.finca,
-            estanque: req.query.estanque,
-            parasito: req.query.parasito,
-            fechaReporte: req.query.fechaReporte
-        };
+    const filtros = {
+        finca:        req.query.finca,
+        estanque:     req.query.estanque,
+        parasito:     req.query.parasito,
+        fechaReporte: req.query.fechaReporte,
+    };
 
-        const data = await parasitologiasService.obtenerResumenParasitologias(
-            filtros
-        );
+    const registros = ParasitologiaModel.findAll(filtros);
+    const resumen = construirResumenParasitologias(registros);
 
-        return exito(
-            res,
-            "Resumen de parasitologias obtenido correctamente.",
-            data,
-            200
-        );
-    } catch (err) {
-        return manejarError(
-            res,
-            err,
-            "No se pudo obtener el resumen de parasitologias."
-        );
-    }
+    return exito(res, 'Resumen de parasitologias obtenido correctamente.', resumen);
 }
 
-export async function obtenerCatalogoParasitos(req, res) {
+export function obtenerCatalogoParasitos(req, res) {
     /*
     Descripcion:
-    Obtiene el catalogo de parasitos disponibles para registrar
-    una parasitologia.
+    Obtiene el catalogo de parasitos disponibles.
 
     Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
 
     Retorna:
-    - 200 con el catalogo de parasitos
+    - 200 con catalogo de parasitos.
     */
-    try {
-        const data = parasitologiasService.obtenerCatalogoParasitos();
+    const data = obtenerCatalogoParasitosService();
 
-        return exito(
-            res,
-            "Catalogo de parasitos obtenido correctamente.",
-            data,
-            200
-        );
-    } catch (err) {
-        return manejarError(
-            res,
-            err,
-            "No se pudo obtener el catalogo de parasitos."
-        );
-    }
+    return exito(res, 'Catalogo de parasitos obtenido correctamente.', data);
 }
