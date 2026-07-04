@@ -51,7 +51,7 @@ base de datos.
 
 */
 
-const registrosTrazabilidad = [
+let registrosTrazabilidad = [
     {
         id: 1,
         fincaId: 1,
@@ -62,23 +62,22 @@ const registrosTrazabilidad = [
         tamano: 8.5,
         dias: 45,
         pl: 5000,
+        tipoMovimiento: "SIEMBRA",
         activo: true,
-        creadoEn: "2026-06-28T00:00:00",
-    },
+        creadoEn: "2026-06-28T00:00:00"
+    }
 ];
 
 /*
 //////////////////////////////////////////////////////////
-FUNCIONES DE BASE DE DATOS
+FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
-Descripcion de seccion
-
-Funciones encargadas del acceso a los datos.
-
+Contiene las funciones exportables que interactuan
+con la fuente de datos del modulo de trazabilidad.
 */
 
-export async function obtenerTodosRegistros() {
+export async function findAll() {
 
     /*
     Descripcion:
@@ -88,52 +87,53 @@ export async function obtenerTodosRegistros() {
     No posee.
 
     Retorna:
-    Lista de registros.
+    Lista con todos los registros.
     */
 
     return registrosTrazabilidad;
 
 }
 
-export async function obtenerRegistroPorId(id) {
+export async function findById(id) {
 
     /*
     Descripcion:
-    Obtiene un registro por su identificador.
+    Busca un registro por su ID.
 
     Parametros:
     - id: Identificador del registro.
 
     Retorna:
-    Registro encontrado o null.
+    El registro encontrado o null si no existe.
     */
 
     return (
         registrosTrazabilidad.find(
-            (registro) => registro.id === Number(id)
+            registro => registro.id === Number(id)
         ) || null
     );
 
 }
 
-export async function guardarRegistro(datos) {
+export async function create(dto) {
 
     /*
     Descripcion:
-    Crea un nuevo registro de trazabilidad.
+    Agrega un nuevo registro de trazabilidad.
 
     Parametros:
-    - datos: Informacion del registro.
+    - dto: Objeto TrazabilidadDTO.
 
     Retorna:
-    Registro creado.
+    El nuevo registro creado.
     */
 
     const nuevoRegistro = {
         id: registrosTrazabilidad.length + 1,
-        ...datos,
+        ...dto,
+        tipoMovimiento: "SIEMBRA",
         activo: true,
-        creadoEn: new Date().toISOString(),
+        creadoEn: new Date().toISOString()
     };
 
     registrosTrazabilidad.push(nuevoRegistro);
@@ -142,7 +142,38 @@ export async function guardarRegistro(datos) {
 
 }
 
-export async function actualizarActivo(id) {
+export async function update(id, dto) {
+
+    /*
+    Descripcion:
+    Actualiza un registro existente.
+
+    Parametros:
+    - id: Identificador del registro.
+    - dto: Datos actualizados.
+
+    Retorna:
+    El registro actualizado o null si no existe.
+    */
+
+    const indice = registrosTrazabilidad.findIndex(
+        registro => registro.id === Number(id)
+    );
+
+    if (indice === -1) {
+        return null;
+    }
+
+    registrosTrazabilidad[indice] = {
+        ...registrosTrazabilidad[indice],
+        ...dto
+    };
+
+    return registrosTrazabilidad[indice];
+
+}
+
+export async function remove(id) {
 
     /*
     Descripcion:
@@ -152,10 +183,10 @@ export async function actualizarActivo(id) {
     - id: Identificador del registro.
 
     Retorna:
-    Registro actualizado o null.
+    El registro actualizado o null si no existe.
     */
 
-    const registro = await obtenerRegistroPorId(id);
+    const registro = await findById(id);
 
     if (!registro) {
         return null;

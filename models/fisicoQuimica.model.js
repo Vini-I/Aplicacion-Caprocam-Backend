@@ -52,7 +52,7 @@ base de datos.
 
 */
 
-const lecturasFisicoQuimicas = [
+let lecturasFisicoQuimicas = [
     {
         id: 1,
         fincaId: 1,
@@ -61,44 +61,42 @@ const lecturasFisicoQuimicas = [
 
         ph: [
             { valor: 7.8, etiqueta: "mañana" },
-            { valor: 7.6, etiqueta: "noche" },
+            { valor: 7.6, etiqueta: "noche" }
         ],
 
         salinidad: [
             { valor: 18.0, etiqueta: "mañana" },
-            { valor: 18.2, etiqueta: "noche" },
+            { valor: 18.2, etiqueta: "noche" }
         ],
 
         temperatura: [
             { valor: 29.0, etiqueta: "mañana" },
-            { valor: 28.5, etiqueta: "noche" },
+            { valor: 28.5, etiqueta: "noche" }
         ],
 
-        oxigenoDisuelto: [
-            { valor: 6.2, etiqueta: "1" },
+        oxigeno: [
+            { valor: 6.2, etiqueta: "1" }
         ],
 
         activo: true,
-        creadoEn: "2026-06-27T00:00:00",
-    },
+        creadoEn: "2026-06-27T00:00:00"
+    }
 ];
 
 /*
 //////////////////////////////////////////////////////////
-FUNCIONES DE BASE DE DATOS
+FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
-Descripcion de seccion
-
-Funciones encargadas del acceso a los datos.
-
+Contiene las funciones exportables que interactuan
+con la fuente de datos del modulo de Fisico Quimica.
 */
 
-export async function obtenerTodasLasLecturas() {
+export async function findAll() {
 
-    /*
+   /*
     Descripcion:
-    Obtiene todas las lecturas de fisico quimica.
+    Obtiene todas las lecturas registradas.
 
     Parametros:
     No posee.
@@ -108,59 +106,88 @@ export async function obtenerTodasLasLecturas() {
     */
 
     return lecturasFisicoQuimicas;
-
+  
 }
 
-export async function obtenerLecturaPorId(id) {
+export async function findById(id) {
+
 
     /*
     Descripcion:
-    Obtiene una lectura por su identificador.
+    Busca una lectura por su identificador.
 
     Parametros:
     - id: Identificador de la lectura.
 
     Retorna:
-    Lectura encontrada o null.
+    La lectura encontrada o null.
     */
 
-    return (
-        lecturasFisicoQuimicas.find(
-            (lectura) => lectura.id === Number(id)
-        ) || null
-    );
-
+  return (
+    lecturasFisicoQuimicas.find(
+      lectura => lectura.id === Number(id)
+    ) || null
+  )
 }
 
-export async function guardarLectura(datos) {
+export async function create(dto){
 
     /*
     Descripcion:
-    Guarda una nueva lectura de fisico quimica.
+    Agrega una nueva lectura.
 
     Parametros:
-    - datos: Informacion de la lectura.
+    - dto: Objeto FisicoQuimicaDTO.
 
     Retorna:
-    Lectura creada.
+    La nueva lectura creada.
     */
 
     const nuevaLectura = {
-        id: lecturasFisicoQuimicas.length + 1,
-        ...datos,
-        activo: true,
-        creadoEn: new Date().toISOString(),
+      id: lecturasFisicoQuimicas.length + 1,
+      ...dto,
+      activo: true,
+      creadoEn: new Date().toISOString()
     };
 
     lecturasFisicoQuimicas.push(nuevaLectura);
 
     return nuevaLectura;
-
 }
 
-export async function actualizarActivo(id) {
+export async function update(id, dto) {
 
-    /*
+  /*
+    Descripcion:
+    Actualiza una lectura existente.
+
+    Parametros:
+    - id: Identificador de la lectura.
+    - dto: Datos a actualizar.
+
+    Retorna:
+    La lectura actualizada o null.
+    */
+
+    const indice = lecturasFisicoQuimicas.findIndex(
+      lectura => lectura.id === Number(id)
+    );
+
+    if(indice === -1){
+      return null;
+    };
+
+    lecturasFisicoQuimicas[indice] = {
+      ...lecturasFisicoQuimicas[indice],
+      ...dto
+    };
+
+    return lecturasFisicoQuimicas[indice];
+}
+
+export async function remove(id){
+
+  /*
     Descripcion:
     Realiza el borrado logico de una lectura.
 
@@ -168,17 +195,16 @@ export async function actualizarActivo(id) {
     - id: Identificador de la lectura.
 
     Retorna:
-    Lectura actualizada o null.
+    La lectura actualizada o null.
     */
 
-    const lectura = await obtenerLecturaPorId(id);
+    const lectura = await findById(id);
 
-    if (!lectura) {
-        return null;
-    }
+    if(!lectura){
+      return null
+    };
 
     lectura.activo = !lectura.activo;
 
     return lectura;
-
 }

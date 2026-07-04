@@ -7,176 +7,198 @@ Autor: Samuel
 Fecha: 29/06/2026
 Modulo: Fisico Quimica
 Descripcion:
-Service encargado de contener la logica de
-negocio del modulo de fisico quimica.
+Define las reglas de negocio y validaciones del modulo
+de Fisico Quimica.
 //////////////////////////////////////////////////////////
 */
 
 /*
 //////////////////////////////////////////////////////////
-IMPORTS
+FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
-Descripcion de seccion
-
-Contiene los imports necesarios para el archivo.
-
+Contiene las funciones exportables de validacion
+que utiliza el controller para verificar los datos.
 */
 
-import { fisicoQuimicaDto } from "../dtos/fisicoQuimica.dto.js";
-
-import {
-    obtenerTodasLasLecturas,
-    obtenerLecturaPorId,
-    guardarLectura,
-    actualizarActivo,
-} from "../models/fisicoQuimica.model.js";
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES DE NEGOCIO
-//////////////////////////////////////////////////////////
-
-Descripcion de seccion
-
-Funciones encargadas de aplicar la logica
-de negocio del modulo de fisico quimica.
-
-*/
-
-export async function getAllLecturas() {
-
+export function isEmpty(valor) {
     /*
     Descripcion:
-    Obtiene todas las lecturas registradas.
+    Verifica si un valor esta vacio.
 
     Parametros:
-    No posee.
+    - valor: Valor a revisar.
 
     Retorna:
-    Lista de lecturas.
+    - true si esta vacio.
+    - false si tiene contenido.
     */
 
-    return await obtenerTodasLasLecturas();
+    if (valor === undefined) {
+        return true;
+    }
 
+    if (valor === null) {
+        return true;
+    }
+
+    if (typeof valor === "string") {
+        if (valor.trim().length === 0) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
-export async function getById(id) {
-
+export function isNumeroMayorCero(valor) {
     /*
     Descripcion:
-    Obtiene una lectura por su identificador.
+    Valida que un valor sea numerico y mayor a cero.
 
     Parametros:
-    - id: Identificador de la lectura.
+    - valor: Valor a validar.
 
     Retorna:
-    Lectura encontrada o null.
+    - true si es valido.
+    - false si no.
     */
 
-    if (!id) {
-        return null;
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        return false;
     }
 
-    return await obtenerLecturaPorId(id);
+    if (numero <= 0) {
+        return false;
+    }
 
+    return true;
 }
 
-export async function crearLectura(body) {
-
+export function isArrayValido(arreglo) {
     /*
     Descripcion:
-    Valida la informacion recibida y crea
-    una nueva lectura.
+    Valida que un arreglo exista y contenga
+    al menos un elemento.
 
     Parametros:
-    - body: Informacion enviada por el cliente.
+    - arreglo: Arreglo a validar.
 
     Retorna:
-    Lectura creada.
+    - true si es valido.
+    - false si no.
     */
 
-    const datos = fisicoQuimicaDto(body);
+    if (!Array.isArray(arreglo)) {
+        return false;
+    }
 
-    validarDatos(datos);
+    if (arreglo.length === 0) {
+        return false;
+    }
 
-    return await guardarLectura(datos);
-
+    return true;
 }
 
-export async function actualizarActivoService(id) {
-
+export function isFechaValida(fecha) {
     /*
     Descripcion:
-    Actualiza el estado activo de una lectura.
+    Verifica que una fecha tenga contenido.
 
     Parametros:
-    - id: Identificador de la lectura.
+    - fecha: Fecha recibida.
 
     Retorna:
-    Lectura actualizada o null.
+    - true si la fecha es valida.
+    - false si esta vacia.
     */
 
-    if (!id) {
-        return null;
-    }
-
-    return await actualizarActivo(id);
-
+    return !isEmpty(fecha);
 }
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRIVADAS
-//////////////////////////////////////////////////////////
-
-Descripcion de seccion
-
-Funciones auxiliares utilizadas por el service.
-
-*/
-
-function validarDatos(datos) {
-
+export function isIdValido(id) {
     /*
     Descripcion:
-    Verifica que la informacion recibida
-    cumpla las reglas del negocio.
+    Valida que un identificador sea numerico
+    y mayor a cero.
 
     Parametros:
-    - datos: Informacion de la lectura.
+    - id: Identificador recibido.
 
     Retorna:
-    No retorna informacion. Lanza un error
-    cuando alguna validacion falla.
+    - true si es valido.
+    - false si no.
     */
 
-    if (!datos.fincaId) {
-        throw new Error("La finca es obligatoria.");
-    }
+    return isNumeroMayorCero(id);
+}
 
-    if (!datos.estanqueId || datos.estanqueId.trim() === "") {
-        throw new Error("El estanque es obligatorio.");
-    }
+export function isPhValido(ph) {
+    /*
+    Descripcion:
+    Valida que el arreglo de mediciones de pH
+    contenga informacion.
 
-    if (!datos.fecha || datos.fecha.trim() === "") {
-        throw new Error("La fecha es obligatoria.");
-    }
+    Parametros:
+    - ph: Arreglo de mediciones.
 
-    if (!Array.isArray(datos.ph) || datos.ph.length === 0) {
-        throw new Error("El pH es obligatorio.");
-    }
+    Retorna:
+    - true si es valido.
+    - false si no.
+    */
 
-    if (!Array.isArray(datos.salinidad) || datos.salinidad.length === 0) {
-        throw new Error("La salinidad es obligatoria.");
-    }
+    return isArrayValido(ph);
+}
 
-    if (!Array.isArray(datos.temperatura) || datos.temperatura.length === 0) {
-        throw new Error("La temperatura es obligatoria.");
-    }
+export function isSalinidadValida(salinidad) {
+    /*
+    Descripcion:
+    Valida que el arreglo de salinidad
+    contenga informacion.
 
-    if (!Array.isArray(datos.oxigenoDisuelto) || datos.oxigenoDisuelto.length === 0) {
-        throw new Error("El oxigeno disuelto es obligatorio.");
-    }
+    Parametros:
+    - salinidad: Arreglo de mediciones.
 
+    Retorna:
+    - true si es valido.
+    - false si no.
+    */
+
+    return isArrayValido(salinidad);
+}
+
+export function isTemperaturaValida(temperatura) {
+    /*
+    Descripcion:
+    Valida que el arreglo de temperatura
+    contenga informacion.
+
+    Parametros:
+    - temperatura: Arreglo de mediciones.
+
+    Retorna:
+    - true si es valido.
+    - false si no.
+    */
+
+    return isArrayValido(temperatura);
+}
+
+export function isOxigeno(oxigeno) {
+    /*
+    Descripcion:
+    Valida que el arreglo de oxigeno disuelto
+    contenga informacion.
+
+    Parametros:
+    - oxigenoDisuelto: Arreglo de mediciones.
+
+    Retorna:
+    - true si es valido.
+    - false si no.
+    */
+
+    return isArrayValido(oxigeno);
 }

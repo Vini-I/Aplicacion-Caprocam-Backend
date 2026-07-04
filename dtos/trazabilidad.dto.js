@@ -27,27 +27,44 @@ informacion recibida desde el cliente.
 
 */
 
-export const trazabilidadDto = (body) => {
-    /*
-    Descripcion:
-    Recibe el body de la peticion y devuelve
-    un objeto con los campos permitidos.
+export class TrazabilidadDTO {
+    constructor({
+        fincaId,
+        estanqueOrigenId,
+        estanqueDestinoId,
+        fecha,
+        colaboradorId,
+        tamano,
+        dias,
+        pl,
+        tipoMovimiento
+    }) {
+        /*
+        Descripcion:
+        Construye un objeto TrazabilidadDTO
+        con la informacion enviada desde el
+        cliente.
 
-    Parametros:
-    - body: Informacion enviada por el cliente.
+        Parametros:
+        - fincaId: Identificador de la finca.
+        - estanqueOrigenId: Identificador del estanque de origen.
+        - estanqueDestinoId: Identificador del estanque de destino.
+        - fecha: Fecha del movimiento.
+        - colaboradorId: Identificador del colaborador.
+        - tamano: Tamaño promedio del camarón.
+        - dias: Días de cultivo.
+        - pl: Cantidad de postlarvas.
+        - tipoMovimiento: Tipo de movimiento realizado.
+        */
 
-    Retorna:
-    Objeto con los datos de trazabilidad.
-    */
-
-    return {
-        fincaId: body.fincaId,
-        estanqueOrigenId: body.estanqueOrigenId,
-        estanqueDestinoId: body.estanqueDestinoId,
-        fecha: body.fecha,
-        colaboradorId: body.colaboradorId,
-        tamano: body.tamano,
-        dias: body.dias,
-        pl: body.pl
-    };
-};
+        this.fincaId = fincaId;
+        this.estanqueOrigenId = estanqueOrigenId
+        this.estanqueDestinoId = estanqueDestinoId;
+        this.fecha = fecha;
+        this.colaboradorId = colaboradorId;
+        this.tamano = tamano;
+        this.dias = dias;
+        this.pl = pl;
+        this.tipoMovimiento = tipoMovimiento
+    }
+}  

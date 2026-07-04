@@ -25,27 +25,38 @@ informacion recibida desde el cliente.
 
 */
 
-export const fisicoQuimicaDto = (body) => {
+export class fisicoQuimicaDto {
+    constructor({
+        fincaId,
+        estanqueId,
+        fecha,
+        ph,
+        salinidad,
+        temperatura,
+        oxigeno
+    }) {
+         /*
+        Descripcion:
+        Construye un objeto FisicoQuimicaDTO
+        con la informacion enviada desde el
+        cliente.
 
-    /*
-    Descripcion:
-    Recibe el body de la peticion y devuelve
-    un objeto con los campos permitidos.
+        Parametros:
+        - fincaId: Identificador de la finca.
+        - estanqueId: Identificador del estanque.
+        - fecha: Fecha de la medicion.
+        - ph: Valor del potencial de hidrogeno.
+        - salinidad: Valor de la salinidad.
+        - temperatura: Valor de la temperatura.
+        - oxigenoDisuelto: Valor del oxigeno disuelto.
+        */
 
-    Parametros:
-    - body: Informacion enviada por el cliente.
-
-    Retorna:
-    Objeto con los datos de fisico quimica.
-    */
-
-    return {
-        fincaId: body.fincaId,
-        estanqueId: body.estanqueId,
-        fecha: body.fecha,
-        ph: body.ph,
-        salinidad: body.salinidad,
-        temperatura: body.temperatura,
-        oxigenoDisuelto: body.oxigenoDisuelto
-    };
-};
+        this.fincaId = fincaId;
+        this.estanqueId = estanqueId;
+        this.fecha = fecha;
+        this.ph = ph;
+        this.salinidad = salinidad;
+        this.temperatura = temperatura;
+        this.oxigeno = oxigeno;
+    }
+}

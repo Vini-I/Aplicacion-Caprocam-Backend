@@ -14,177 +14,201 @@ negocio del modulo de trazabilidad.
 
 /*
 //////////////////////////////////////////////////////////
-IMPORTS
+FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
-Descripcion de seccion
-
-Contiene los imports necesarios para el archivo.
-
+Contiene las funciones exportables de validacion
+que utiliza el controller para verificar los datos.
 */
 
-import { trazabilidadDto } from "../dtos/trazabilidad.dto.js";
-
-import {
-    obtenerTodosRegistros,
-    obtenerRegistroPorId,
-    guardarRegistro,
-    actualizarActivo
-} from "../models/trazabilidad.model.js";
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES DE NEGOCIO
-//////////////////////////////////////////////////////////
-
-Descripcion de seccion
-
-Funciones encargadas de aplicar la logica
-de negocio del modulo de trazabilidad.
-
-*/
-
-export async function getAllRegistros() {
-
+export function isEmpty(valor) {
     /*
     Descripcion:
-    Obtiene todos los registros de trazabilidad.
+    Verifica si un valor esta vacio.
 
     Parametros:
-    No posee.
+    - valor: Valor a revisar.
 
     Retorna:
-    Lista de registros.
+    - true si esta vacio.
+    - false si tiene contenido.
     */
 
-    return await obtenerTodosRegistros();
+    if (valor === undefined) {
+        return true;
+    }
 
+    if (valor === null) {
+        return true;
+    }
+
+    if (typeof valor === "string") {
+        if (valor.trim().length === 0) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
-export async function getById(id) {
-
+export function isNumeroMayorCero(valor) {
     /*
     Descripcion:
-    Obtiene un registro por su identificador.
+    Valida que un valor sea numerico y mayor a cero.
 
     Parametros:
-    - id: Identificador del registro.
+    - valor: Valor a validar.
 
     Retorna:
-    Registro encontrado o null.
+    - true si es valido.
+    - false si no.
     */
 
-    if (!id) {
-        return null;
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        return false;
     }
 
-    return await obtenerRegistroPorId(id);
+    if (numero <= 0) {
+        return false;
+    }
 
+    return true;
 }
 
-export async function crearRegistro(body) {
-
+export function isIdValido(id) {
     /*
     Descripcion:
-    Valida la informacion recibida y crea
-    un nuevo registro.
+    Valida que un identificador sea numerico
+    y mayor a cero.
 
     Parametros:
-    - body: Informacion enviada por el cliente.
+    - id: Identificador recibido.
 
     Retorna:
-    Registro creado.
+    - true si es valido.
+    - false si no.
     */
 
-    const datos = trazabilidadDto(body);
-
-    validarDatos(datos);
-
-    return await guardarRegistro(datos);
-
+    return isNumeroMayorCero(id);
 }
 
-export async function actualizarActivoService(id) {
-
+export function isFechaValida(fecha) {
     /*
     Descripcion:
-    Actualiza el estado activo del registro.
+    Verifica que una fecha tenga contenido.
 
     Parametros:
-    - id: Identificador del registro.
+    - fecha: Fecha recibida.
 
     Retorna:
-    Registro actualizado o null.
+    - true si la fecha es valida.
+    - false si esta vacia.
     */
 
-    if (!id) {
-        return null;
-    }
-
-    return await actualizarActivo(id);
-
+    return !isEmpty(fecha);
 }
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRIVADAS
-//////////////////////////////////////////////////////////
-
-Descripcion de seccion
-
-Funciones auxiliares utilizadas por el service.
-
-*/
-
-function validarDatos(datos) {
-
+export function isEstanqueOrigenValido(estanqueOrigenId) {
     /*
     Descripcion:
-    Valida las reglas de negocio del registro
-    de trazabilidad.
+    Verifica que el estanque de origen
+    tenga informacion.
 
     Parametros:
-    - datos: Informacion del registro.
+    - estanqueOrigenId: Identificador del estanque.
 
     Retorna:
-    No retorna informacion. Lanza un error
-    cuando alguna validacion falla.
+    - true si es valido.
+    - false si esta vacio.
     */
 
-    if (!datos.fincaId) {
-        throw new Error("La finca es obligatoria.");
-    }
+    return !isEmpty(estanqueOrigenId);
+}
 
-    if (!datos.estanqueOrigenId || datos.estanqueOrigenId.trim() === "") {
-        throw new Error("El estanque de origen es obligatorio.");
-    }
+export function isEstanqueDestinoValido(estanqueDestinoId) {
+    /*
+    Descripcion:
+    Verifica que el estanque de destino
+    tenga informacion.
 
-    if (!datos.estanqueDestinoId || datos.estanqueDestinoId.trim() === "") {
-        throw new Error("El estanque de destino es obligatorio.");
-    }
+    Parametros:
+    - estanqueDestinoId: Identificador del estanque.
 
-    if (datos.estanqueOrigenId === datos.estanqueDestinoId) {
-        throw new Error("El estanque de origen no puede ser igual al estanque de destino.");
-    }
+    Retorna:
+    - true si es valido.
+    - false si esta vacio.
+    */
 
-    if (!datos.fecha || datos.fecha.trim() === "") {
-        throw new Error("La fecha es obligatoria.");
-    }
+    return !isEmpty(estanqueDestinoId);
+}
 
-    if (!datos.colaboradorId) {
-        throw new Error("El colaborador es obligatorio.");
-    }
+export function isEstanqueDiferente(estanqueOrigenId, estanqueDestinoId) {
+    /*
+    Descripcion:
+    Verifica que el estanque de origen
+    sea diferente al estanque de destino.
 
-    if (Number(datos.tamano) <= 0) {
-        throw new Error("El tamaño debe ser mayor a 0.");
-    }
+    Parametros:
+    - estanqueOrigenId: Estanque origen.
+    - estanqueDestinoId: Estanque destino.
 
-    if (Number(datos.dias) <= 0) {
-        throw new Error("Los dias deben ser mayores a 0.");
-    }
+    Retorna:
+    - true si son diferentes.
+    - false si son iguales.
+    */
 
-    if (Number(datos.pl) <= 0) {
-        throw new Error("El PL debe ser mayor a 0.");
-    }
+    return estanqueOrigenId !== estanqueDestinoId;
+}
 
+export function isTamanoValido(tamano) {
+    /*
+    Descripcion:
+    Valida que el tamaño sea un numero
+    mayor a cero.
+
+    Parametros:
+    - tamano: Tamaño registrado.
+
+    Retorna:
+    - true si es valido.
+    - false si no.
+    */
+
+    return isNumeroMayorCero(tamano);
+}
+
+export function isDiasValidos(dias) {
+    /*
+    Descripcion:
+    Valida que los dias sean un numero
+    mayor a cero.
+
+    Parametros:
+    - dias: Dias registrados.
+
+    Retorna:
+    - true si es valido.
+    - false si no.
+    */
+
+    return isNumeroMayorCero(dias);
+}
+
+export function isPlValido(pl) {
+    /*
+    Descripcion:
+    Valida que el PL sea un numero
+    mayor a cero.
+
+    Parametros:
+    - pl: Cantidad de PL.
+
+    Retorna:
+    - true si es valido.
+    - false si no.
+    */
+
+    return isNumeroMayorCero(pl);
 }
