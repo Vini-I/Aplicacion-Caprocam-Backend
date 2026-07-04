@@ -26,6 +26,7 @@ import cors from "cors";
 import colaboradoresRouter from "./routes/colaborador.routes.js";
 import crecimientoRouter from "./routes/mantCrecimiento.routes.js";
 import estanquesRouter from "./routes/estanques.routes.js";
+import parasitologiasRouter from "./routes/parasitologias.routes.js";
 import densidadPoblacionalRouter from "./routes/densidadPoblacional.routes.js";
 import alimentacionRouter from "./alimentacion/routes/alimentacion.routes.js";
 
@@ -52,17 +53,11 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-// Colaboradores
-app.use("/api/v1/colaboradores", colaboradoresRouter);
-
-// Alimentación
-app.use("/api/v1/alimentaciones", alimentacionRouter);
-
-// Crecimiento
-app.use("/api/v1/crecimiento", crecimientoRouter);
-
-// Estanques
-app.use("/api/v1/estanques", estanquesRouter);
+app.use("/api/v0/colaboradores", colaboradoresRouter);
+app.use("/api/v0/crecimiento", crecimientoRouter);
+app.use("/api/v0/estanques", estanquesRouter);
+app.use("/api/v0/parasitologias", parasitologiasRouter);
+app.use("/api/v0alimentaciones", alimentacionRouter);
 
 // Densidad Poblacional
 app.use("/api/v1/densidades-poblacionales", densidadPoblacionalRouter);
