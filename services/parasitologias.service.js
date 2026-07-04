@@ -7,8 +7,8 @@ Autor: Andres Gutierrez
 Fecha: 30/06/2026
 Modulo: Parasitologias
 Descripcion:
-Define las reglas de negocio, calculos y validaciones del
-modulo de parasitologias.
+Define las reglas de negocio, validaciones y calculos
+del modulo de parasitologias.
 //////////////////////////////////////////////////////////
 */
 
@@ -17,47 +17,40 @@ modulo de parasitologias.
 IMPORTS
 //////////////////////////////////////////////////////////
 
-Modelos
+DTOs
 */
 
-import parasitologiasModel from "../models/parasitologias.model.js";
-
-// DTOs
-import {
-    listaParasitologiasSalidaDTO,
-    parasitologiaSalidaDTO,
-    resumenParasitologiasDTO
-} from "../dtos/parasitologias.dto.js";
+import { ParasitoParasitologia, GradoInfeccion } from '../dtos/parasitologias.dto.js';
 
 /*
 //////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
 
-Catalogo de parasitos permitidos dentro del modulo.
+Catalogo visible de parasitos disponibles.
 */
 
-const PARASITOS_CATALOGO = [
+const catalogoParasitos = [
     {
-        label: "Gregarina",
-        value: "gregarina"
+        label: 'Gregarina',
+        value: ParasitoParasitologia.GREGARINA,
     },
     {
-        label: "Nematodo",
-        value: "nematodo"
+        label: 'Nematodo',
+        value: ParasitoParasitologia.NEMATODO,
     },
     {
-        label: "Epicomensal",
-        value: "epicomensal"
+        label: 'Epicomensal',
+        value: ParasitoParasitologia.EPICOMENSAL,
     },
     {
-        label: "Protozoario",
-        value: "protozoario"
+        label: 'Protozoario',
+        value: ParasitoParasitologia.PROTOZOARIO,
     },
     {
-        label: "Otro",
-        value: "otro"
-    }
+        label: 'Otro',
+        value: ParasitoParasitologia.OTRO,
+    },
 ];
 
 /*
@@ -65,370 +58,299 @@ const PARASITOS_CATALOGO = [
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
-Contiene las funciones que utiliza el controller para
-realizar operaciones del modulo de parasitologias.
+Contiene las funciones exportables de validacion,
+catalogo y calculo que utiliza el controller.
 */
 
-async function obtenerParasitologias(filtros) {
+export function isEmpty(valor) {
     /*
     Descripcion:
-    Obtiene todos los registros de parasitologias y aplica
-    filtros opcionales enviados por query params.
+    Verifica si un valor esta vacio, es null, undefined
+    o solo contiene espacios.
 
     Parametros:
-    - filtros: Objeto con finca, estanque, parasito y fechaReporte
+    - valor: Valor a verificar.
 
     Retorna:
-    - Lista de parasitologias transformadas para la respuesta
+    - true si esta vacio, false si tiene contenido.
     */
-    const registros = await parasitologiasModel.findAll(filtros);
-    const data = listaParasitologiasSalidaDTO(registros);
-
-    return data;
-}
-
-async function obtenerParasitologiaPorId(id) {
-    /*
-    Descripcion:
-    Busca un registro de parasitologia por su ID.
-
-    Parametros:
-    - id: Identificador del registro
-
-    Retorna:
-    - Registro encontrado transformado para la respuesta
-
-    Lanza:
-    - Error 400 si el id no es valido
-    - Error 404 si el registro no existe
-    */
-    if (isIdValido(id) === false) {
-        throw crearError("El id de la parasitologia no es valido", 400);
+    if (valor === undefined) {
+        return true;
     }
 
-    const registro = await parasitologiasModel.findById(id);
-
-    if (registro === null) {
-        throw crearError("Registro de parasitologia no encontrado", 404);
+    if (valor === null) {
+        return true;
     }
 
-    return parasitologiaSalidaDTO(registro);
+    return String(valor).trim().length === 0;
 }
 
-async function crearParasitologia(datos) {
+export function isIdValido(id) {
     /*
     Descripcion:
-    Crea un nuevo registro de parasitologia con sus calculos
-    automaticos de porcentaje y grado de infeccion.
+    Valida que un id sea numerico y mayor que cero.
 
     Parametros:
-    - datos: Datos normalizados desde el DTO de entrada
+    - id: ID recibido por parametro.
 
     Retorna:
-    - Registro creado transformado para la respuesta
+    - true si el id es valido, false si no.
     */
-    const datosCreacion = construirDatosParasitologia(datos);
-    const registro = await parasitologiasModel.create(datosCreacion);
+    const numero = Number(id);
 
-    return parasitologiaSalidaDTO(registro);
-}
-
-async function actualizarParasitologia(id, datos) {
-    /*
-    Descripcion:
-    Actualiza un registro de parasitologia existente.
-
-    Parametros:
-    - id: Identificador del registro
-    - datos: Datos normalizados desde el DTO de entrada
-
-    Retorna:
-    - Registro actualizado transformado para la respuesta
-
-    Lanza:
-    - Error 400 si el id no es valido
-    - Error 404 si el registro no existe
-    */
-    if (isIdValido(id) === false) {
-        throw crearError("El id de la parasitologia no es valido", 400);
+    if (Number.isNaN(numero)) {
+        return false;
     }
 
-    const registroActual = await parasitologiasModel.findById(id);
-
-    if (registroActual === null) {
-        throw crearError("Registro de parasitologia no encontrado", 404);
+    if (numero <= 0) {
+        return false;
     }
 
-    const datosActualizacion = construirDatosParasitologia(datos);
-    const registro = await parasitologiasModel.update(id, datosActualizacion);
-
-    return parasitologiaSalidaDTO(registro);
+    return true;
 }
 
-async function eliminarParasitologia(id) {
+export function isNumeroMayorCero(valor) {
     /*
     Descripcion:
-    Elimina logicamente un registro de parasitologia por su ID.
+    Valida que un valor sea numerico y mayor que cero.
 
     Parametros:
-    - id: Identificador del registro
+    - valor: Valor a validar.
 
     Retorna:
-    - Registro eliminado transformado para la respuesta
-
-    Lanza:
-    - Error 400 si el id no es valido
-    - Error 404 si el registro no existe
+    - true si es numerico y mayor que cero, false si no.
     */
-    if (isIdValido(id) === false) {
-        throw crearError("El id de la parasitologia no es valido", 400);
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        return false;
     }
 
-    const registroActual = await parasitologiasModel.findById(id);
-
-    if (registroActual === null) {
-        throw crearError("Registro de parasitologia no encontrado", 404);
+    if (numero <= 0) {
+        return false;
     }
 
-    const registro = await parasitologiasModel.remove(id);
-
-    return parasitologiaSalidaDTO(registro);
+    return true;
 }
 
-async function obtenerResumenParasitologias(filtros) {
+export function isNumeroMayorIgualCero(valor) {
     /*
     Descripcion:
-    Genera un resumen general de parasitologias con totales,
-    promedio de infeccion y frecuencias.
+    Valida que un valor sea numerico y mayor o igual que cero.
 
     Parametros:
-    - filtros: Objeto con filtros opcionales
+    - valor: Valor a validar.
 
     Retorna:
-    - Resumen transformado para la respuesta
+    - true si es numerico y mayor o igual que cero, false si no.
     */
-    const registros = await parasitologiasModel.findAll(filtros);
-    const resumen = construirResumenParasitologias(registros);
-    const data = resumenParasitologiasDTO(resumen);
+    const numero = Number(valor);
 
-    return data;
-}
-
-function obtenerCatalogoParasitos() {
-    /*
-    Descripcion:
-    Retorna el catalogo de parasitos disponibles.
-
-    Parametros:
-    - No recibe parametros
-
-    Retorna:
-    - Lista de parasitos con label y value
-    */
-    return PARASITOS_CATALOGO;
-}
-
-function validarDatosParasitologia(body) {
-    /*
-    Descripcion:
-    Valida los datos requeridos para crear o actualizar
-    una parasitologia.
-
-    Parametros:
-    - body: Datos recibidos en el request body
-
-    Retorna:
-    - Objeto con valido y lista de errores
-    */
-    const errores = [];
-    const datos = body || {};
-
-    validarCampoObligatorio(datos.finca, "finca", errores);
-    validarCampoObligatorio(datos.estanque, "estanque", errores);
-    validarCampoObligatorio(datos.fechaReporte, "fechaReporte", errores);
-    validarCampoObligatorio(datos.parasito, "parasito", errores);
-    validarTextoValido(datos.finca, "finca", errores);
-    validarTextoValido(datos.estanque, "estanque", errores);
-    validarTextoValido(datos.parasito, "parasito", errores);
-    validarFechaValida(datos.fechaReporte, "fechaReporte", errores);
-
-    validarNumeroMayorCero(
-        datos.camaronesMuestreados,
-        "camaronesMuestreados",
-        errores
-    );
-
-    validarNumeroMayorIgualCero(
-        datos.camaronesInfectados,
-        "camaronesInfectados",
-        errores
-    );
-
-    validarInfectadosContraMuestreados(
-        datos.camaronesMuestreados,
-        datos.camaronesInfectados,
-        errores
-    );
-
-    return {
-        valido: errores.length === 0,
-        errores: errores
-    };
-}
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
-
-Contiene funciones internas para calculos, validaciones y
-construccion de objetos de negocio.
-*/
-
-function construirDatosParasitologia(datos) {
-    /*
-    Descripcion:
-    Construye el objeto completo de parasitologia incluyendo
-    
-    campos calculados.
-
-    Parametros:
-    - datos: Datos normalizados recibidos desde el DTO
-
-    Retorna:
-    - Objeto listo para guardar en el modelo
-    */
-    const porcentajeInfeccion = calcularPorcentajeInfeccion(
-        datos.camaronesMuestreados,
-        datos.camaronesInfectados
-    );
-
-    const gradoInfeccion = calcularGradoInfeccion(porcentajeInfeccion);
-    const gradoInfeccionNombre = obtenerNombreGradoInfeccion(gradoInfeccion);
-
-    return {
-        tipoRegistro: "parasitologia",
-        finca: datos.finca,
-        fincaNombre: datos.fincaNombre,
-        estanque: datos.estanque,
-        fechaReporte: datos.fechaReporte,
-        responsable: datos.responsable,
-        parasito: datos.parasito,
-        parasitoNombre: obtenerNombreParasito(datos.parasito),
-        camaronesMuestreados: datos.camaronesMuestreados,
-        camaronesInfectados: datos.camaronesInfectados,
-        porcentajeInfeccion: porcentajeInfeccion,
-        gradoInfeccion: gradoInfeccion,
-        gradoInfeccionNombre: gradoInfeccionNombre,
-        observaciones: datos.observaciones
-    };
-}
-
-function calcularPorcentajeInfeccion(camaronesMuestreados, camaronesInfectados) {
-    /*
-    Descripcion:
-    Calcula el porcentaje de infeccion con base en camarones
-    muestreados e infectados.
-
-    Parametros:
-    - camaronesMuestreados: Total de camarones revisados
-    - camaronesInfectados: Total de camarones infectados
-
-    Retorna:
-    - Porcentaje de infeccion con dos decimales
-    */
-    let porcentaje = 0;
-
-    if (Number(camaronesMuestreados) > 0) {
-        porcentaje = (
-            Number(camaronesInfectados) / Number(camaronesMuestreados)
-        ) * 100;
+    if (Number.isNaN(numero)) {
+        return false;
     }
+
+    if (numero < 0) {
+        return false;
+    }
+
+    return true;
+}
+
+export function isFechaValida(fecha) {
+    /*
+    Descripcion:
+    Valida que una fecha tenga formato permitido.
+    Se aceptan formatos yyyy-mm-dd y dd/mm/aaaa.
+
+    Parametros:
+    - fecha: Fecha a validar.
+
+    Retorna:
+    - true si la fecha tiene formato valido, false si no.
+    */
+    if (isEmpty(fecha)) {
+        return false;
+    }
+
+    const fechaTexto = String(fecha).trim();
+    const patronIso = /^\d{4}-\d{2}-\d{2}$/;
+    const patronLocal = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    if (patronIso.test(fechaTexto)) {
+        return true;
+    }
+
+    if (patronLocal.test(fechaTexto)) {
+        return true;
+    }
+
+    return false;
+}
+
+export function isParasitoValido(parasito) {
+    /*
+    Descripcion:
+    Valida que el parasito exista dentro del enum permitido.
+
+    Parametros:
+    - parasito: Valor del parasito.
+
+    Retorna:
+    - true si es valido, false si no.
+    */
+    if (isEmpty(parasito)) {
+        return false;
+    }
+
+    return Object.values(ParasitoParasitologia).includes(String(parasito).trim());
+}
+
+export function isInfectadosValido(camaronesMuestreados, camaronesInfectados) {
+    /*
+    Descripcion:
+    Valida que los camarones infectados no sean mayores
+    que los camarones muestreados.
+
+    Parametros:
+    - camaronesMuestreados: Total de camarones revisados.
+    - camaronesInfectados: Total de camarones infectados.
+
+    Retorna:
+    - true si la relacion es valida, false si no.
+    */
+    const muestreados = Number(camaronesMuestreados);
+    const infectados = Number(camaronesInfectados);
+
+    if (Number.isNaN(muestreados)) {
+        return false;
+    }
+
+    if (Number.isNaN(infectados)) {
+        return false;
+    }
+
+    if (infectados > muestreados) {
+        return false;
+    }
+
+    return true;
+}
+
+export function calcularPorcentajeInfeccion(camaronesMuestreados, camaronesInfectados) {
+    /*
+    Descripcion:
+    Calcula el porcentaje de infeccion del muestreo.
+
+    Parametros:
+    - camaronesMuestreados: Total de camarones revisados.
+    - camaronesInfectados: Total de camarones infectados.
+
+    Retorna:
+    - Porcentaje de infeccion con dos decimales.
+    */
+    const muestreados = Number(camaronesMuestreados);
+    const infectados = Number(camaronesInfectados);
+
+    if (muestreados <= 0) {
+        return 0;
+    }
+
+    const porcentaje = (infectados / muestreados) * 100;
 
     return Number(porcentaje.toFixed(2));
 }
 
-function calcularGradoInfeccion(porcentajeInfeccion) {
+export function calcularGradoInfeccion(porcentajeInfeccion) {
     /*
     Descripcion:
-    Determina el grado de infeccion segun el porcentaje calculado.
+    Calcula el grado de infeccion segun el porcentaje.
 
     Parametros:
-    - porcentajeInfeccion: Porcentaje calculado
+    - porcentajeInfeccion: Porcentaje calculado.
 
     Retorna:
-    - bajo, medio o alto
+    - bajo, medio o alto.
     */
-    let grado = "bajo";
+    const porcentaje = Number(porcentajeInfeccion);
 
-    if (porcentajeInfeccion >= 30) {
-        grado = "medio";
+    if (porcentaje >= 60) {
+        return GradoInfeccion.ALTO;
     }
 
-    if (porcentajeInfeccion >= 60) {
-        grado = "alto";
+    if (porcentaje >= 30) {
+        return GradoInfeccion.MEDIO;
     }
 
-    return grado;
+    return GradoInfeccion.BAJO;
 }
 
-function obtenerNombreGradoInfeccion(grado) {
+export function obtenerNombreGradoInfeccion(gradoInfeccion) {
     /*
     Descripcion:
-    Convierte el valor tecnico del grado en un nombre visible.
+    Obtiene el nombre visible del grado de infeccion.
 
     Parametros:
-    - grado: Valor bajo, medio o alto
+    - gradoInfeccion: Valor del grado de infeccion.
 
     Retorna:
-    - Nombre del grado para mostrar en la respuesta
+    - Nombre visible del grado.
     */
-    let nombre = "Bajo";
-
-    if (grado === "medio") {
-        nombre = "Medio";
+    if (gradoInfeccion === GradoInfeccion.ALTO) {
+        return 'Alto';
     }
 
-    if (grado === "alto") {
-        nombre = "Alto";
+    if (gradoInfeccion === GradoInfeccion.MEDIO) {
+        return 'Medio';
     }
 
-    return nombre;
+    return 'Bajo';
 }
 
-function obtenerNombreParasito(valor) {
+export function obtenerNombreParasito(parasito) {
     /*
     Descripcion:
-    Busca el nombre visible de un parasito usando el catalogo.
+    Obtiene el nombre visible de un parasito.
 
     Parametros:
-    - valor: Valor interno del parasito
+    - parasito: Valor interno del parasito.
 
     Retorna:
-    - Nombre visible del parasito
+    - Nombre visible del parasito.
     */
-    let nombre = valor;
-
-    for (let i = 0; i < PARASITOS_CATALOGO.length; i++) {
-        if (PARASITOS_CATALOGO[i].value === valor) {
-            nombre = PARASITOS_CATALOGO[i].label;
+    for (let i = 0; i < catalogoParasitos.length; i++) {
+        if (catalogoParasitos[i].value === parasito) {
+            return catalogoParasitos[i].label;
         }
     }
 
-    return nombre;
+    return 'Otro';
 }
 
-function construirResumenParasitologias(registros) {
+export function obtenerCatalogoParasitos() {
     /*
     Descripcion:
-    Calcula los totales, promedio y frecuencias de los registros
-    de parasitologias.
+    Obtiene el catalogo de parasitos disponibles.
 
     Parametros:
-    - registros: Lista de registros filtrados
+    No posee.
 
     Retorna:
-    - Objeto resumen del modulo
+    - Lista de parasitos con label y value.
+    */
+    return catalogoParasitos;
+}
+
+export function construirResumenParasitologias(registros) {
+    /*
+    Descripcion:
+    Construye un resumen general de los registros de parasitologias.
+
+    Parametros:
+    - registros: Lista de registros de parasitologias.
+
+    Retorna:
+    - Objeto con totales, promedio y frecuencias.
     */
     const resumen = {
         totalRegistros: registros.length,
@@ -436,7 +358,7 @@ function construirResumenParasitologias(registros) {
         totalCamaronesInfectados: 0,
         promedioInfeccion: 0,
         gradosFrecuentes: [],
-        parasitosFrecuentes: []
+        parasitosFrecuentes: [],
     };
 
     const contadorGrados = {};
@@ -447,12 +369,10 @@ function construirResumenParasitologias(registros) {
         const registro = registros[i];
 
         resumen.totalCamaronesMuestreados =
-            resumen.totalCamaronesMuestreados +
-            Number(registro.camaronesMuestreados);
+            resumen.totalCamaronesMuestreados + Number(registro.camaronesMuestreados);
 
         resumen.totalCamaronesInfectados =
-            resumen.totalCamaronesInfectados +
-            Number(registro.camaronesInfectados);
+            resumen.totalCamaronesInfectados + Number(registro.camaronesInfectados);
 
         sumaPorcentajeInfeccion =
             sumaPorcentajeInfeccion + Number(registro.porcentajeInfeccion);
@@ -472,19 +392,27 @@ function construirResumenParasitologias(registros) {
     return resumen;
 }
 
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+
+Funciones auxiliares utilizadas para construir resumenes.
+*/
+
 function contarValor(contador, valor) {
     /*
     Descripcion:
     Suma una ocurrencia dentro de un objeto contador.
 
     Parametros:
-    - contador: Objeto usado para contar valores
-    - valor: Valor que se desea contar
+    - contador: Objeto donde se almacenan las cantidades.
+    - valor: Valor que se desea contar.
 
     Retorna:
-    - No retorna valor, modifica el contador recibido
+    No retorna valor.
     */
-    if (isEmpty(valor) === true) {
+    if (isEmpty(valor)) {
         return;
     }
 
@@ -498,13 +426,13 @@ function contarValor(contador, valor) {
 function construirListaContador(contador) {
     /*
     Descripcion:
-    Convierte un objeto contador en una lista ordenada por cantidad.
+    Convierte un objeto contador en una lista ordenada.
 
     Parametros:
-    - contador: Objeto con valores y cantidades
+    - contador: Objeto con valores y cantidades.
 
     Retorna:
-    - Arreglo de objetos con valor y cantidad
+    - Lista de objetos con valor y cantidad.
     */
     const lista = [];
     const claves = Object.keys(contador);
@@ -514,7 +442,7 @@ function construirListaContador(contador) {
 
         lista.push({
             valor: clave,
-            cantidad: contador[clave]
+            cantidad: contador[clave],
         });
     }
 
@@ -524,359 +452,3 @@ function construirListaContador(contador) {
 
     return lista;
 }
-
-function crearError(mensaje, status) {
-    /*
-    Descripcion:
-    Crea un error con status HTTP personalizado.
-
-    Parametros:
-    - mensaje: Mensaje del error
-    - status: Codigo HTTP del error
-
-    Retorna:
-    - Objeto Error con propiedad status
-    */
-    const error = new Error(mensaje);
-    error.status = status;
-
-    return error;
-}
-
-function validarCampoObligatorio(valor, campo, errores) {
-    /*
-    Descripcion:
-    Valida que un campo obligatorio tenga contenido.
-
-    Parametros:
-    - valor: Valor recibido
-    - campo: Nombre del campo
-    - errores: Arreglo donde se agregan los errores
-
-    Retorna:
-    - No retorna valor, modifica el arreglo errores
-    */
-    if (isEmpty(valor) === true) {
-        errores.push("El campo " + campo + " es obligatorio");
-    }
-}
-
-function validarTextoValido(valor, campo, errores) {
-    /*
-    Descripcion:
-    Valida que un campo de texto no venga vacio.
-
-    Parametros:
-    - valor: Valor recibido
-    - campo: Nombre del campo
-    - errores: Arreglo donde se agregan los errores
-
-    Retorna:
-    - No retorna valor, modifica el arreglo errores
-    */
-    if (isEmpty(valor) === true) {
-        return;
-    }
-
-    if (String(valor).trim().length < 1) {
-        errores.push("El campo " + campo + " no es valido");
-    }
-}
-
-function validarFechaValida(valor, campo, errores) {
-    /*
-    Descripcion:
-    Valida que una fecha tenga formato yyyy-mm-dd o dd/mm/aaaa.
-
-    Parametros:
-    - valor: Fecha recibida
-    - campo: Nombre del campo
-    - errores: Arreglo donde se agregan los errores
-
-    Retorna:
-    - No retorna valor, modifica el arreglo errores
-    */
-    if (isEmpty(valor) === true) {
-        return;
-    }
-
-    const fechaTexto = String(valor).trim();
-    const patronIso = /^\d{4}-\d{2}-\d{2}$/;
-    const patronLocal = /^\d{2}\/\d{2}\/\d{4}$/;
-
-    if (patronIso.test(fechaTexto) === true) {
-        return;
-    }
-
-    if (patronLocal.test(fechaTexto) === true) {
-        return;
-    }
-
-    errores.push(
-        "El campo " + campo + " debe tener formato yyyy-mm-dd o dd/mm/aaaa"
-    );
-}
-
-function validarNumeroMayorCero(valor, campo, errores) {
-    /*
-    Descripcion:
-    Valida que un campo sea numerico y mayor que cero.
-
-    Parametros:
-    - valor: Valor recibido
-    - campo: Nombre del campo
-    - errores: Arreglo donde se agregan los errores
-
-    Retorna:
-    - No retorna valor, modifica el arreglo errores
-    */
-    if (isEmpty(valor) === true) {
-        errores.push("El campo " + campo + " es obligatorio");
-        return;
-    }
-
-    if (isNumero(valor) === false) {
-        errores.push("El campo " + campo + " debe ser numerico");
-        return;
-    }
-
-    if (Number(valor) <= 0) {
-        errores.push("El campo " + campo + " debe ser mayor a cero");
-    }
-}
-
-function validarNumeroMayorIgualCero(valor, campo, errores) {
-    /*
-    Descripcion:
-    Valida que un campo sea numerico y mayor o igual que cero.
-
-    Parametros:
-    - valor: Valor recibido
-    - campo: Nombre del campo
-    - errores: Arreglo donde se agregan los errores
-
-    Retorna:
-    - No retorna valor, modifica el arreglo errores
-    */
-    if (isEmpty(valor) === true) {
-        errores.push("El campo " + campo + " es obligatorio");
-        return;
-    }
-
-    if (isNumero(valor) === false) {
-        errores.push("El campo " + campo + " debe ser numerico");
-        return;
-    }
-
-    if (Number(valor) < 0) {
-        errores.push("El campo " + campo + " no puede ser negativo");
-    }
-}
-
-function validarInfectadosContraMuestreados(
-    camaronesMuestreados,
-    camaronesInfectados,
-    errores
-) {
-    /*
-    Descripcion:
-    Valida que los camarones infectados no superen los
-    camarones muestreados.
-
-    Parametros:
-    - camaronesMuestreados: Total de camarones revisados
-    - camaronesInfectados: Total de camarones infectados
-    - errores: Arreglo donde se agregan los errores
-
-    Retorna:
-    - No retorna valor, modifica el arreglo errores
-    */
-    if (isNumero(camaronesMuestreados) === false) {
-        return;
-    }
-
-    if (isNumero(camaronesInfectados) === false) {
-        return;
-    }
-
-    if (Number(camaronesInfectados) > Number(camaronesMuestreados)) {
-        errores.push(
-            "Los camarones infectados no pueden ser mayores que los muestreados"
-        );
-    }
-}
-
-function isEmpty(valor) {
-    /*
-    Descripcion:
-    Verifica si un valor esta vacio.
-
-    Parametros:
-    - valor: Valor a revisar
-
-    Retorna:
-    - true si esta vacio, false si tiene contenido
-    */
-    if (valor === undefined) {
-        return true;
-    }
-
-    if (valor === null) {
-        return true;
-    }
-
-    if (String(valor).trim() === "") {
-        return true;
-    }
-
-    return false;
-}
-
-function isIdValido(id) {
-    /*
-    Descripcion:
-    Valida que un id tenga contenido.
-
-    Parametros:
-    - id: Id recibido por parametro
-
-    Retorna:
-    - true si es valido, false si no
-    */
-    if (isEmpty(id) === true) {
-        return false;
-    }
-
-    if (String(id).trim().length < 1) {
-        return false;
-    }
-
-    return true;
-}
-
-function isNumero(valor) {
-    /*
-    Descripcion:
-    Valida que un valor pueda convertirse a numero.
-
-    Parametros:
-    - valor: Valor recibido
-
-    Retorna:
-    - true si es numerico, false si no
-    */
-    const numero = Number(valor);
-
-    if (Number.isNaN(numero) === true) {
-        return false;
-    }
-
-    return true;
-}
-
-function isNumeroMayorCero(valor) {
-    /*
-    Descripcion:
-    Valida que un valor sea numerico y mayor que cero.
-
-    Parametros:
-    - valor: Valor recibido
-
-    Retorna:
-    - true si es valido, false si no
-    */
-    if (isNumero(valor) === false) {
-        return false;
-    }
-
-    if (Number(valor) <= 0) {
-        return false;
-    }
-
-    return true;
-}
-
-function isNumeroMayorIgualCero(valor) {
-    /*
-    Descripcion:
-    Valida que un valor sea numerico y mayor o igual que cero.
-
-    Parametros:
-    - valor: Valor recibido
-
-    Retorna:
-    - true si es valido, false si no
-    */
-    if (isNumero(valor) === false) {
-        return false;
-    }
-
-    if (Number(valor) < 0) {
-        return false;
-    }
-
-    return true;
-}
-
-function isFechaValida(valor) {
-    /*
-    Descripcion:
-    Valida que una fecha tenga formato permitido.
-
-    Parametros:
-    - valor: Fecha recibida
-
-    Retorna:
-    - true si es valida, false si no
-    */
-    const errores = [];
-
-    validarFechaValida(valor, "fecha", errores);
-
-    if (errores.length > 0) {
-        return false;
-    }
-
-    return true;
-}
-
-function isTextoValido(valor) {
-    /*
-    Descripcion:
-    Valida que un texto tenga contenido.
-
-    Parametros:
-    - valor: Texto recibido
-
-    Retorna:
-    - true si es valido, false si no
-    */
-    if (isEmpty(valor) === true) {
-        return false;
-    }
-
-    return true;
-}
-
-/*
-//////////////////////////////////////////////////////////
-EXPORTS
-//////////////////////////////////////////////////////////
-*/
-
-export default {
-    obtenerParasitologias,
-    obtenerParasitologiaPorId,
-    crearParasitologia,
-    actualizarParasitologia,
-    eliminarParasitologia,
-    obtenerResumenParasitologias,
-    obtenerCatalogoParasitos,
-    validarDatosParasitologia,
-    isEmpty,
-    isIdValido,
-    isNumeroMayorCero,
-    isNumeroMayorIgualCero,
-    isFechaValida,
-    isTextoValido
-};

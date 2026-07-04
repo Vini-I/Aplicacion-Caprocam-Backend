@@ -19,22 +19,22 @@ IMPORTS
 Librerias externas
 */
 
-import { Router } from "express";
+import { Router } from 'express';
 
 // Middlewares
-import { verificarAuth } from "../middlewares/auth.middleware.js";
-import { validarBodyParasitologia } from "../middlewares/parasitologias.middleware.js";
+import { verificarAuth }             from '../middlewares/auth.middleware.js';
+import { validarBodyParasitologia }  from '../middlewares/parasitologias.middleware.js';
 
 // Controladores
 import {
-    actualizarParasitologia,
-    crearParasitologia,
-    eliminarParasitologia,
-    obtenerCatalogoParasitos,
-    obtenerParasitologiaPorId,
     obtenerParasitologias,
-    obtenerResumenParasitologias
-} from "../controllers/parasitologias.controller.js";
+    obtenerParasitologiaPorId,
+    crearParasitologia,
+    actualizarParasitologia,
+    eliminarParasitologia,
+    obtenerResumenParasitologias,
+    obtenerCatalogoParasitos,
+} from '../controllers/parasitologias.controller.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -50,13 +50,13 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get("/", verificarAuth, obtenerParasitologias);
-router.get("/resumen", verificarAuth, obtenerResumenParasitologias);
-router.get("/catalogos/parasitos", verificarAuth, obtenerCatalogoParasitos);
-router.get("/:id", verificarAuth, obtenerParasitologiaPorId);
-router.post("/", verificarAuth, validarBodyParasitologia, crearParasitologia);
-router.put("/:id", verificarAuth, validarBodyParasitologia, actualizarParasitologia);
-router.delete("/:id", verificarAuth, eliminarParasitologia);
+router.get('/',                   verificarAuth,                              obtenerParasitologias);
+router.get('/resumen',            verificarAuth,                              obtenerResumenParasitologias);
+router.get('/catalogos/parasitos',verificarAuth,                              obtenerCatalogoParasitos);
+router.get('/:id',                verificarAuth,                              obtenerParasitologiaPorId);
+router.post('/',                  verificarAuth, validarBodyParasitologia,    crearParasitologia);
+router.put('/:id',                verificarAuth, validarBodyParasitologia,    actualizarParasitologia);
+router.delete('/:id',             verificarAuth,                              eliminarParasitologia);
 
 /*
 //////////////////////////////////////////////////////////

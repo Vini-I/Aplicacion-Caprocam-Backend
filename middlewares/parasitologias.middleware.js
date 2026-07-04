@@ -7,8 +7,7 @@ Autor: Andres Gutierrez
 Fecha: 30/06/2026
 Modulo: Parasitologias
 Descripcion:
-Middleware encargado de validar que el body de las peticiones
-POST y PUT del modulo de parasitologias tenga los campos minimos.
+Middleware de validacion de body para parasitologias.
 //////////////////////////////////////////////////////////
 */
 
@@ -20,24 +19,23 @@ IMPORTS
 Common
 */
 
-import { error } from "../common/respuestaJson.js";
+import { error } from '../common/respuestaJson.js';
 
 /*
 //////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
 
-Campos minimos requeridos para crear o actualizar
-un registro de parasitologia.
+Campos minimos requeridos en el body para parasitologias.
 */
 
 const camposRequeridos = [
-    "finca",
-    "estanque",
-    "fechaReporte",
-    "parasito",
-    "camaronesMuestreados",
-    "camaronesInfectados"
+    'finca',
+    'estanque',
+    'fechaReporte',
+    'parasito',
+    'camaronesMuestreados',
+    'camaronesInfectados',
 ];
 
 /*
@@ -45,27 +43,27 @@ const camposRequeridos = [
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
-Contiene los middlewares exportables que se usan en las rutas
-del modulo de parasitologias.
+Contiene los middlewares de validacion de body
+para el modulo de parasitologias.
 */
 
 export function validarBodyParasitologia(req, res, next) {
     /*
     Descripcion:
-    Verifica que el body no este vacio y que tenga los campos
-    requeridos para procesar una parasitologia.
+    Verifica que el body no este vacio y contenga
+    los campos minimos requeridos.
 
     Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
-    - next: Funcion para continuar al controlador
+    - req:  Objeto request de Express
+    - res:  Objeto response de Express
+    - next: Funcion para pasar al siguiente middleware
 
     Retorna:
     - next() si el body es valido
-    - 400 si el body esta vacio o faltan campos requeridos
+    - 400 si el body esta vacio o faltan campos
     */
     if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, "El body no puede estar vacio.", null, 400);
+        return error(res, 'El body no puede estar vacio.', null, 400);
     }
 
     const faltantes = [];
@@ -73,7 +71,7 @@ export function validarBodyParasitologia(req, res, next) {
     for (let i = 0; i < camposRequeridos.length; i++) {
         const campo = camposRequeridos[i];
 
-        if (campoVacio(req.body[campo]) === true) {
+        if (campoVacio(req.body[campo])) {
             faltantes.push(campo);
         }
     }
@@ -81,7 +79,7 @@ export function validarBodyParasitologia(req, res, next) {
     if (faltantes.length > 0) {
         return error(
             res,
-            "Faltan campos requeridos: " + faltantes.join(", ") + ".",
+            `Faltan campos requeridos: ${faltantes.join(', ')}.`,
             null,
             400
         );
@@ -95,19 +93,19 @@ export function validarBodyParasitologia(req, res, next) {
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 
-Funciones internas utilizadas por los middlewares de este archivo.
+Funciones internas del middleware.
 */
 
 function campoVacio(valor) {
     /*
     Descripcion:
-    Verifica si un campo recibido esta vacio.
+    Verifica si un valor esta vacio.
 
     Parametros:
-    - valor: Valor recibido en el body
+    - valor: Valor a revisar.
 
     Retorna:
-    - true si el campo esta vacio, false si tiene contenido
+    - true si esta vacio, false si tiene contenido.
     */
     if (valor === undefined) {
         return true;
@@ -117,7 +115,7 @@ function campoVacio(valor) {
         return true;
     }
 
-    if (String(valor).trim() === "") {
+    if (String(valor).trim().length === 0) {
         return true;
     }
 

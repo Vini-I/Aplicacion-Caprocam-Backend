@@ -8,223 +8,113 @@ Fecha: 30/06/2026
 Modulo: Parasitologias
 Descripcion:
 Archivo de transferencia de datos para parasitologias.
-Transforma, normaliza y prepara los datos de entrada y salida.
+Es un caparazon para almacenar los datos requeridos.
 //////////////////////////////////////////////////////////
 */
 
 /*
 //////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
+ENUM
 //////////////////////////////////////////////////////////
 
-Contiene las funciones exportables que transforman los datos
-recibidos y los datos enviados al cliente.
+Define los valores permitidos para el campo parasito.
 */
 
-export function crearParasitologiaEntradaDTO(body) {
-    /*
-    Descripcion:
-    Normaliza el body recibido antes de crear un registro
-    de parasitologia.
-
-    Parametros:
-    - body: Datos recibidos en el request body
-
-    Retorna:
-    - Objeto normalizado para crear una parasitologia
-    */
-    return construirParasitologiaEntrada(body);
-}
-
-export function actualizarParasitologiaEntradaDTO(body) {
-    /*
-    Descripcion:
-    Normaliza el body recibido antes de actualizar un registro
-    de parasitologia.
-
-    Parametros:
-    - body: Datos recibidos en el request body
-
-    Retorna:
-    - Objeto normalizado para actualizar una parasitologia
-    */
-    return construirParasitologiaEntrada(body);
-}
-
-export function parasitologiaSalidaDTO(registro) {
-    /*
-    Descripcion:
-    Construye el objeto de salida que se enviara al cliente
-    para un solo registro de parasitologia.
-
-    Parametros:
-    - registro: Registro obtenido desde el modelo
-
-    Retorna:
-    - Objeto con los datos visibles para la respuesta JSON
-    */
-    return {
-        id: registro.id,
-        tipoRegistro: registro.tipoRegistro,
-        finca: registro.finca,
-        fincaNombre: registro.fincaNombre,
-        estanque: registro.estanque,
-        fechaReporte: registro.fechaReporte,
-        responsable: registro.responsable,
-        parasito: registro.parasito,
-        parasitoNombre: registro.parasitoNombre,
-        camaronesMuestreados: registro.camaronesMuestreados,
-        camaronesInfectados: registro.camaronesInfectados,
-        porcentajeInfeccion: registro.porcentajeInfeccion,
-        gradoInfeccion: registro.gradoInfeccion,
-        gradoInfeccionNombre: registro.gradoInfeccionNombre,
-        observaciones: registro.observaciones,
-        activo: registro.activo,
-        fechaCreacion: registro.fechaCreacion,
-        fechaActualizacion: registro.fechaActualizacion,
-        fechaEliminacion: registro.fechaEliminacion
-    };
-}
-
-export function listaParasitologiasSalidaDTO(registros) {
-    /*
-    Descripcion:
-    Convierte una lista de registros internos en una lista
-    preparada para la respuesta JSON.
-
-    Parametros:
-    - registros: Arreglo de registros de parasitologias
-
-    Retorna:
-    - Arreglo de registros transformados con parasitologiaSalidaDTO()
-    */
-    const lista = [];
-
-    for (let i = 0; i < registros.length; i++) {
-        lista.push(parasitologiaSalidaDTO(registros[i]));
-    }
-
-    return lista;
-}
-
-export function resumenParasitologiasDTO(resumen) {
-    /*
-    Descripcion:
-    Construye el objeto de salida para el resumen general
-    del modulo de parasitologias.
-
-    Parametros:
-    - resumen: Datos calculados por el servicio
-
-    Retorna:
-    - Objeto con totales, promedio y frecuencias
-    */
-    return {
-        totalRegistros: resumen.totalRegistros,
-        totalCamaronesMuestreados: resumen.totalCamaronesMuestreados,
-        totalCamaronesInfectados: resumen.totalCamaronesInfectados,
-        promedioInfeccion: resumen.promedioInfeccion,
-        gradosFrecuentes: resumen.gradosFrecuentes,
-        parasitosFrecuentes: resumen.parasitosFrecuentes
-    };
-}
+export const ParasitoParasitologia = Object.freeze({
+    GREGARINA:    'gregarina',
+    NEMATODO:     'nematodo',
+    EPICOMENSAL:  'epicomensal',
+    PROTOZOARIO:  'protozoario',
+    OTRO:         'otro',
+});
 
 /*
 //////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
+ENUM
 //////////////////////////////////////////////////////////
 
-Contiene funciones internas para normalizar texto y numeros
-antes de enviarlos al servicio.
+Define los valores permitidos para el grado de infeccion.
 */
 
-function construirParasitologiaEntrada(body) {
-    /*
-    Descripcion:
-    Construye un objeto limpio con los campos permitidos
-    para crear o actualizar una parasitologia.
+export const GradoInfeccion = Object.freeze({
+    BAJO:   'bajo',
+    MEDIO:  'medio',
+    ALTO:   'alto',
+});
 
-    Parametros:
-    - body: Datos recibidos desde el cliente
+/*
+//////////////////////////////////////////////////////////
+DTO
+//////////////////////////////////////////////////////////
 
-    Retorna:
-    - Objeto con campos normalizados
-    */
-    const datos = body || {};
+Caparazon de datos para el modulo de parasitologias.
+*/
 
-    return {
-        finca: normalizarTexto(datos.finca),
-        fincaNombre: normalizarTextoOpcional(datos.fincaNombre),
-        estanque: normalizarTexto(datos.estanque),
-        fechaReporte: normalizarTexto(datos.fechaReporte),
-        responsable: normalizarTextoOpcional(datos.responsable),
-        parasito: normalizarTexto(datos.parasito),
-        camaronesMuestreados: normalizarNumero(datos.camaronesMuestreados),
-        camaronesInfectados: normalizarNumero(datos.camaronesInfectados),
-        observaciones: normalizarTextoOpcional(datos.observaciones)
-    };
-}
+export class ParasitologiaDTO {
+    constructor({
+        id,
+        tipoRegistro,
+        finca,
+        fincaNombre,
+        estanque,
+        fechaReporte,
+        responsable,
+        parasito,
+        parasitoNombre,
+        camaronesMuestreados,
+        camaronesInfectados,
+        porcentajeInfeccion,
+        gradoInfeccion,
+        gradoInfeccionNombre,
+        observaciones,
+        activo,
+        fechaCreacion,
+        fechaActualizacion,
+        fechaEliminacion,
+    }) {
+        /*
+        Descripcion:
+        Construye un objeto ParasitologiaDTO con los datos recibidos.
 
-function normalizarTexto(valor) {
-    /*
-    Descripcion:
-    Convierte un valor obligatorio a texto limpio.
-
-    Parametros:
-    - valor: Valor recibido
-
-    Retorna:
-    - Texto sin espacios al inicio ni al final
-    */
-    if (valor === undefined) {
-        return "";
+        Parametros:
+        - id:                    Identificador unico.
+        - tipoRegistro:          Tipo de registro del modulo.
+        - finca:                 Identificador de la finca.
+        - fincaNombre:           Nombre visible de la finca.
+        - estanque:              Codigo del estanque.
+        - fechaReporte:          Fecha del reporte parasitologico.
+        - responsable:           Persona responsable del reporte.
+        - parasito:              Tipo de parasito encontrado.
+        - parasitoNombre:        Nombre visible del parasito.
+        - camaronesMuestreados:  Cantidad de camarones revisados.
+        - camaronesInfectados:   Cantidad de camarones infectados.
+        - porcentajeInfeccion:   Porcentaje calculado de infeccion.
+        - gradoInfeccion:        Nivel de infeccion calculado.
+        - gradoInfeccionNombre:  Nombre visible del grado de infeccion.
+        - observaciones:         Comentarios adicionales.
+        - activo:                Estado logico del registro.
+        - fechaCreacion:         Fecha de creacion.
+        - fechaActualizacion:    Fecha de ultima actualizacion.
+        - fechaEliminacion:      Fecha de eliminacion logica.
+        */
+        this.id                   = id;
+        this.tipoRegistro         = tipoRegistro;
+        this.finca                = finca;
+        this.fincaNombre          = fincaNombre;
+        this.estanque             = estanque;
+        this.fechaReporte         = fechaReporte;
+        this.responsable          = responsable;
+        this.parasito             = parasito;
+        this.parasitoNombre       = parasitoNombre;
+        this.camaronesMuestreados = camaronesMuestreados;
+        this.camaronesInfectados  = camaronesInfectados;
+        this.porcentajeInfeccion  = porcentajeInfeccion;
+        this.gradoInfeccion       = gradoInfeccion;
+        this.gradoInfeccionNombre = gradoInfeccionNombre;
+        this.observaciones        = observaciones;
+        this.activo               = activo;
+        this.fechaCreacion        = fechaCreacion;
+        this.fechaActualizacion   = fechaActualizacion;
+        this.fechaEliminacion     = fechaEliminacion;
     }
-
-    if (valor === null) {
-        return "";
-    }
-
-    return String(valor).trim();
-}
-
-function normalizarTextoOpcional(valor) {
-    /*
-    Descripcion:
-    Convierte un valor opcional a texto limpio.
-
-    Parametros:
-    - valor: Valor recibido
-
-    Retorna:
-    - Texto limpio o cadena vacia si no se envio
-    */
-    if (valor === undefined) {
-        return "";
-    }
-
-    if (valor === null) {
-        return "";
-    }
-
-    return String(valor).trim();
-}
-
-function normalizarNumero(valor) {
-    /*
-    Descripcion:
-    Convierte un valor recibido a numero.
-
-    Parametros:
-    - valor: Valor recibido
-
-    Retorna:
-    - Numero convertido o 0 si no es numerico
-    */
-    const numero = Number(valor);
-
-    if (Number.isNaN(numero) === true) {
-        return 0;
-    }
-
-    return numero;
 }
