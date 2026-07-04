@@ -439,3 +439,57 @@ Respuesta de error (Peso invalido):
     "message": "El peso actual debe ser un numero mayor que cero.",
     "error": null
 }
+
+# Raleo
+
+## GET /api/v1/raleo/
+Obtiene todos los raleos
+{
+    "success": true,
+    "message": "Raleos obtenidos correctamente.",
+    "data": [ ... ]
+}
+
+---
+
+## GET /api/v1/raleo/1
+Obtiene el raleo con id 1
+{
+    "success": true,
+    "message": "Raleo obtenido correctamente.",
+    "data": [ ... ]
+}
+
+---
+
+---
+
+## POST /api/v1/raleo/
+crea un objeto raleo
+ejemplo con JSON:
+{
+  "idFinca": 3,
+  "idEstanque": 2,
+  "idResponsable": 1,
+  "fecha": "05/07/2026",
+  "porcentaje": 30,
+  "pesoEstimado": 0.35,
+  "biomasaEstimado": 18,
+  "objetivo": "Traslado a otro estanque",
+  "metodo": "Atarraya",
+  "notas": "Raleo realizado sin inconvenientes."
+}
+Respuesta:
+{
+    "success": true,
+    "message": "Raleo creado correctamente.",
+    "data": [ ... ]
+}
+
+## DELETE /api/v1/raleo/3
+Elimina el raleo con id 3
+{
+    "success": true,
+    "message": "Raleo eliminado correctamente.",
+    "data": [ ... ]
+}
