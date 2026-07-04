@@ -9,7 +9,6 @@ Modulo: Proveedores
 Descripcion:
 Capa de datos del modulo de proveedores.
 Por ahora trabaja con datos mock en memoria.
-Cuando haya DB, solo este archivo cambia.
 //////////////////////////////////////////////////////////
 */
 
@@ -17,8 +16,6 @@ Cuando haya DB, solo este archivo cambia.
 //////////////////////////////////////////////////////////
 MOCK DATA
 //////////////////////////////////////////////////////////
-Datos de prueba que simulan la base de datos.
-Cuando se conecte una DB real, esta seccion desaparece.
 */
 
 let proveedores = [
@@ -39,7 +36,7 @@ let proveedores = [
         telefono: "+506 2566-7788",
         correo: "contacto@farmamar.com",
         direccion: "San José, Costa Rica",
-        notas: "Antibióticos y probióticos aprobados",
+        notes: "Antibióticos y probióticos aprobados",
         activo: true
     },
     {
@@ -58,35 +55,13 @@ let proveedores = [
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-Contiene las funciones exportables que interactuan
-con la fuente de datos del modulo de proveedores.
 */
 
 export function findAll() {
-    /*
-    Descripcion:
-    Obtiene todos los proveedores activos.
-
-    Parametros:
-    No posee.
-
-    Retorna:
-    - Lista de proveedores activos.
-    */
     return proveedores.filter(p => p.activo === true);
 }
 
 export function findById(id) {
-    /*
-    Descripcion:
-    Busca un proveedor activo por su ID.
-
-    Parametros:
-    - id: ID del proveedor a buscar.
-
-    Retorna:
-    - El proveedor encontrado, o null si no existe o esta inactivo.
-    */
     const proveedor = proveedores.find(p => p.id === Number(id));
     if (!proveedor || proveedor.activo === false) {
         return null;
@@ -95,35 +70,25 @@ export function findById(id) {
 }
 
 export function findByName(nombre) {
-    /*
-    Descripcion:
-    Busca un proveedor activo por su nombre.
-
-    Parametros:
-    - nombre: Nombre del proveedor a buscar.
-
-    Retorna:
-    - El proveedor encontrado, o null si no existe.
-    */
     const nombreNormalizado = nombre.toLowerCase().trim();
     return proveedores.find(p => 
         p.nombre.toLowerCase().trim() === nombreNormalizado && p.activo === true
     ) || null;
 }
 
-export function create(datos) {
-    /*
-    Descripcion:
-    Crea un nuevo proveedor y lo guarda en la lista.
+export function findByNameIgnorandoId(nombre, idIgnorado) {
+    const nombreNormalizado = nombre.toLowerCase().trim();
+    const numeroIgnorado = Number(idIgnorado);
+    return proveedores.find(p => 
+        p.nombre.toLowerCase().trim() === nombreNormalizado && 
+        p.activo === true && 
+        p.id !== numeroIgnorado
+    ) || null;
+}
 
-    Parametros:
-    - datos: Objeto con los datos del proveedor a crear.
-
-    Retorna:
-    - nuevo: El proveedor recien creado.
-    */
+export function create(dto) {
     const nuevo = {
-        ...datos,
+        ...dto,
         id: proveedores.length + 1,
         activo: true
     };
@@ -131,46 +96,23 @@ export function create(datos) {
     return nuevo;
 }
 
-export function update(id, datos) {
-    /*
-    Descripcion:
-    Actualiza un proveedor activo existente por su ID.
-
-    Parametros:
-    - id: ID del proveedor a actualizar.
-    - datos: Objeto con los nuevos datos.
-
-    Retorna:
-    - El proveedor actualizado, o null si no existe.
-    */
+export function update(id, dto) {
     const index = proveedores.findIndex(p => p.id === Number(id));
     if (index === -1 || proveedores[index].activo === false) {
         return null;
     }
-
     proveedores[index] = {
         ...proveedores[index],
-        ...datos
+        ...dto
     };
     return proveedores[index];
 }
 
 export function remove(id) {
-    /*
-    Descripcion:
-    Realiza un borrado logico de un proveedor cambiandolo a inactivo.
-
-    Parametros:
-    - id: ID del proveedor a desactivar.
-
-    Retorna:
-    - El proveedor desactivado, o null si no existe.
-    */
     const index = proveedores.findIndex(p => p.id === Number(id));
     if (index === -1 || proveedores[index].activo === false) {
         return null;
     }
-
     proveedores[index].activo = false;
     return proveedores[index];
 }

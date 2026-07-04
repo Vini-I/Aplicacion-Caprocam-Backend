@@ -7,7 +7,8 @@ Autor: Joan
 Fecha: 29/06/2026
 Modulo: Proveedores
 Descripcion:
-Recibe las peticiones HTTP de proveedores y delega al servicio.
+Recibe las peticiones HTTP, delega al modelo,
+y devuelve la respuesta al cliente.
 //////////////////////////////////////////////////////////
 */
 
@@ -17,8 +18,78 @@ IMPORTS
 //////////////////////////////////////////////////////////
 */
 
-import * as proveedorService from "../services/proveedor.service.js";
+// DTOs
+import { proveedorDto, tipoProductos, proveedorDTO, proveedoresDTO } from "../dtos/proveedor.dto.js";
+
+// Servicios (Validaciones)
+import {
+    isEmpty,
+    isTelefonoValido,
+    isCorreoValido,
+    isTipoProductoValido,
+    isIdValido
+} from "../services/proveedor.service.js";
+
+// Modelos
+import * as proveedorModel from "../models/proveedor.model.js";
+
+// Common
 import { exito, error } from "../common/respuestaJson.js";
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+*/
+
+function validarCuerpo(body, res) {
+    const errores = [];
+
+    if (isEmpty(body.nombre)) {
+        errores.push("El campo nombre es requerido.");
+    }
+    if (isEmpty(body.tipoProducto)) {
+        errores.push("El campo tipoProducto es requerido.");
+    }
+    if (isEmpty(body.telefono)) {
+        errores.push("El campo telefono es requerido.");
+    }
+    if (!isEmpty(body.telefono) && !isTelefonoValido(body.telefono)) {
+        errores.push("Formato de telefono invalido. Debe ser: +506 XXXX-XXXX");
+    }
+    if (!isEmpty(body.correo) && !isCorreoValido(body.correo)) {
+        errores.push("Formato de correo electronico invalido.");
+    }
+    if (!isEmpty(body.tipoProducto) && !isTipoProductoValido(body.tipoProducto)) {
+        errores.push(
+            "Tipo de producto invalido. Opciones: " +
+                Object.values(tipoProductos).join(", ")
+        );
+    }
+
+    if (errores.length > 0) {
+        return error(res, "Datos invalidos para el proveedor.", errores, 422);
+    }
+    return null;
+}
+
+function validarIdParametro(id, res) {
+    if (!isIdValido(id)) {
+        return error(res, "El id debe ser numerico y mayor que cero.", null, 400);
+    }
+    return null;
+}
+
+function generarIniciales(nombre) {
+    if (!nombre) return "";
+    return nombre
+        .split(" ")
+        .filter(word => word.length > 0)
+        .map(word => word[0])
+        .join("")
+        .toUpperCase()
+        .substring(0, 3);
+}
 
 /*
 //////////////////////////////////////////////////////////
@@ -27,96 +98,108 @@ FUNCIONES PRINCIPALES
 */
 
 export function listarProveedores(req, res) {
-    /*
-    Descripcion:
-    Controlador para obtener todos los proveedores activos.
-
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
-    */
-    const proveedores = proveedorService.listarProveedores();
-    return exito(res, "Proveedores obtenidos correctamente.", proveedores, 200);
+    const proveedores = proveedorModel.findAll();
+    return exito(
+        res,
+        "Proveedores obtenidos correctamente.",
+        proveedoresDTO(proveedores)
+    );
 }
 
 export function obtenerProveedor(req, res) {
-    /*
-    Descripcion:
-    Controlador para obtener un proveedor activo por su ID.
+    const errId = validarIdParametro(req.params.id, res);
+    if (errId) return errId;
 
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
-    */
-    const { id } = req.params;
-    const proveedor = proveedorService.obtenerProveedor(id);
-
+    const proveedor = proveedorModel.findById(req.params.id);
     if (!proveedor) {
         return error(res, "Proveedor no encontrado.", null, 404);
     }
 
-    return exito(res, "Proveedor obtenido correctamente.", proveedor, 200);
+    return exito(
+        res,
+        "Proveedor obtenido correctamente.",
+        proveedorDTO(proveedor)
+    );
 }
 
 export function crearProveedor(req, res) {
-    /*
-    Descripcion:
-    Controlador para crear un nuevo proveedor.
+    const err = validarCuerpo(req.body, res);
+    if (err) return err;
 
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
-    */
-    try {
-        const creado = proveedorService.crearProveedor(req.body);
-        return exito(res, "Proveedor creado correctamente.", creado, 201);
-    } catch (err) {
-        return error(res, "Error al crear el proveedor.", err.message, 400);
+    const existente = proveedorModel.findByName(req.body.nombre);
+    if (existente) {
+        return error(
+            res,
+            "Ya existe un proveedor con ese nombre.",
+            null,
+            409
+        );
     }
+
+    const iniciales = generarIniciales(req.body.nombre);
+    const bodyConIniciales = { ...req.body, iniciales };
+
+    const dto = new proveedorDto(bodyConIniciales);
+    const nuevo = proveedorModel.create(dto);
+
+    return exito(
+        res,
+        "Proveedor creado correctamente.",
+        proveedorDTO(nuevo),
+        201
+    );
 }
 
 export function actualizarProveedor(req, res) {
-    /*
-    Descripcion:
-    Controlador para actualizar un proveedor existente.
+    const errId = validarIdParametro(req.params.id, res);
+    if (errId) return errId;
 
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
-    */
-    try {
-        const { id } = req.params;
-        const actualizado = proveedorService.actualizarProveedor(id, req.body);
-        
-        if (!actualizado) {
-            return error(res, "Proveedor no encontrado.", null, 404);
-        }
+    const err = validarCuerpo(req.body, res);
+    if (err) return err;
 
-        return exito(
-            res,
-            "Proveedor actualizado correctamente.",
-            actualizado,
-            200
-        );
-    } catch (err) {
-        return error(res, "Error al actualizar el proveedor.", err.message, 400);
+    const proveedorActual = proveedorModel.findById(req.params.id);
+    if (!proveedorActual) {
+        return error(res, "Proveedor no encontrado.", null, 404);
     }
+
+    const existente = proveedorModel.findByNameIgnorandoId(
+        req.body.nombre,
+        req.params.id
+    );
+    if (existente) {
+        return error(
+            res,
+            "Ya existe otro proveedor con ese nombre.",
+            null,
+            409
+        );
+    }
+
+    const iniciales = generarIniciales(req.body.nombre);
+    const bodyConIniciales = { ...req.body, iniciales };
+
+    const dto = new proveedorDto(bodyConIniciales);
+    const actualizado = proveedorModel.update(req.params.id, dto);
+
+    return exito(
+        res,
+        "Proveedor actualizado correctamente.",
+        proveedorDTO(actualizado)
+    );
 }
 
 export function eliminarProveedor(req, res) {
-    /*
-    Descripcion:
-    Controlador para desactivar (borrado logico) un proveedor.
+    const errId = validarIdParametro(req.params.id, res);
+    if (errId) return errId;
 
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
-    */
-    try {
-        const { id } = req.params;
-        const eliminado = proveedorService.eliminarProveedor(id);
-        return exito(res, "Proveedor eliminado correctamente.", eliminado, 200);
-    } catch (err) {
-        return error(res, "Error al eliminar el proveedor.", err.message, 400);
+    const eliminado = proveedorModel.remove(req.params.id);
+    if (!eliminado) {
+        return error(res, "Proveedor no encontrado.", null, 404);
     }
+
+    return exito(
+        res,
+        "Proveedor eliminado correctamente.",
+        proveedorDTO(eliminado)
+    );
 }
