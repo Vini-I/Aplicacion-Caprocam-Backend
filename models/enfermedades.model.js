@@ -7,60 +7,72 @@ Autor: Isaac
 Fecha: 03/07/2026
 Modulo: Enfermedades
 Descripcion:
-Modelo encargado de manejar los datos del modulo de
-enfermedades.
-Actualmente trabaja con datos mock locales en memoria.
+Capa de datos del modulo de enfermedades.
+Por ahora trabaja con datos mock. Cuando haya DB,
+solo este archivo cambia.
 //////////////////////////////////////////////////////////
 */
 
 /*
 //////////////////////////////////////////////////////////
-DATOS MOCK LOCALES
+IMPORTS
 //////////////////////////////////////////////////////////
 
-Contiene registros temporales para probar el modulo sin base
-de datos.
+DTOs
+*/
+
+import { TipoEnfermedad, SeveridadEnfermedad } from '../dtos/enfermedades.dto.js';
+
+/*
+//////////////////////////////////////////////////////////
+MOCK DATA
+//////////////////////////////////////////////////////////
+
+Datos de prueba que simulan la base de datos.
+Cuando se conecte una DB real, esta seccion desaparece.
 */
 
 let siguienteId = 3;
 
-let enfermedadesMock = [
+let enfermedades = [
     {
-        id: "1",
-        tipoRegistro: "enfermedad",
-        finca: "1",
-        fincaNombre: "Finca La Reina",
-        estanque: "EST-001",
-        fechaReporte: "27/06/2026",
-        responsable: "Isaac",
-        enfermedades: ["wssv", "vibriosis"],
-        severidad: "media",
-        severidadNombre: "Media",
-        mortalidad: 2,
-        reporte: "Caso mock con sintomas leves y seguimiento sanitario.",
-        activo: true,
-        fechaCreacion: "2026-06-27T00:00:00.000Z",
-        fechaActualizacion: "2026-06-27T00:00:00.000Z",
-        fechaEliminacion: null
+        id:                   1,
+        tipoRegistro:         'enfermedad',
+        finca:                '1',
+        fincaNombre:          'Finca La Reina',
+        estanque:             'EST-001',
+        fechaReporte:         '2026-06-27',
+        responsable:          'Isaac',
+        enfermedades:         [TipoEnfermedad.WSSV, TipoEnfermedad.VIBRIOSIS],
+        enfermedadesNombre:   ['WSSV - Mancha Blanca', 'Vibriosis'],
+        severidad:            SeveridadEnfermedad.MEDIA,
+        severidadNombre:      'Media',
+        mortalidad:           2,
+        reporte:              'Caso mock con sintomas leves y seguimiento sanitario.',
+        activo:               true,
+        fechaCreacion:        '2026-06-27T00:00:00.000Z',
+        fechaActualizacion:   '2026-06-27T00:00:00.000Z',
+        fechaEliminacion:     null,
     },
     {
-        id: "2",
-        tipoRegistro: "enfermedad",
-        finca: "2",
-        fincaNombre: "Finca La Esperanza",
-        estanque: "EST-002",
-        fechaReporte: "28/06/2026",
-        responsable: "Maria",
-        enfermedades: ["nhp"],
-        severidad: "alta",
-        severidadNombre: "Alta",
-        mortalidad: 5,
-        reporte: "Caso mock con mortalidad registrada y observacion activa.",
-        activo: true,
-        fechaCreacion: "2026-06-28T00:00:00.000Z",
-        fechaActualizacion: "2026-06-28T00:00:00.000Z",
-        fechaEliminacion: null
-    }
+        id:                   2,
+        tipoRegistro:         'enfermedad',
+        finca:                '2',
+        fincaNombre:          'Finca La Esperanza',
+        estanque:             'EST-002',
+        fechaReporte:         '2026-06-28',
+        responsable:          'Maria',
+        enfermedades:         [TipoEnfermedad.NHP],
+        enfermedadesNombre:   ['NHP - Hepatobacter penaei'],
+        severidad:            SeveridadEnfermedad.ALTA,
+        severidadNombre:      'Alta',
+        mortalidad:           5,
+        reporte:              'Caso mock con mortalidad registrada y observacion activa.',
+        activo:               true,
+        fechaCreacion:        '2026-06-28T00:00:00.000Z',
+        fechaActualizacion:   '2026-06-28T00:00:00.000Z',
+        fechaEliminacion:     null,
+    },
 ];
 
 /*
@@ -68,47 +80,57 @@ let enfermedadesMock = [
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
-Contiene las funciones usadas por el service para consultar,
-crear, actualizar y eliminar registros.
+Contiene las funciones exportables que interactuan
+con la fuente de datos mock del modulo de enfermedades.
 */
 
-async function obtenerEnfermedades(filtros) {
+export function findAll(filtros) {
     /*
     Descripcion:
-    Obtiene registros activos de enfermedades y aplica filtros.
+    Obtiene todos los registros activos de enfermedades.
+    Permite aplicar filtros opcionales.
 
     Parametros:
-    - filtros: Objeto con filtros opcionales
+    - filtros: Objeto con filtros de busqueda.
 
     Retorna:
-    - Lista de registros activos
+    - Lista con los registros encontrados.
     */
 
-    let registros = obtenerActivos();
+    const resultado = [];
 
-    registros = aplicarFiltros(registros, filtros);
+    for (let i = 0; i < enfermedades.length; i++) {
+        const registro = enfermedades[i];
 
-    return registros;
+        if (registro.activo === true) {
+            if (coincideConFiltros(registro, filtros)) {
+                resultado.push(registro);
+            }
+        }
+    }
+
+    return resultado;
 }
 
-async function obtenerEnfermedadPorId(id) {
+export function findById(id) {
     /*
     Descripcion:
-    Busca un registro activo por id.
+    Busca un registro de enfermedad por su ID.
 
     Parametros:
-    - id: Identificador del registro
+    - id: ID del registro a buscar.
 
     Retorna:
-    - Registro encontrado o null
+    - El registro encontrado.
+    - null si no existe o esta inactivo.
     */
 
-    const idBuscado = String(id);
+    for (let i = 0; i < enfermedades.length; i++) {
+        const registro = enfermedades[i];
 
-    for (let i = 0; i < enfermedadesMock.length; i++) {
-        if (enfermedadesMock[i].id === idBuscado) {
-            if (enfermedadesMock[i].activo === true) {
-                return enfermedadesMock[i];
+        if (registro.id === Number(id)) {
+            if (registro.activo === true) {
+                return registro;
             }
         }
     }
@@ -116,143 +138,103 @@ async function obtenerEnfermedadPorId(id) {
     return null;
 }
 
-async function crearEnfermedad(datos) {
+export function create(dto) {
     /*
     Descripcion:
-    Crea un nuevo registro mock en memoria.
+    Agrega un nuevo registro de enfermedad a la lista mock.
 
     Parametros:
-    - datos: Datos preparados por el service
+    - dto: Objeto EnfermedadDTO con los datos del nuevo registro.
 
     Retorna:
-    - Registro creado
+    - nuevo: El registro recien creado con su ID asignado.
     */
 
     const fechaActual = new Date().toISOString();
-    const idNuevo = String(siguienteId);
 
-    const nuevoRegistro = {
-        id: idNuevo,
-        tipoRegistro: "enfermedad",
-        finca: datos.finca,
-        fincaNombre: datos.fincaNombre,
-        estanque: datos.estanque,
-        fechaReporte: datos.fechaReporte,
-        responsable: datos.responsable,
-        enfermedades: datos.enfermedades,
-        severidad: datos.severidad,
-        severidadNombre: datos.severidadNombre,
-        mortalidad: datos.mortalidad,
-        reporte: datos.reporte,
-        activo: true,
-        fechaCreacion: fechaActual,
+    const nuevo = {
+        ...dto,
+        id:                 siguienteId,
+        activo:             true,
+        fechaCreacion:      fechaActual,
         fechaActualizacion: fechaActual,
-        fechaEliminacion: null
+        fechaEliminacion:   null,
     };
 
     siguienteId = siguienteId + 1;
-    enfermedadesMock.push(nuevoRegistro);
+    enfermedades.push(nuevo);
 
-    return nuevoRegistro;
+    return nuevo;
 }
 
-async function actualizarEnfermedad(id, datos) {
+export function update(id, dto) {
     /*
     Descripcion:
-    Actualiza un registro mock existente.
+    Actualiza un registro de enfermedad existente por su ID.
 
     Parametros:
-    - id: Identificador del registro
-    - datos: Datos nuevos del registro
+    - id:  ID del registro a actualizar.
+    - dto: Objeto EnfermedadDTO con los nuevos datos.
 
     Retorna:
-    - Registro actualizado o null
+    - El registro actualizado.
+    - null si no existe o esta inactivo.
     */
 
-    const indice = buscarIndicePorId(id);
+    const index = buscarIndicePorId(id);
 
-    if (indice === -1) {
+    if (index === -1) {
         return null;
     }
 
-    if (enfermedadesMock[indice].activo === false) {
+    if (enfermedades[index].activo === false) {
         return null;
     }
 
     const fechaActual = new Date().toISOString();
 
-    const actualizado = {
-        id: String(id),
-        tipoRegistro: "enfermedad",
-        finca: datos.finca,
-        fincaNombre: datos.fincaNombre,
-        estanque: datos.estanque,
-        fechaReporte: datos.fechaReporte,
-        responsable: datos.responsable,
-        enfermedades: datos.enfermedades,
-        severidad: datos.severidad,
-        severidadNombre: datos.severidadNombre,
-        mortalidad: datos.mortalidad,
-        reporte: datos.reporte,
-        activo: true,
-        fechaCreacion: enfermedadesMock[indice].fechaCreacion,
+    enfermedades[index] = {
+        ...enfermedades[index],
+        ...dto,
+        id:                 Number(id),
+        activo:             true,
         fechaActualizacion: fechaActual,
-        fechaEliminacion: null
+        fechaEliminacion:   null,
     };
 
-    enfermedadesMock[indice] = actualizado;
-
-    return actualizado;
+    return enfermedades[index];
 }
 
-async function eliminarEnfermedad(id) {
+export function remove(id) {
     /*
     Descripcion:
-    Realiza borrado logico de un registro.
+    Elimina logicamente un registro de enfermedad por su ID.
 
     Parametros:
-    - id: Identificador del registro
+    - id: ID del registro a eliminar.
 
     Retorna:
-    - Registro marcado como inactivo o null
+    - El registro eliminado logicamente.
+    - null si no existe o ya estaba inactivo.
     */
 
-    const indice = buscarIndicePorId(id);
+    const index = buscarIndicePorId(id);
 
-    if (indice === -1) {
+    if (index === -1) {
         return null;
     }
 
-    if (enfermedadesMock[indice].activo === false) {
+    if (enfermedades[index].activo === false) {
         return null;
     }
 
     const fechaActual = new Date().toISOString();
 
-    enfermedadesMock[indice].activo = false;
-    enfermedadesMock[indice].fechaActualizacion = fechaActual;
-    enfermedadesMock[indice].fechaEliminacion = fechaActual;
+    enfermedades[index].activo = false;
+    enfermedades[index].fechaActualizacion = fechaActual;
+    enfermedades[index].fechaEliminacion = fechaActual;
 
-    return enfermedadesMock[indice];
-}
-
-async function limpiarEnfermedades() {
-    /*
-    Descripcion:
-    Limpia todos los registros mock activos.
-    Esta funcion es solo para pruebas locales.
-
-    Parametros:
-    No posee
-
-    Retorna:
-    - Lista vacia
-    */
-
-    enfermedadesMock = [];
-    siguienteId = 1;
-
-    return enfermedadesMock;
+    return enfermedades[index];
 }
 
 /*
@@ -260,117 +242,24 @@ async function limpiarEnfermedades() {
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 
-Funciones internas usadas por las funciones principales.
+Funciones internas de busqueda y filtrado.
 */
 
-// obtenerEnfermedades() depende de esta funcion
-function obtenerActivos() {
-    /*
-    Descripcion:
-    Obtiene solo registros activos.
-
-    Parametros:
-    No posee
-
-    Retorna:
-    - Lista de registros activos
-    */
-
-    const activos = [];
-
-    for (let i = 0; i < enfermedadesMock.length; i++) {
-        if (enfermedadesMock[i].activo === true) {
-            activos.push(enfermedadesMock[i]);
-        }
-    }
-
-    return activos;
-}
-
-// obtenerEnfermedades() depende de esta funcion
-function aplicarFiltros(registros, filtros) {
-    /*
-    Descripcion:
-    Aplica filtros opcionales sobre los registros.
-
-    Parametros:
-    - registros: Lista base
-    - filtros: Filtros opcionales
-
-    Retorna:
-    - Lista filtrada
-    */
-
-    let resultado = registros;
-
-    if (filtros === undefined) {
-        return resultado;
-    }
-
-    if (filtros === null) {
-        return resultado;
-    }
-
-    resultado = filtrarPorCampo(resultado, "finca", filtros.finca);
-    resultado = filtrarPorCampo(resultado, "estanque", filtros.estanque);
-    resultado = filtrarPorCampo(resultado, "severidad", filtros.severidad);
-    resultado = filtrarPorCampo(
-        resultado,
-        "fechaReporte",
-        filtros.fechaReporte
-    );
-
-    return resultado;
-}
-
-// aplicarFiltros() depende de esta funcion
-function filtrarPorCampo(registros, campo, valor) {
-    /*
-    Descripcion:
-    Filtra una lista por campo cuando el valor existe.
-
-    Parametros:
-    - registros: Lista de registros
-    - campo: Campo del objeto
-    - valor: Valor buscado
-
-    Retorna:
-    - Lista filtrada
-    */
-
-    if (valorEstaVacio(valor) === true) {
-        return registros;
-    }
-
-    const resultado = [];
-    const valorBuscado = String(valor);
-
-    for (let i = 0; i < registros.length; i++) {
-        if (String(registros[i][campo]) === valorBuscado) {
-            resultado.push(registros[i]);
-        }
-    }
-
-    return resultado;
-}
-
-// actualizarEnfermedad() y eliminarEnfermedad() dependen de esta funcion
 function buscarIndicePorId(id) {
     /*
     Descripcion:
-    Busca el indice de un registro por id.
+    Busca el indice de un registro por su ID.
 
     Parametros:
-    - id: Identificador del registro
+    - id: ID del registro.
 
     Retorna:
-    - Indice encontrado o -1
+    - Indice encontrado.
+    - -1 si no existe.
     */
 
-    const idBuscado = String(id);
-
-    for (let i = 0; i < enfermedadesMock.length; i++) {
-        if (enfermedadesMock[i].id === idBuscado) {
+    for (let i = 0; i < enfermedades.length; i++) {
+        if (enfermedades[i].id === Number(id)) {
             return i;
         }
     }
@@ -378,46 +267,72 @@ function buscarIndicePorId(id) {
     return -1;
 }
 
-// aplicarFiltros() depende de esta funcion
-function valorEstaVacio(valor) {
+function coincideConFiltros(registro, filtros) {
     /*
     Descripcion:
-    Revisa si un valor viene vacio.
+    Verifica si un registro coincide con los filtros recibidos.
 
     Parametros:
-    - valor: Valor recibido
+    - registro: Registro a evaluar.
+    - filtros: Objeto con filtros.
 
     Retorna:
-    - true si esta vacio
-    - false si tiene informacion
+    - true si coincide.
+    - false si no coincide.
     */
 
-    if (valor === undefined) {
+    if (!filtros) {
         return true;
     }
 
-    if (valor === null) {
+    if (!coincideFiltro(registro.finca, filtros.finca)) {
+        return false;
+    }
+
+    if (!coincideFiltro(registro.estanque, filtros.estanque)) {
+        return false;
+    }
+
+    if (!coincideFiltro(registro.severidad, filtros.severidad)) {
+        return false;
+    }
+
+    if (!coincideFiltro(registro.fechaReporte, filtros.fechaReporte)) {
+        return false;
+    }
+
+    return true;
+}
+
+function coincideFiltro(valorRegistro, valorFiltro) {
+    /*
+    Descripcion:
+    Compara un valor del registro con un filtro opcional.
+
+    Parametros:
+    - valorRegistro: Valor almacenado en el registro.
+    - valorFiltro: Valor recibido como filtro.
+
+    Retorna:
+    - true si el filtro esta vacio o si coincide.
+    - false si no coincide.
+    */
+
+    if (valorFiltro === undefined) {
         return true;
     }
 
-    if (String(valor).trim() === "") {
+    if (valorFiltro === null) {
+        return true;
+    }
+
+    if (String(valorFiltro).trim().length === 0) {
+        return true;
+    }
+
+    if (String(valorRegistro) === String(valorFiltro)) {
         return true;
     }
 
     return false;
 }
-
-/*
-//////////////////////////////////////////////////////////
-EXPORTS
-//////////////////////////////////////////////////////////
-*/
-
-export default {
-    obtenerEnfermedades,
-    obtenerEnfermedadPorId,
-    crearEnfermedad,
-    actualizarEnfermedad,
-    eliminarEnfermedad,
-    limpiarEnfermedades
-};

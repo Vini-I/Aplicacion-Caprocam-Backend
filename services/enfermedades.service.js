@@ -7,8 +7,12 @@ Autor: Isaac
 Fecha: 03/07/2026
 Modulo: Enfermedades
 Descripcion:
-Servicio encargado de manejar la logica de negocio del
-modulo de enfermedades.
+Define las reglas de negocio, validaciones, catalogos y
+calculos del modulo de enfermedades.
+
+Importante:
+Este archivo NO debe usar el modelo. El acceso al modelo
+se realiza desde el controller.
 //////////////////////////////////////////////////////////
 */
 
@@ -16,507 +20,431 @@ modulo de enfermedades.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
+
+DTOs
 */
 
-// Modelos
-import enfermedadesModel from "../models/enfermedades.model.js";
-
-// DTOs
-import {
-    enfermedadSalidaDTO,
-    listaEnfermedadesSalidaDTO,
-    resumenEnfermedadesDTO
-} from "../dtos/enfermedades.dto.js";
+import { TipoEnfermedad, SeveridadEnfermedad } from '../dtos/enfermedades.dto.js';
 
 /*
 //////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
 
-Catalogos locales del modulo.
+Catalogos visibles del modulo de enfermedades.
 */
 
-const ENFERMEDADES_CATALOGO = [
+const catalogoEnfermedades = [
     {
-        label: "WSSV - Mancha Blanca",
-        value: "wssv",
-        tipo: "viral"
+        label: 'WSSV - Mancha Blanca',
+        value: TipoEnfermedad.WSSV,
+        tipo: 'viral',
     },
     {
-        label: "AHPND - Necrosis hepatopancreatica aguda",
-        value: "ahpnd",
-        tipo: "bacteriana"
+        label: 'AHPND - Necrosis hepatopancreatica aguda',
+        value: TipoEnfermedad.AHPND,
+        tipo: 'bacteriana',
     },
     {
-        label: "Vibriosis",
-        value: "vibriosis",
-        tipo: "bacteriana"
+        label: 'Vibriosis',
+        value: TipoEnfermedad.VIBRIOSIS,
+        tipo: 'bacteriana',
     },
     {
-        label: "IHHNV",
-        value: "ihhnv",
-        tipo: "viral"
+        label: 'IHHNV',
+        value: TipoEnfermedad.IHHNV,
+        tipo: 'viral',
     },
     {
-        label: "NHP - Hepatobacter penaei",
-        value: "nhp",
-        tipo: "bacteriana"
+        label: 'NHP - Hepatobacter penaei',
+        value: TipoEnfermedad.NHP,
+        tipo: 'bacteriana',
     },
     {
-        label: "Otro",
-        value: "otro",
-        tipo: "otro"
-    }
+        label: 'Otro',
+        value: TipoEnfermedad.OTRO,
+        tipo: 'otro',
+    },
 ];
 
-const SEVERIDADES_CATALOGO = [
+const catalogoSeveridades = [
     {
-        label: "Baja",
-        value: "baja"
+        label: 'Baja',
+        value: SeveridadEnfermedad.BAJA,
     },
     {
-        label: "Media",
-        value: "media"
+        label: 'Media',
+        value: SeveridadEnfermedad.MEDIA,
     },
     {
-        label: "Alta",
-        value: "alta"
+        label: 'Alta',
+        value: SeveridadEnfermedad.ALTA,
     },
     {
-        label: "Critica",
-        value: "critica"
-    }
+        label: 'Critica',
+        value: SeveridadEnfermedad.CRITICA,
+    },
 ];
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
+
+Contiene las funciones exportables de validacion,
+catalogo y resumen que utiliza el controller.
 */
 
-async function obtenerEnfermedades(filtros) {
+export function isEmpty(valor) {
     /*
     Descripcion:
-    Obtiene enfermedades desde el model con filtros opcionales.
+    Verifica si un valor esta vacio, es null, undefined
+    o solo contiene espacios.
 
     Parametros:
-    - filtros: Filtros de busqueda
+    - valor: Valor a verificar.
 
     Retorna:
-    - Lista transformada por DTO
+    - true si esta vacio.
+    - false si tiene contenido.
     */
 
-    const registros = await enfermedadesModel.obtenerEnfermedades(filtros);
-
-    return listaEnfermedadesSalidaDTO(registros);
-}
-
-async function obtenerEnfermedadPorId(id) {
-    /*
-    Descripcion:
-    Obtiene un registro por id y valida existencia.
-
-    Parametros:
-    - id: Identificador del registro
-
-    Retorna:
-    - Registro transformado por DTO
-    */
-
-    const registro = await enfermedadesModel.obtenerEnfermedadPorId(id);
-
-    if (registro === null) {
-        throw crearError("Registro de enfermedad no encontrado", 404);
+    if (valor === undefined) {
+        return true;
     }
 
-    return enfermedadSalidaDTO(registro);
-}
-
-async function crearEnfermedad(datos) {
-    /*
-    Descripcion:
-    Crea un registro de enfermedad validando catalogos.
-
-    Parametros:
-    - datos: Datos normalizados
-
-    Retorna:
-    - Registro creado
-    */
-
-    validarEnfermedades(datos.enfermedades);
-    validarSeveridad(datos.severidad);
-
-    const datosCreacion = {
-        finca: datos.finca,
-        fincaNombre: datos.fincaNombre,
-        estanque: datos.estanque,
-        fechaReporte: datos.fechaReporte,
-        responsable: datos.responsable,
-        enfermedades: datos.enfermedades,
-        severidad: datos.severidad,
-        severidadNombre: obtenerNombreSeveridad(datos.severidad),
-        mortalidad: datos.mortalidad,
-        reporte: datos.reporte
-    };
-
-    const registro = await enfermedadesModel.crearEnfermedad(datosCreacion);
-
-    return enfermedadSalidaDTO(registro);
-}
-
-async function actualizarEnfermedad(id, datos) {
-    /*
-    Descripcion:
-    Actualiza un registro completo de enfermedad.
-
-    Parametros:
-    - id: Identificador del registro
-    - datos: Datos normalizados
-
-    Retorna:
-    - Registro actualizado
-    */
-
-    const existente = await enfermedadesModel.obtenerEnfermedadPorId(id);
-
-    if (existente === null) {
-        throw crearError("Registro de enfermedad no encontrado", 404);
+    if (valor === null) {
+        return true;
     }
 
-    validarEnfermedades(datos.enfermedades);
-    validarSeveridad(datos.severidad);
-
-    const datosActualizacion = {
-        finca: datos.finca,
-        fincaNombre: datos.fincaNombre,
-        estanque: datos.estanque,
-        fechaReporte: datos.fechaReporte,
-        responsable: datos.responsable,
-        enfermedades: datos.enfermedades,
-        severidad: datos.severidad,
-        severidadNombre: obtenerNombreSeveridad(datos.severidad),
-        mortalidad: datos.mortalidad,
-        reporte: datos.reporte
-    };
-
-    const registro = await enfermedadesModel.actualizarEnfermedad(
-        id,
-        datosActualizacion
-    );
-
-    return enfermedadSalidaDTO(registro);
+    return String(valor).trim().length === 0;
 }
 
-async function eliminarEnfermedad(id) {
+export function isIdValido(id) {
     /*
     Descripcion:
-    Realiza borrado logico de un registro.
+    Valida que un id sea numerico y mayor que cero.
 
     Parametros:
-    - id: Identificador del registro
+    - id: ID recibido por parametro.
 
     Retorna:
-    - Registro eliminado logicamente
+    - true si el id es valido.
+    - false si el id no es valido.
     */
 
-    const existente = await enfermedadesModel.obtenerEnfermedadPorId(id);
+    const numero = Number(id);
 
-    if (existente === null) {
-        throw crearError("Registro de enfermedad no encontrado", 404);
+    if (Number.isNaN(numero)) {
+        return false;
     }
 
-    const registro = await enfermedadesModel.eliminarEnfermedad(id);
+    if (numero <= 0) {
+        return false;
+    }
 
-    return enfermedadSalidaDTO(registro);
+    return true;
 }
 
-async function limpiarEnfermedades() {
+export function isNumeroMayorIgualCero(valor) {
     /*
     Descripcion:
-    Limpia los datos mock locales.
-    Solo debe usarse para pruebas.
+    Valida que un valor sea numerico y mayor o igual que cero.
 
     Parametros:
-    No posee
+    - valor: Valor a validar.
 
     Retorna:
-    - Lista vacia
+    - true si es numerico y mayor o igual que cero.
+    - false si no cumple la regla.
     */
 
-    const registros = await enfermedadesModel.limpiarEnfermedades();
+    const numero = Number(valor);
 
-    return listaEnfermedadesSalidaDTO(registros);
+    if (Number.isNaN(numero)) {
+        return false;
+    }
+
+    if (numero < 0) {
+        return false;
+    }
+
+    return true;
 }
 
-async function obtenerResumenEnfermedades(filtros) {
+export function isFechaValida(fecha) {
     /*
     Descripcion:
-    Construye un resumen sanitario con datos mock activos.
+    Valida que una fecha tenga el formato estandar yyyy-mm-dd.
 
     Parametros:
-    - filtros: Filtros opcionales
+    - fecha: Fecha a validar.
 
     Retorna:
-    - Resumen de enfermedades
+    - true si la fecha tiene formato valido.
+    - false si la fecha no cumple el formato.
     */
 
-    const registros = await enfermedadesModel.obtenerEnfermedades(filtros);
-    const resumen = construirResumen(registros);
+    if (isEmpty(fecha)) {
+        return false;
+    }
 
-    return resumenEnfermedadesDTO(resumen);
+    const fechaTexto = String(fecha).trim();
+    const patronIso = /^\d{4}-\d{2}-\d{2}$/;
+
+    if (patronIso.test(fechaTexto)) {
+        return true;
+    }
+
+    return false;
 }
 
-function obtenerCatalogoEnfermedades() {
+export function isEnfermedadesValidas(enfermedades) {
     /*
     Descripcion:
-    Devuelve catalogo local de enfermedades.
+    Valida que enfermedades sea una lista y que cada valor
+    exista dentro del catalogo permitido.
 
     Parametros:
-    No posee
+    - enfermedades: Lista de enfermedades recibida.
 
     Retorna:
-    - Catalogo de enfermedades
-    */
-
-    return ENFERMEDADES_CATALOGO;
-}
-
-function obtenerCatalogoSeveridades() {
-    /*
-    Descripcion:
-    Devuelve catalogo local de severidades.
-
-    Parametros:
-    No posee
-
-    Retorna:
-    - Catalogo de severidades
-    */
-
-    return SEVERIDADES_CATALOGO;
-}
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
-*/
-
-// crearEnfermedad() y actualizarEnfermedad() dependen de esta funcion
-function validarEnfermedades(enfermedades) {
-    /*
-    Descripcion:
-    Valida que las enfermedades existan en catalogo.
-
-    Parametros:
-    - enfermedades: Lista recibida
-
-    Retorna:
-    No retorna
+    - true si la lista es valida.
+    - false si la lista es invalida.
     */
 
     if (Array.isArray(enfermedades) === false) {
-        throw crearError("El campo enfermedades debe ser una lista", 400);
+        return false;
     }
 
     if (enfermedades.length === 0) {
-        throw crearError("Debe seleccionar al menos una enfermedad", 400);
+        return false;
     }
 
     for (let i = 0; i < enfermedades.length; i++) {
-        if (existeEnfermedad(enfermedades[i]) === false) {
-            throw crearError(
-                "La enfermedad " + enfermedades[i] + " no es valida",
-                400
-            );
-        }
-    }
-}
-
-// crearEnfermedad() y actualizarEnfermedad() dependen de esta funcion
-function validarSeveridad(severidad) {
-    /*
-    Descripcion:
-    Valida que la severidad exista en catalogo.
-
-    Parametros:
-    - severidad: Severidad recibida
-
-    Retorna:
-    No retorna
-    */
-
-    if (existeSeveridad(severidad) === false) {
-        throw crearError("La severidad no es valida", 400);
-    }
-}
-
-// validarEnfermedades() depende de esta funcion
-function existeEnfermedad(valor) {
-    /*
-    Descripcion:
-    Revisa si una enfermedad existe en catalogo.
-
-    Parametros:
-    - valor: Valor de enfermedad
-
-    Retorna:
-    - true o false
-    */
-
-    for (let i = 0; i < ENFERMEDADES_CATALOGO.length; i++) {
-        if (ENFERMEDADES_CATALOGO[i].value === valor) {
-            return true;
+        if (isEnfermedadValida(enfermedades[i]) === false) {
+            return false;
         }
     }
 
-    return false;
+    return true;
 }
 
-// validarSeveridad() depende de esta funcion
-function existeSeveridad(valor) {
+export function isEnfermedadValida(enfermedad) {
     /*
     Descripcion:
-    Revisa si una severidad existe en catalogo.
+    Valida que una enfermedad exista dentro del enum permitido.
 
     Parametros:
-    - valor: Valor de severidad
+    - enfermedad: Enfermedad recibida.
 
     Retorna:
-    - true o false
+    - true si la enfermedad es valida.
+    - false si no es valida.
     */
 
-    for (let i = 0; i < SEVERIDADES_CATALOGO.length; i++) {
-        if (SEVERIDADES_CATALOGO[i].value === valor) {
-            return true;
+    if (isEmpty(enfermedad)) {
+        return false;
+    }
+
+    return Object.values(TipoEnfermedad).includes(String(enfermedad).trim());
+}
+
+export function isSeveridadValida(severidad) {
+    /*
+    Descripcion:
+    Valida que una severidad exista dentro del enum permitido.
+
+    Parametros:
+    - severidad: Severidad recibida.
+
+    Retorna:
+    - true si la severidad es valida.
+    - false si no es valida.
+    */
+
+    if (isEmpty(severidad)) {
+        return false;
+    }
+
+    return Object.values(SeveridadEnfermedad).includes(String(severidad).trim());
+}
+
+export function obtenerNombreEnfermedad(enfermedad) {
+    /*
+    Descripcion:
+    Obtiene el nombre visible de una enfermedad.
+
+    Parametros:
+    - enfermedad: Valor interno de la enfermedad.
+
+    Retorna:
+    - Nombre visible de la enfermedad.
+    */
+
+    for (let i = 0; i < catalogoEnfermedades.length; i++) {
+        if (catalogoEnfermedades[i].value === enfermedad) {
+            return catalogoEnfermedades[i].label;
         }
     }
 
-    return false;
+    return 'Otro';
 }
 
-// crearEnfermedad(), actualizarEnfermedad() y resumen dependen de esta funcion
-function obtenerNombreSeveridad(valor) {
+export function obtenerNombresEnfermedades(enfermedades) {
     /*
     Descripcion:
-    Obtiene label visible de severidad.
+    Convierte una lista de enfermedades internas en una lista
+    de nombres visibles.
 
     Parametros:
-    - valor: Valor de severidad
+    - enfermedades: Lista de enfermedades internas.
 
     Retorna:
-    - Nombre visible
+    - Lista de nombres visibles.
     */
 
-    let nombre = valor;
+    const nombres = [];
 
-    for (let i = 0; i < SEVERIDADES_CATALOGO.length; i++) {
-        if (SEVERIDADES_CATALOGO[i].value === valor) {
-            nombre = SEVERIDADES_CATALOGO[i].label;
+    if (Array.isArray(enfermedades) === false) {
+        return nombres;
+    }
+
+    for (let i = 0; i < enfermedades.length; i++) {
+        nombres.push(obtenerNombreEnfermedad(enfermedades[i]));
+    }
+
+    return nombres;
+}
+
+export function obtenerNombreSeveridad(severidad) {
+    /*
+    Descripcion:
+    Obtiene el nombre visible de una severidad.
+
+    Parametros:
+    - severidad: Valor interno de severidad.
+
+    Retorna:
+    - Nombre visible de la severidad.
+    */
+
+    for (let i = 0; i < catalogoSeveridades.length; i++) {
+        if (catalogoSeveridades[i].value === severidad) {
+            return catalogoSeveridades[i].label;
         }
     }
 
-    return nombre;
+    return 'Baja';
 }
 
-// construirListaEnfermedades() depende de esta funcion
-function obtenerNombreEnfermedad(valor) {
+export function obtenerCatalogoEnfermedades() {
     /*
     Descripcion:
-    Obtiene label visible de enfermedad.
+    Obtiene el catalogo de enfermedades disponibles.
 
     Parametros:
-    - valor: Valor de enfermedad
+    No posee.
 
     Retorna:
-    - Nombre visible
+    - Lista de enfermedades con label, value y tipo.
     */
 
-    let nombre = valor;
-
-    for (let i = 0; i < ENFERMEDADES_CATALOGO.length; i++) {
-        if (ENFERMEDADES_CATALOGO[i].value === valor) {
-            nombre = ENFERMEDADES_CATALOGO[i].label;
-        }
-    }
-
-    return nombre;
+    return catalogoEnfermedades;
 }
 
-// obtenerResumenEnfermedades() depende de esta funcion
-function construirResumen(registros) {
+export function obtenerCatalogoSeveridades() {
     /*
     Descripcion:
-    Construye resumen operativo del modulo.
+    Obtiene el catalogo de severidades disponibles.
 
     Parametros:
-    - registros: Lista de registros activos
+    No posee.
 
     Retorna:
-    - Resumen construido
+    - Lista de severidades con label y value.
+    */
+
+    return catalogoSeveridades;
+}
+
+export function construirResumenEnfermedades(registros) {
+    /*
+    Descripcion:
+    Construye un resumen general de los registros de enfermedades.
+
+    Parametros:
+    - registros: Lista de registros de enfermedades.
+
+    Retorna:
+    - Objeto con totales y frecuencias.
     */
 
     const resumen = {
-        totalCasos: registros.length,
+        totalRegistros: registros.length,
         totalMortalidad: 0,
         enfermedadesFrecuentes: [],
-        severidadesFrecuentes: []
+        severidadesFrecuentes: [],
     };
 
     const contadorEnfermedades = {};
     const contadorSeveridades = {};
 
     for (let i = 0; i < registros.length; i++) {
-        sumarMortalidad(resumen, registros[i]);
-        contarEnfermedades(contadorEnfermedades, registros[i]);
-        contarSeveridad(contadorSeveridades, registros[i]);
+        const registro = registros[i];
+
+        sumarMortalidad(resumen, registro);
+        contarEnfermedades(contadorEnfermedades, registro);
+        contarValor(contadorSeveridades, registro.severidad);
     }
 
-    resumen.enfermedadesFrecuentes = construirListaEnfermedades(
-        contadorEnfermedades
-    );
-
-    resumen.severidadesFrecuentes = construirListaSeveridades(
-        contadorSeveridades
-    );
+    resumen.enfermedadesFrecuentes = construirListaEnfermedades(contadorEnfermedades);
+    resumen.severidadesFrecuentes = construirListaSeveridades(contadorSeveridades);
 
     return resumen;
 }
 
-// construirResumen() depende de esta funcion
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+
+Funciones auxiliares utilizadas para construir resumenes.
+*/
+
 function sumarMortalidad(resumen, registro) {
     /*
     Descripcion:
-    Suma mortalidad del registro.
+    Suma la mortalidad de un registro al resumen general.
 
     Parametros:
-    - resumen: Objeto resumen
-    - registro: Registro actual
+    - resumen: Objeto resumen donde se acumula la mortalidad.
+    - registro: Registro actual de enfermedad.
 
     Retorna:
-    No retorna
+    No retorna valor.
     */
 
     const mortalidad = Number(registro.mortalidad);
 
-    if (Number.isNaN(mortalidad) === false) {
-        resumen.totalMortalidad = resumen.totalMortalidad + mortalidad;
+    if (Number.isNaN(mortalidad)) {
+        return;
     }
+
+    resumen.totalMortalidad = resumen.totalMortalidad + mortalidad;
 }
 
-// construirResumen() depende de esta funcion
 function contarEnfermedades(contador, registro) {
     /*
     Descripcion:
-    Cuenta apariciones de enfermedades.
+    Cuenta las apariciones de cada enfermedad en un registro.
 
     Parametros:
-    - contador: Objeto contador
-    - registro: Registro actual
+    - contador: Objeto donde se almacenan las cantidades.
+    - registro: Registro actual de enfermedad.
 
     Retorna:
-    No retorna
+    No retorna valor.
     */
 
     if (Array.isArray(registro.enfermedades) === false) {
@@ -524,141 +452,94 @@ function contarEnfermedades(contador, registro) {
     }
 
     for (let i = 0; i < registro.enfermedades.length; i++) {
-        const enfermedad = registro.enfermedades[i];
-
-        if (contador[enfermedad] === undefined) {
-            contador[enfermedad] = 0;
-        }
-
-        contador[enfermedad] = contador[enfermedad] + 1;
+        contarValor(contador, registro.enfermedades[i]);
     }
 }
 
-// construirResumen() depende de esta funcion
-function contarSeveridad(contador, registro) {
+function contarValor(contador, valor) {
     /*
     Descripcion:
-    Cuenta apariciones de severidades.
+    Suma una ocurrencia dentro de un objeto contador.
 
     Parametros:
-    - contador: Objeto contador
-    - registro: Registro actual
+    - contador: Objeto donde se almacenan las cantidades.
+    - valor: Valor que se desea contar.
 
     Retorna:
-    No retorna
+    No retorna valor.
     */
 
-    if (registro.severidad === undefined) {
+    if (isEmpty(valor)) {
         return;
     }
 
-    if (registro.severidad === "") {
-        return;
+    if (contador[valor] === undefined) {
+        contador[valor] = 0;
     }
 
-    if (contador[registro.severidad] === undefined) {
-        contador[registro.severidad] = 0;
-    }
-
-    contador[registro.severidad] = contador[registro.severidad] + 1;
+    contador[valor] = contador[valor] + 1;
 }
 
-// construirResumen() depende de esta funcion
 function construirListaEnfermedades(contador) {
     /*
     Descripcion:
-    Construye lista de enfermedades frecuentes.
+    Convierte el contador de enfermedades en una lista ordenada.
 
     Parametros:
-    - contador: Objeto contador
+    - contador: Objeto con enfermedades y cantidades.
 
     Retorna:
-    - Lista ordenada
+    - Lista de enfermedades con valor, nombre y cantidad.
     */
 
     const lista = [];
     const claves = Object.keys(contador);
 
     for (let i = 0; i < claves.length; i++) {
+        const clave = claves[i];
+
         lista.push({
-            enfermedad: claves[i],
-            nombre: obtenerNombreEnfermedad(claves[i]),
-            casos: contador[claves[i]]
+            valor: clave,
+            nombre: obtenerNombreEnfermedad(clave),
+            cantidad: contador[clave],
         });
     }
 
     lista.sort(function (a, b) {
-        return b.casos - a.casos;
+        return b.cantidad - a.cantidad;
     });
 
     return lista;
 }
 
-// construirResumen() depende de esta funcion
 function construirListaSeveridades(contador) {
     /*
     Descripcion:
-    Construye lista de severidades frecuentes.
+    Convierte el contador de severidades en una lista ordenada.
 
     Parametros:
-    - contador: Objeto contador
+    - contador: Objeto con severidades y cantidades.
 
     Retorna:
-    - Lista ordenada
+    - Lista de severidades con valor, nombre y cantidad.
     */
 
     const lista = [];
     const claves = Object.keys(contador);
 
     for (let i = 0; i < claves.length; i++) {
+        const clave = claves[i];
+
         lista.push({
-            severidad: claves[i],
-            nombre: obtenerNombreSeveridad(claves[i]),
-            casos: contador[claves[i]]
+            valor: clave,
+            nombre: obtenerNombreSeveridad(clave),
+            cantidad: contador[clave],
         });
     }
 
     lista.sort(function (a, b) {
-        return b.casos - a.casos;
+        return b.cantidad - a.cantidad;
     });
 
     return lista;
 }
-
-// Funciones principales dependen de esta funcion
-function crearError(mensaje, status) {
-    /*
-    Descripcion:
-    Crea error con status HTTP personalizado.
-
-    Parametros:
-    - mensaje: Mensaje del error
-    - status: Codigo HTTP
-
-    Retorna:
-    - Error personalizado
-    */
-
-    const nuevoError = new Error(mensaje);
-    nuevoError.status = status;
-
-    return nuevoError;
-}
-
-/*
-//////////////////////////////////////////////////////////
-EXPORTS
-//////////////////////////////////////////////////////////
-*/
-
-export default {
-    obtenerEnfermedades,
-    obtenerEnfermedadPorId,
-    crearEnfermedad,
-    actualizarEnfermedad,
-    eliminarEnfermedad,
-    limpiarEnfermedades,
-    obtenerResumenEnfermedades,
-    obtenerCatalogoEnfermedades,
-    obtenerCatalogoSeveridades
-};

@@ -7,8 +7,7 @@ Autor: Isaac
 Fecha: 03/07/2026
 Modulo: Enfermedades
 Descripcion:
-Archivo encargado de definir las rutas del modulo de
-enfermedades.
+Define las rutas HTTP del modulo de enfermedades.
 //////////////////////////////////////////////////////////
 */
 
@@ -16,28 +15,27 @@ enfermedades.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
+
+Librerias externas
 */
 
-// Librerias externas
-import { Router } from "express";
+import { Router } from 'express';
+
+// Middlewares
+import { verificarAuth } from '../middlewares/auth.middleware.js';
+import { validarBodyEnfermedad } from '../middlewares/enfermedades.middleware.js';
 
 // Controladores
 import {
-    actualizarEnfermedad,
+    obtenerEnfermedades,
+    obtenerEnfermedadPorId,
     crearEnfermedad,
+    actualizarEnfermedad,
     eliminarEnfermedad,
-    limpiarEnfermedades,
+    obtenerResumenEnfermedades,
     obtenerCatalogoEnfermedades,
     obtenerCatalogoSeveridades,
-    obtenerEnfermedadPorId,
-    obtenerEnfermedades,
-    obtenerResumenEnfermedades
-} from "../controllers/enfermedades.controller.js";
-
-// Middlewares
-import {
-    validarBodyEnfermedad
-} from "../middlewares/enfermedades.middleware.js";
+} from '../controllers/enfermedades.controller.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -52,24 +50,22 @@ const router = Router();
 RUTAS
 //////////////////////////////////////////////////////////
 
-Las rutas especiales van antes de /:id para evitar conflictos.
+Las rutas especiales van antes de /:id para evitar
+conflictos con parametros dinamicos.
 */
 
-router.get("/", obtenerEnfermedades);
-router.get("/resumen", obtenerResumenEnfermedades);
-router.get("/catalogos/enfermedades", obtenerCatalogoEnfermedades);
-router.get("/catalogos/severidades", obtenerCatalogoSeveridades);
-router.get("/:id", obtenerEnfermedadPorId);
-
-router.post("/", validarBodyEnfermedad, crearEnfermedad);
-router.put("/:id", validarBodyEnfermedad, actualizarEnfermedad);
-
-router.delete("/", limpiarEnfermedades);
-router.delete("/:id", eliminarEnfermedad);
+router.get('/',                         verificarAuth,                         obtenerEnfermedades);
+router.get('/resumen',                  verificarAuth,                         obtenerResumenEnfermedades);
+router.get('/catalogos/enfermedades',   verificarAuth,                         obtenerCatalogoEnfermedades);
+router.get('/catalogos/severidades',    verificarAuth,                         obtenerCatalogoSeveridades);
+router.get('/:id',                      verificarAuth,                         obtenerEnfermedadPorId);
+router.post('/',                        verificarAuth, validarBodyEnfermedad,  crearEnfermedad);
+router.put('/:id',                      verificarAuth, validarBodyEnfermedad,  actualizarEnfermedad);
+router.delete('/:id',                   verificarAuth,                         eliminarEnfermedad);
 
 /*
 //////////////////////////////////////////////////////////
-EXPORTS
+EXPORT
 //////////////////////////////////////////////////////////
 */
 
