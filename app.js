@@ -3,22 +3,31 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
-Autor: Jose Espinoza
+Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas, Felipe Salas, Jose Espinoza
 Fecha: 29/06/2026
-Modulo: Raiz / Configuracion
+Modulo: Core / Configuracion
 Descripcion:
-Archivo principal del backend configurado con ES Modules.
-Integra los middlewares globales y enruta todos los modulos.
+Punto de entrada del servidor. Configura Express,
+monta los middlewares globales y registra las rutas
+de todos los módulos del proyecto.
 //////////////////////////////////////////////////////////
 */
 
-// Librerias externas
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+*/
+
 import express from "express";
 import cors from "cors";
 
-// Rutas existentes
+// Rutas
 import colaboradoresRouter from "./routes/colaborador.routes.js";
+import crecimientoRouter from "./routes/mantCrecimiento.routes.js";
 import estanquesRouter from "./routes/estanques.routes.js";
+import densidadPoblacionalRouter from "./routes/densidadPoblacional.routes.js";
+import alimentacionRouter from "./alimentacion/routes/alimentacion.routes.js";
 
 // Rutas Team 6
 import productoRouter from "./routes/producto.routes.js";
@@ -41,13 +50,39 @@ INYECCION DE RUTAS
 //////////////////////////////////////////////////////////
 */
 
-// Modulos existentes
-app.use("/api/v1/colaboradores", colaboradoresRouter);
-app.use("/api/v1/estanques", estanquesRouter);
+// Colaboradores
+app.use("/api/v0/colaboradores", colaboradoresRouter);
+
+// Alimentación
+app.use("/api/v0/alimentaciones", alimentacionRouter);
+
+// Crecimiento
+app.use("/api/v0/crecimiento", crecimientoRouter);
+
+// Estanques
+app.use("/api/v0/estanques", estanquesRouter);
+
+// Densidad Poblacional
+app.use("/api/v0/densidades-poblacionales", densidadPoblacionalRouter);
 
 // Modulos Team 6
-app.use("/api/v1/productos", productoRouter);
-app.use("/api/v1/compradores", compradorRouter);
+app.use("/api/v0/productos", productoRouter);
+app.use("/api/v0/compradores", compradorRouter);
+
+/*
+//////////////////////////////////////////////////////////
+ENDPOINT DE VERIFICACION
+//////////////////////////////////////////////////////////
+Permite comprobar que la API se
+encuentra ejecutándose correctamente.
+*/
+
+app.get("/", (req, res) => {
+    res.json({
+        success: true,
+        message: "API CAPROCAM funcionando correctamente."
+    });
+});
 
 /*
 //////////////////////////////////////////////////////////
@@ -65,5 +100,11 @@ app.use((req, res) => {
     });
 
 });
+
+/*
+//////////////////////////////////////////////////////////
+EXPORTACION
+//////////////////////////////////////////////////////////
+*/
 
 export default app;
