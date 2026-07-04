@@ -3,8 +3,14 @@ import fisicoQuimicaRoutes from './routes/fisicoQuimica.routes.js';
 import trazabilidadRoutes from './routes/trazabilidad.routes.js';
 
 const app = express();
-const PORT = 4000;
 
+/*
+//////////////////////////////////////////////////////////
+MIDDLEWARES GLOBALES
+//////////////////////////////////////////////////////////
+*/
+
+app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
