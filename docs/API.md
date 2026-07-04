@@ -299,91 +299,56 @@ Respuesta de error:
 
 
 # Crecimiento
-## GET /api/v0/crecimiento/fincas
-Obtiene la lista de todas las fincas activas.
+## GET /api/v1/crecimiento
+Obtiene todos los registros de crecimiento disponibles en la mockdata.
 
 Respuesta exitosa:
 200 OK
 {
     "success": true,
-    "message": "Fincas obtenidas correctamente.",
+    "message": "Registros de crecimiento obtenidos correctamente.",
     "data": [
         {
-            "id": 1,
-            "codigo": "FIN001",
-            "nombre": "Finca Central"
+            "id": "1",
+            "finca": "Finca La Perla",
+            "estanque": "EST-01",
+            "pesoActual": 2.5
         },
         {
-            "id": 2,
-            "codigo": "FIN002",
-            "nombre": "Finca Norte"
+            "id": "2",
+            "finca": "Finca La Perla",
+            "estanque": "EST-02",
+            "pesoActual": 3.1
         }
     ]
 }
 
 Respuesta de error:
-500 Internal Server Error
+404 Not Found
 {
     "success": false,
-    "message": "Error al obtener las fincas.",
-    "error": "Mensaje detallado del error"
+    "message": "Registro no encontrado.",
+    "error": null
 }
 
 ---
 
-## GET /api/v0/crecimiento/fincas/:fincaId/estanques
-Obtiene todos los estanques asociados a una finca especifica.
+## GET /api/v1/crecimiento/:id
+Obtiene un registro de crecimiento por su ID.
 
 Parametros URL:
-- fincaId: ID numerico de la finca.
+- id: Identificador del registro.
 
 Respuesta exitosa:
 200 OK
 {
     "success": true,
-    "message": "Estanques obtenidos correctamente.",
-    "data": [
-        {
-            "id": 1,
-            "fincaId": 1,
-            "codigo": "EST001",
-            "nombre": "Estanque A",
-            "diasCultivo": 45,
-            "pesoActual": 180,
-            "estado": "ACTIVO"
-        }
-    ]
-}
-
-Respuesta de error:
-500 Internal Server Error
-{
-    "success": false,
-    "message": "Error al obtener los estanques.",
-    "error": "Mensaje detallado del error"
-}
-
----
-
-## GET /api/v0/crecimiento/estanque/:id
-Obtiene la informacion detallada de un estanque especifico junto
-con el peso de la ultima lectura (peso anterior).
-
-Parametros URL:
-- id: ID numerico del estanque.
-
-Respuesta exitosa:
-200 OK
-{
-    "success": true,
-    "message": "Informacion del estanque obtenida correctamente.",
+    "message": "Registro obtenido correctamente.",
     "data": {
-        "id": 1,
-        "codigo": "EST001",
-        "nombre": "Estanque A",
-        "diasCultivo": 45,
-        "pesoAnterior": 180,
-        "estado": "ACTIVO"
+        "id": "1",
+        "finca": "Finca La Perla",
+        "estanque": "EST-01",
+        "pesoActual": 2.5
     }
 }
 
@@ -391,51 +356,140 @@ Respuesta de error:
 404 Not Found
 {
     "success": false,
-    "message": "El estanque no existe.",
+    "message": "Registro no encontrado.",
     "error": null
 }
 
 ---
 
-## POST /api/v0/crecimiento
-Registra un nuevo control de crecimiento para un estanque y
-actualiza de manera automatica su peso actual.
+## POST /api/v1/crecimiento
+Crea un nuevo registro de crecimiento.
 
 Body (JSON):
 {
-    "estanqueId": 1,
-    "pesoActual": 195.5,
-    "observacion": "Los peces muestran buena actividad y desarrollo alimenticio."
+    "id": "3",
+    "finca": "Finca La Perla",
+    "estanque": "EST-03",
+    "pesoActual": 4.2
 }
+
+Campos requeridos:
+- finca
+- estanque
+- pesoActual
 
 Respuesta exitosa:
 201 Created
 {
     "success": true,
-    "message": "Crecimiento registrado correctamente.",
+    "message": "Registro de crecimiento creado correctamente.",
     "data": {
-        "id": 1,
-        "estanqueId": 1,
-        "pesoAnterior": 180,
-        "pesoActual": 195.5,
-        "incremento": 15.5,
-        "fechaRegistro": "2026-06-29T08:30:00.000Z",
-        "observacion": "Los peces muestran buena actividad y desarrollo alimenticio."
+        "id": "3",
+        "finca": "Finca La Perla",
+        "estanque": "EST-03",
+        "pesoActual": 4.2
     }
 }
 
-Respuesta de error (Estanque no encontrado):
-404 Not Found
-{
-    "success": false,
-    "message": "El estanque no existe.",
-    "error": null
-}
-
-Respuesta de error (Peso invalido):
+Respuesta de error:
 400 Bad Request
 {
     "success": false,
-    "message": "El peso actual debe ser un numero mayor que cero.",
+    "message": "Finca y estanque son requeridos.",
+    "error": null
+}
+
+Respuesta de error:
+422 Unprocessable Entity
+{
+    "success": false,
+    "message": "El peso actual es requerido y debe ser un numero mayor o igual a cero.",
+    "error": null
+}
+
+---
+
+## PUT /api/v1/crecimiento/:id
+Actualiza un registro de crecimiento existente.
+
+Parametros URL:
+- id: Identificador del registro a actualizar.
+
+Body (JSON):
+{
+    "id": "1",
+    "finca": "Finca La Perla",
+    "estanque": "EST-01",
+    "pesoActual": 5.1
+}
+
+Campos requeridos:
+- finca
+- estanque
+- pesoActual
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Registro de crecimiento actualizado correctamente.",
+    "data": {
+        "id": "1",
+        "finca": "Finca La Perla",
+        "estanque": "EST-01",
+        "pesoActual": 5.1
+    }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Registro no encontrado",
+    "error": null
+}
+
+Respuesta de error:
+400 Bad Request
+{
+    "success": false,
+    "message": "Finca y estanque son requeridos.",
+    "error": null
+}
+
+Respuesta de error:
+422 Unprocessable Entity
+{
+    "success": false,
+    "message": "El peso actual es requerido y debe ser un numero mayor o igual a cero.",
+    "error": null
+}
+
+---
+
+## DELETE /api/v1/crecimiento/:id
+Elimina un registro de crecimiento por su ID.
+
+Parametros URL:
+- id: Identificador del registro a eliminar.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Registro eliminado correctamente",
+    "data": {
+        "id": "1",
+        "finca": "Finca La Perla",
+        "estanque": "EST-01",
+        "pesoActual": 2.5
+    }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Registro no encontrado",
     "error": null
 }
