@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantCrecimiento.service.js
 Autor: Greivin Arguedas
-Fecha: 28/06/2026
+Fecha: 04/07/2026
 Modulo: Crecimiento
 Descripcion:
 Define las validaciones de logica de negocio del modulo
@@ -20,46 +20,26 @@ FUNCIONES PRINCIPALES
 Contiene las funciones exportables de validacion
 que utiliza el controller para verificar los datos.
 */
-
-export function esEstanqueValido(estanque) {
+export function isEmpty(value) {
     /*
     Descripcion:
-    Verifica si un estanque existe (no es null ni undefined).
-
+    Valida si un valor esta vacio.
     Parametros:
-    - estanque: Objeto del estanque a verificar.
-
+    - value: Valor a verificar.
     Retorna:
-    - true si el estanque existe, false si no.
+    - true si esta vacio, false si no.
     */
-    return estanque !== null && estanque !== undefined;
+    return value === undefined || value === null || String(value).trim() === '';
 }
-
-export function esPesoValido(peso) {
+export function isNumeroMayorIgualCero(value) {
     /*
     Descripcion:
-    Verifica que el peso sea un numero mayor que cero.
-
+    Valida si un valor es un numero mayor o igual a cero.
     Parametros:
-    - peso: Valor a verificar.
-
+    - value: Valor a verificar.
     Retorna:
-    - true si el peso es valido, false si no.
+    - true si es numero >= 0, false si no.
     */
-    return !isNaN(peso) && Number(peso) > 0;
-}
-
-export function calcularIncremento(pesoAnterior, pesoActual) {
-    /*
-    Descripcion:
-    Calcula el incremento de peso entre dos mediciones.
-
-    Parametros:
-    - pesoAnterior: Peso previo del estanque.
-    - pesoActual:   Nuevo peso registrado.
-
-    Retorna:
-    - Incremento redondeado a 2 decimales.
-    */
-    return Number((Number(pesoActual) - Number(pesoAnterior)).toFixed(2));
+    const num = Number(value);
+    return !isNaN(num) && num >= 0;
 }
