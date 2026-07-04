@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantCrecimiento.routes.js
 Autor: Greivin Arguedas
-Fecha: 28/06/2026
+Fecha: 04/07/2026
 Modulo: Crecimiento
 Descripcion:
 Define las rutas HTTP del modulo de crecimiento.
@@ -21,14 +21,16 @@ Librerias externas
 import { Router } from "express";
 
 // Middlewares
+import { verificarAuth } from "../middlewares/auth.middleware.js";
 import { validarMantCrecimiento } from "../middlewares/mantCrecimiento.middleware.js";
 
 // Controladores
 import {
-  obtenerFincas,
-  obtenerEstanques,
-  obtenerEstanque,
-  crearCrecimiento,
+  getCrecimientos,
+  getCrecimientoById,
+  createCrecimiento,
+  updateCrecimiento,
+  deleteCrecimiento,
 } from "../controllers/mantCrecimiento.controller.js";
 
 /*
@@ -44,10 +46,11 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get("/fincas", obtenerFincas);
-router.get("/fincas/:fincaId/estanques", obtenerEstanques);
-router.get("/estanque/:id", obtenerEstanque);
-router.post("/", validarMantCrecimiento, crearCrecimiento);
+router.get("/", verificarAuth, getCrecimientos);
+router.get("/:id", verificarAuth, getCrecimientoById);
+router.post("/", verificarAuth, validarMantCrecimiento, createCrecimiento);
+router.put("/:id", verificarAuth, validarMantCrecimiento, updateCrecimiento);
+router.delete("/:id", verificarAuth, deleteCrecimiento);
 
 /*
 //////////////////////////////////////////////////////////
