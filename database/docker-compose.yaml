@@ -7,9 +7,10 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: caprocam
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_caprocam_data:/var/lib/mysql
+      - ./init:/docker-entrypoint-initdb.d
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -27,3 +28,4 @@ volumes:
   mysql_caprocam_data:
 
   # <- Para arrancar se usa "docker compose up -d", y para acceder se usar "http://localhost:8080", el user y contraseña es "root"
+  # Importante que la db usa el puerto 3307
