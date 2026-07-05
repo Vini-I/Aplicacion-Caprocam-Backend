@@ -171,6 +171,11 @@ Respuesta de error:
 "error": null
 }
 
+# Productos
+
+## GET /api/v1/productos
+Obtiene todos los productos en estado ACTIVO.
+---
 ## POST /api/v0/densidad-poblacional
 
 Crea un nuevo registro de densidad poblacional.
@@ -244,15 +249,20 @@ Obtiene todos los estanques registrados.
 Respuesta:
 200 OK
 {
-"success": true,
-"message": "Registros obtenidos correctamente.",
-
+    "success": true,
+    "message": "Productos obtenidos correctamente.",
     "message": "Estanques obtenidos correctamente.",
     "data": [ ... ]
 
 }
 
 ---
+
+## GET /api/v1/productos/:id
+Obtiene un producto activo por su ID.
+
+Parametros URL:
+- id: ID numerico del producto.
 
 ## GET /api/v0/estanques/:id
 
@@ -265,9 +275,8 @@ Parametros URL:
 Respuesta exitosa:
 200 OK
 {
-"success": true,
-"message": "Registro obtenido correctamente.",
-
+    "success": true,
+    "message": "Producto obtenido correctamente.",
     "message": "Estanque obtenido correctamente.",
     "data": { ... }
 
@@ -276,15 +285,25 @@ Respuesta exitosa:
 Respuesta de error:
 404 Not Found
 {
-"success": false,
-"message": "Registro no encontrado.",
-
+    "success": false,
+    "message": "Producto no encontrado.",
     "message": "Estanque no encontrado.",
     "error": null
 
 }
 
 ---
+
+## POST /api/v1/productos
+Crea un nuevo producto.
+
+Body (JSON):
+{
+    "nombre": "Fertilizante Foliar H2",
+    "categoria": "Fertilizante",
+    "cantidad": 50,
+    "stockMinimo": 10,
+    "precioUnidad": 3500
 
 ## POST /api/v0/estanques
 
@@ -315,9 +334,8 @@ Body (JSON):
 Respuesta exitosa:
 201 Created
 {
-"success": true,
-"message": "Registro creado correctamente.",
-
+    "success": true,
+    "message": "Producto creado correctamente.",
     "message": "Estanque creado correctamente.",
     "data": { ... }
 
@@ -326,9 +344,32 @@ Respuesta exitosa:
 Respuesta de error:
 400 Bad Request
 {
-"success": false,
-"message": "Faltan campos requeridos.",
+    "success": false,
+    "message": "Nombre y categoria son requeridos.",
+    "error": null
+}
 
+---
+
+## PUT /api/v1/productos/:id/activos
+Desactiva un producto (Borrado logico).
+
+Parametros URL:
+- id: ID numerico del producto.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Producto desactivado correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Producto no encontrado.",
     "message": "Faltan campos requeridos: codigo.",
     "error": null
 
@@ -344,7 +385,19 @@ Respuesta de error:
 
 ---
 
-## PUT /api/v0/estanques/:id
+## PUT /api/v1/productos/:id
+Actualiza un producto existente.
+
+Parametros URL:
+- id: ID numerico del producto.
+
+Body (JSON):
+{
+    "nombre": "Fertilizante Foliar Premium",
+    "categoria": "Fertilizante",
+    "cantidad": 45,
+    "stockMinimo": 10,
+    "precioUnidad": 3800
 
 Actualiza un estanque existente.
 
@@ -377,9 +430,8 @@ Body (JSON):
 Respuesta exitosa:
 200 OK
 {
-"success": true,
-"message": "Registro actualizado correctamente.",
-
+    "success": true,
+    "message": "Producto actualizado correctamente.",
     "message": "Estanque actualizado correctamente.",
     "data": { ... }
 
@@ -388,9 +440,8 @@ Respuesta exitosa:
 Respuesta de error:
 404 Not Found
 {
-"success": false,
-"message": "Registro no encontrado.",
-
+    "success": false,
+    "message": "Producto no encontrado.",
     "message": "Estanque no encontrado.",
     "error": null
 
@@ -406,8 +457,28 @@ Respuesta de error:
 
 ---
 
-## DELETE /api/v0/estanques/:id
+# Compradores
 
+## GET /api/v1/compradores
+Obtiene todos los compradores en estado ACTIVO.
+
+Respuesta:
+200 OK
+{
+    "success": true,
+    "message": "Compradores obtenidos correctamente.",
+    "data": [ ... ]
+}
+
+---
+
+## GET /api/v1/compradores/:id
+Obtiene un comprador activo por su ID.
+
+Parametros URL:
+- id: ID numerico del comprador.
+
+## DELETE /api/v0/estanques/:id
 Elimina un estanque por su ID.
 
 Parametros URL:
@@ -417,9 +488,8 @@ Parametros URL:
 Respuesta exitosa:
 200 OK
 {
-"success": true,
-"message": "Registro eliminado correctamente.",
-
+    "success": true,
+    "message": "Comprador obtenido correctamente.",
     "message": "Estanque eliminado correctamente.",
     "data": { ... }
 
@@ -428,6 +498,266 @@ Respuesta exitosa:
 Respuesta de error:
 404 Not Found
 {
+    "success": false,
+    "message": "Comprador no encontrado.",
+    "error": null
+}
+
+---
+
+## POST /api/v1/compradores
+Crea un nuevo comprador.
+
+Body (JSON):
+{
+    "nombre": "AgroComercial S.A.",
+    "contacto": "Juan Pérez",
+    "telefono": "88334455"
+}
+
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Comprador creado correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+400 Bad Request
+{
+    "success": false,
+    "message": "Nombre y contacto son requeridos.",
+    "error": null
+}
+
+---
+
+## PUT /api/v1/compradores/:id/activo
+Desactiva un comprador (Borrado logico).
+
+Parametros URL:
+- id: ID numerico del comprador.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Comprador desactivado correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Comprador no encontrado.",
+    "error": null
+}
+
+---
+
+## PUT /api/v1/compradores/:id
+Actualiza un comprador existente.
+
+Parametros URL:
+- id: ID numerico del comprador.
+
+Body (JSON):
+{
+    "nombre": "AgroComercial S.A. Modificado",
+    "contacto": "Juan Pérez",
+    "telefono": "88334455"
+}
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Comprador actualizado correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Comprador no encontrado.",
+    "message": "Estanque no encontrado.",
+    "error": null
+}
+
+# Fisico Quimica
+ 
+## GET /api/v1/lecturasFisicoQuimicas
+Obtiene todas las lecturas fisico quimicas.
+ 
+Respuesta:
+200 OK
+{
+    "success": true,
+    "message": "Lecturas obtenidas correctamente.",
+    "data": [ ... ]
+}
+ 
+Respuesta de error:
+500 Internal Server Error
+{
+    "success": false,
+    "message": "Error al obtener las lecturas.",
+    "error": "Mensaje detallado del error"
+}
+ 
+---
+ 
+## GET /api/v1/lecturasFisicoQuimicas/:id
+Obtiene una lectura fisico quimica por su ID.
+ 
+Parametros URL:
+- id: ID numerico de la lectura.
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Lectura obtenida correctamente.",
+    "data": { ... }
+}
+ 
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Lectura no encontrada.",
+    "error": null
+}
+ 
+---
+ 
+## POST /api/v1/lecturasFisicoQuimicas
+Registra una nueva lectura fisico quimica.
+ 
+Body (JSON):
+{
+    "fincaId":     1,
+    "estanqueId":  "E-01",
+    "fecha":       "2026-07-03",
+    "ph":          [{ "valor": 7.8, "etiqueta": "mañana" }],
+    "salinidad":   [{ "valor": 18.0, "etiqueta": "mañana" }],
+    "temperatura": [{ "valor": 29.0, "etiqueta": "mañana" }],
+    "oxigeno":     [{ "valor": 6.2, "etiqueta": "mañana" }]
+}
+ 
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Lectura registrada correctamente.",
+    "data": { ... }
+}
+ 
+Respuesta de error:
+400 Bad Request
+{
+    "success": false,
+    "message": "Faltan campos requeridos: oxigeno.",
+    "error": null
+}
+ 
+---
+ 
+## PUT /api/v1/lecturasFisicoQuimicas/:id/activo
+Realiza el borrado logico de una lectura.
+Invierte el estado activo del registro.
+ 
+Parametros URL:
+- id: ID numerico de la lectura.
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Estado actualizado correctamente.",
+    "data": { ... }
+}
+ 
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Lectura no encontrada.",
+    "error": null
+}
+ 
+---
+ 
+# Trazabilidad
+ 
+## GET /api/v1/registrosTrazabilidad
+Obtiene todos los registros de trazabilidad.
+ 
+Respuesta:
+200 OK
+{
+    "success": true,
+    "message": "Registros obtenidos correctamente.",
+    "data": [ ... ]
+}
+ 
+Respuesta de error:
+500 Internal Server Error
+{
+    "success": false,
+    "message": "Error al obtener los registros.",
+    "error": "Mensaje detallado del error"
+}
+ 
+---
+ 
+## GET /api/v1/registrosTrazabilidad/:id
+Obtiene un registro de trazabilidad por su ID.
+ 
+Parametros URL:
+- id: ID numerico del registro.
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Registro obtenido correctamente.",
+    "data": { ... }
+}
+ 
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Registro no encontrado.",
+    "error": null
+}
+ 
+---
+ 
+## POST /api/v1/registrosTrazabilidad
+Registra un nuevo movimiento de trazabilidad.
+ 
+Body (JSON):
+{
+    "fincaId":           1,
+    "estanqueOrigenId":  "E-01",
+    "estanqueDestinoId": "E-05",
+    "fecha":             "2026-07-03",
+    "colaboradorId":     3,
+    "tamano":            8.5,
+    "dias":              45,
+    "pl":                5000
+}
+ 
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Registro guardado correctamente.",
+    "data": { ... }
+}
+ 
 "success": false,
 "message": "Registro no encontrado.",
 
@@ -435,6 +765,7 @@ Respuesta de error:
     "error": null
 
 }
+
 
 # Crecimiento
 ## GET /api/v0/crecimiento
@@ -925,6 +1256,34 @@ Respuesta de error:
 400 Bad Request
 {
     "success": false,
+    "message": "El estanque origen y destino no pueden ser el mismo.",
+    "error": null
+}
+ 
+---
+ 
+## PUT /api/v1/registrosTrazabilidad/:id/activo
+Realiza el borrado logico de un registro de trazabilidad.
+Invierte el estado activo del registro.
+ 
+Parametros URL:
+- id: ID numerico del registro.
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Estado actualizado correctamente.",
+    "data": { ... }
+}
+ 
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Registro no encontrado.",
+    "error": null
+}
+ 
     "message": "No se pudo obtener la parasitologia.",
     "error": "El id de la parasitologia no es valido"
 }
@@ -1136,6 +1495,7 @@ Respuesta de error:
     "message": "No se pudo eliminar la parasitologia.",
     "error": "Registro de parasitologia no encontrado"
 }
+
 # Enfermedades
 
 ## GET /api/v0/enfermedades
@@ -2050,6 +2410,270 @@ Obtiene un lote de larva activo por su ID.
 
 Parametros URL:
 - id: ID numerico del lote de larva.
+---
+
+# Tareas
+
+## GET /api/v1/tareas
+Obtiene todas las tareas.
+
+Respuesta:
+200 OK
+{ "success": true, "message": "Tareas obtenidas correctamente.", "data": [...] }
+
+---
+
+## GET /api/v1/tareas/catalogo
+Retorna lista reducida de tareas para poblar selects en el frontend.
+
+Respuesta:
+200 OK
+{ "success": true, "message": "Catalogo de tareas obtenido correctamente.",
+  "data": [{ "id": 1, "nombre": "Limpieza de filtros" }] }
+
+---
+
+## GET /api/v1/tareas/:id
+Obtiene una tarea por su ID.
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
+
+---
+
+## POST /api/v1/tareas
+Crea una nueva tarea.
+
+Body (JSON):
+{
+    "nombre":           "Revision de aireadores",
+    "descripcion":      "Inspeccion y limpieza de aireadores.",
+    "categoria":        "preventivo",
+    "duracionEstimada": 3
+}
+
+Respuesta exitosa:   201 Created
+Respuesta de error:  400 / 422
+
+Categorias validas: preventivo, correctivo, instalacion, inspeccion
+
+---
+
+## PUT /api/v1/tareas/:id
+Actualiza una tarea existente. Mismo body que POST.
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  400 / 422 / 404
+
+---
+
+## DELETE /api/v1/tareas/:id
+Elimina una tarea por su ID.
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
+
+---
+
+# Mantenimientos
+
+## GET /api/v1/mantenimientos
+Obtiene todos los mantenimientos.
+
+Respuesta:
+200 OK
+{ "success": true, "message": "Mantenimientos obtenidos correctamente.", "data": [...] }
+
+---
+
+## GET /api/v1/mantenimientos/:id
+Obtiene un mantenimiento por su ID.
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
+
+---
+
+## POST /api/v1/mantenimientos
+Crea un nuevo ticket de mantenimiento.
+
+Body (JSON):
+{
+    "fechaHora":   "2026-07-04T10:30:00",
+    "creadoPor":   "Marco Vásquez",
+    "titulo":      "Falla en bomba estanque 3",
+    "equipo":      "Bomba estanque 3",
+    "tarea":       1,
+    "descripcion": "La bomba presenta vibracion inusual."
+}
+
+Respuesta exitosa:   201 Created
+Respuesta de error:  400 / 422
+
+Nota: creadoPor sera reemplazado por sesion JWT cuando se implemente auth.
+Estados validos: abierto, en_progreso, cerrado
+
+---
+
+## PUT /api/v1/mantenimientos/:id
+Actualiza un mantenimiento existente.
+Mismo body que POST. Adicionalmente acepta el campo "estado".
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  400 / 422 / 404
+
+---
+
+## DELETE /api/v1/mantenimientos/:id
+Elimina un mantenimiento por su ID.
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
+# Login
+
+## POST /api/v0/login
+
+Autentica un administrador web con usuario o correo y contrasena.
+
+Body (JSON):
+{
+"usuario":    "admin01",
+"contrasena": "Admin1234"
+}
+
+También se puede usar "correo" en lugar de "usuario":
+{
+"correo":     "marco@caprocam.com",
+"contrasena": "Admin1234"
+}
+
+Respuesta exitosa:
+200 OK
+{
+"success": true,
+"message": "Login exitoso.",
+"data": {
+"id":        1,
+"nombre":    "Marco",
+"apellidos": "Vasquez",
+"correo":    "marco@caprocam.com",
+"usuario":   "admin01",
+"rol":       "Administrador"
+}
+}
+
+Respuesta de error:
+400 Bad Request
+{
+"success": false,
+"message": "Faltan campos requeridos: contrasena.",
+"error": null
+}
+
+Respuesta de error:
+404 Not Found
+{
+"success": false,
+"message": "Usuario no encontrado.",
+"error": null
+}
+
+Respuesta de error:
+401 Unauthorized
+{
+"success": false,
+"message": "Credenciales incorrectas.",
+"error": null
+}
+
+## POST /api/v0/login/registro
+
+Registra un nuevo administrador web. Requiere autenticacion.
+
+Body (JSON):
+{
+"nombre":     "Maria",
+"apellidos":  "Lopez",
+"correo":     "maria@caprocam.com",
+"usuario":    "maria01",
+"contrasena": "Segura2024",
+"rolId":      1
+}
+
+Respuesta exitosa:
+201 Created
+{
+"success": true,
+"message": "Administrador registrado correctamente.",
+"data": {
+"id":        4,
+"nombre":    "Maria",
+"apellidos": "Lopez",
+"correo":    "maria@caprocam.com",
+"usuario":   "maria01",
+"rol":       "Administrador"
+}
+}
+
+Respuesta de error:
+400 Bad Request
+{
+"success": false,
+"message": "Faltan campos requeridos: correo.",
+"error": null
+}
+
+Respuesta de error:
+409 Conflict
+{
+"success": false,
+"message": "El correo ya esta registrado.",
+"error": null
+}
+
+Respuesta de error:
+422 Unprocessable Entity
+{
+"success": false,
+"message": "La contrasena debe tener minimo 8 caracteres.",
+"error": null
+}
+
+## POST /api/v0/login/registro-operario
+
+Registra un nuevo operario de campo con PIN de 4 digitos.
+Solo accesible por administradores. Requiere autenticacion.
+
+Body (JSON):
+{
+"nombre": "Luis Fonseca",
+"rolId":  2,
+"pin":    "3391"
+}
+
+# Finca
+
+## GET /api/v0/fincas
+
+Obtiene todas las fincas registradas.
+
+Respuesta:
+200 OK
+{
+"success": true,
+"message": "Fincas obtenidas correctamente.",
+"data": [ ... ]
+}
+
+---
+
+## GET /api/v0/fincas/:idCBO
+
+Obtiene una finca por su ID CBO.
+
+Parametros URL:
+
+- idCBO: ID CBO de la finca.
 
 Respuesta exitosa:
 200 OK
@@ -2134,6 +2758,117 @@ Body (JSON):
     "pl_inicial": 12,
     "cantidad_inicial": 150000,
     "fecha_ingreso": "2026-07-04"
+"success": false,
+"message": "Finca no encontrada.",
+"error": null
+}
+
+---
+
+## POST /api/v0/fincas
+
+Crea una nueva finca.
+
+Body (JSON):
+{
+"idCBO": 1,
+"nombreFinca": "Finca La Reina",
+"provincia": "Guanacaste",
+"canton": "Nandayure",
+"distrito": "Bongo",
+"otrasSenas": "Frente a la carretera principal",
+"propietarioResponsable": "Juan Pérez",
+"telefono": "88776655",
+"areaTotal": 50,
+"espejosAgua": 15
+}
+
+Campos requeridos:
+
+- idCBO
+- nombreFinca
+- provincia
+- canton
+- distrito
+- propietarioResponsable
+- telefono
+- areaTotal
+- espejosAgua
+
+Campos opcionales:
+
+- otrasSenas
+
+Respuesta exitosa:
+201 Created
+{
+"success": true,
+"message": "Operario registrado correctamente.",
+"data": {
+"id":     4,
+"nombre": "Luis Fonseca",
+"rol": {
+"id":                  2,
+"nombre":              "Operario de alimentacion",
+"pantallasPermitidas": ["registro-alimentacion", "historial-estanques"]
+}
+}
+"message": "Finca creada correctamente.",
+"data": { ... }
+}
+
+Respuesta de error:
+400 Bad Request
+{
+"success": false,
+"message": "Faltan campos requeridos: pin.",
+"error": null
+}
+
+Respuesta de error:
+422 Unprocessable Entity
+{
+"success": false,
+"message": "El PIN debe tener exactamente 4 digitos numericos.",
+"error": null
+}
+
+## POST /api/v0/login/verificar-pin
+
+Verifica el PIN de un operario de campo desde la app movil.
+Devuelve el rol y las pantallas permitidas para controlar
+las vistas que se muestran en el dispositivo.
+
+Body (JSON):
+{
+"operarioId": 2,
+"pin":        "1984"
+"message": "Faltan campos requeridos.",
+"error": null
+}
+
+---
+
+## PUT /api/v0/fincas/:idCBO
+
+Actualiza una finca existente.
+
+Parametros URL:
+
+- idCBO: ID CBO de la finca a actualizar.
+
+Body (JSON):
+{
+"idCBO": 1,
+"nombreFinca": "Finca La Reina Actualizada",
+"provincia": "Guanacaste",
+"canton": "Nandayure",
+"distrito": "Bongo",
+"otrasSenas": "Frente a la carretera principal, sector este",
+"propietarioResponsable": "Juan Pérez García",
+"telefono": "88776655",
+"areaTotal": 55,
+"espejosAgua": 18
 }
 
 Respuesta exitosa:
@@ -2188,6 +2923,59 @@ Respuesta exitosa:
 
 ## GET /api/v1/siembra/precrias/:id
 Obtiene una pre-cria activa por su ID.
+"success": true,
+"message": "PIN verificado correctamente.",
+"data": {
+"id":     2,
+"nombre": "Carlos Mendoza",
+"rol": {
+"id":                  2,
+"nombre":              "Operario de alimentacion",
+"pantallasPermitidas": ["registro-alimentacion", "historial-estanques"]
+}
+}
+}
+
+Respuesta de error:
+400 Bad Request
+{
+"success": false,
+"message": "Faltan campos requeridos: pin.",
+"error": null
+"message": "Finca actualizada correctamente.",
+"data": { ... }
+}
+
+Respuesta de error:
+404 Not Found
+{
+"success": false,
+"message": "Operario no encontrado.",
+"message": "Finca no encontrada.",
+"error": null
+}
+
+Respuesta de error:
+401 Unauthorized
+{
+"success": false,
+"message": "PIN incorrecto.",
+"error": null
+}
+
+Respuesta de error:
+422 Unprocessable Entity
+{
+"success": false,
+"message": "El PIN debe tener exactamente 4 digitos numericos.",
+"error": null
+}
+
+## GET /api/v0/login/sincronizar
+
+Devuelve la lista de operarios activos con sus hashes de PIN
+para que la app movil los guarde en SQLite y pueda autenticar
+sin conexion a internet. Requiere autenticacion.
 
 Respuesta exitosa:
 200 OK
@@ -2242,6 +3030,49 @@ Body (JSON):
     "cantidad_final": 75000,
     "pl_final": 15
 }
+"success": true,
+"message": "Lista de operarios obtenida correctamente.",
+"data": [
+{
+"id":      2,
+"nombre":  "Carlos Mendoza",
+"pinHash": "2b$10
+...",
+"rol":     "Operario de alimentacion"
+},
+{
+"id":      3,
+"nombre":  "Ana Solis",
+"pinHash": "2b$10
+...",
+"rol":     "Supervisor de estanques"
+}
+]
+}
+
+## GET /api/v0/login/:id
+
+Obtiene un usuario por su ID. Requiere autenticacion.
+
+Parametros URL:
+
+id: ID numerico del usuario.
+400 Bad Request
+{
+"success": false,
+"message": "Faltan campos requeridos.",
+"error": null
+}
+
+---
+
+## DELETE /api/v0/fincas/:idCBO
+
+Elimina una finca por su ID CBO.
+
+Parametros URL:
+
+- idCBO: ID CBO de la finca a eliminar.
 
 Respuesta exitosa:
 200 OK
@@ -2291,3 +3122,28 @@ Respuesta exitosa:
     "message": "Pre-cria eliminada correctamente.",
     "data": { ... }
 }
+"success": true,
+"message": "Usuario obtenido correctamente.",
+"data": {
+"id":        1,
+"nombre":    "Marco",
+"apellidos": "Vasquez",
+"correo":    "marco@caprocam.com",
+"usuario":   "admin01",
+"rol":       "Administrador"
+}
+"message": "Finca eliminada correctamente.",
+"data": { ... }
+}
+
+Respuesta de error:
+404 Not Found
+{
+"success": false,
+"message": "Usuario no encontrado.",
+"error": null
+}
+"message": "Finca no encontrada.",
+"error": null
+}
+

@@ -36,6 +36,8 @@ import mantenimientoRouter from './routes/mantenimiento.routes.js';
 import tareaRouter from './routes/tarea.routes.js';
 import loginRouter     from "./routes/loginUsuarios.routes.js";
 import fincaRoutes from "./routes/finca.routes.js";
+import fisicoQuimicaRoutes from './routes/fisicoQuimica.routes.js';
+import trazabilidadRoutes from './routes/trazabilidad.routes.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -73,6 +75,8 @@ app.use('/api/v0/mantenimientos', mantenimientoRouter);
 app.use('/api/v0/tareas', tareaRouter);
 app.use("/api/v0/login",  loginRouter);
 app.use("/api/v0/fincas", fincaRoutes);
+app.use('/api/v0/lecturasFisicoQuimicas', fisicoQuimicaRoutes);
+app.use('/api/v0/registrosTrazabilidad', trazabilidadRoutes);
 
 /*
 //////////////////////////////////////////////////////////
@@ -87,6 +91,10 @@ app.get("/", (req, res) => {
         success: true,
         message: "API CAPROCAM funcionando correctamente."
     });
+});
+
+app.listen(PORT, () => {
+    console.log(`El server esta corriendo en http://localhost:${PORT}`);
 });
 
 /*
