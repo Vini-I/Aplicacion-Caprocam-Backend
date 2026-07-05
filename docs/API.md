@@ -1040,3 +1040,216 @@ Respuesta de error:
     "message": "No se pudo eliminar la parasitologia.",
     "error": "Registro de parasitologia no encontrado"
 }
+
+---
+
+# Inventario
+
+## GET /api/v1/inventarios
+Obtiene todos los productos activos del inventario con la bandera calculada de stock bajo.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Productos de inventario obtenidos correctamente.",
+    "data": [
+        {
+            "id": 1,
+            "codigo": "ALI-001",
+            "nombre": "Alimento Biomar 35%",
+            "categoria": "Alimentación",
+            "cantidad": 250,
+            "unidad": "kg",
+            "stockMinimo": 50,
+            "proveedor": "Biomar",
+            "precioUnidad": 1450,
+            "stockBajo": false
+        },
+        ...
+    ]
+}
+
+---
+
+## GET /api/v1/inventarios/:id
+Obtiene un producto activo por su ID.
+
+Parametros URL:
+- id: ID numerico del producto.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Producto obtenido correctamente.",
+    "data": {
+        "id": 2,
+        "codigo": "ALI-002",
+        "nombre": "Melaza de caña",
+        "categoria": "Alimentación",
+        "cantidad": 30,
+        "unidad": "litros",
+        "stockMinimo": 50,
+        "proveedor": "Trisan",
+        "precioUnidad": 320,
+        "stockBajo": true
+    }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Producto no encontrado.",
+    "error": null
+}
+
+---
+
+## POST /api/v1/inventarios
+Crea un nuevo producto de inventario.
+
+Body (JSON):
+{
+    "codigo": "ALI-004",
+    "nombre": "Alimento Biomar 40%",
+    "categoria": "Alimentación",
+    "cantidad": 100,
+    "unidad": "kg",
+    "stockMinimo": 20,
+    "proveedor": "Biomar",
+    "precioUnidad": 1600
+}
+
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Producto creado correctamente.",
+    "data": {
+        "id": 8,
+        "codigo": "ALI-004",
+        "nombre": "Alimento Biomar 40%",
+        "categoria": "Alimentación",
+        "cantidad": 100,
+        "unidad": "kg",
+        "stockMinimo": 20,
+        "proveedor": "Biomar",
+        "precioUnidad": 1600,
+        "stockBajo": false
+    }
+}
+
+Respuesta de error:
+400 Bad Request (Faltan campos)
+{
+    "success": false,
+    "message": "Faltan campos requeridos: nombre, categoria.",
+    "error": null
+}
+
+Respuesta de error:
+409 Conflict (Código duplicado)
+{
+    "success": false,
+    "message": "Ya existe un producto con ese código.",
+    "error": null
+}
+
+Respuesta de error:
+422 Unprocessable Entity (Validaciones)
+{
+    "success": false,
+    "message": "La cantidad debe ser mayor o igual a 0.",
+    "error": null
+}
+
+---
+
+## PUT /api/v1/inventarios/:id
+Actualiza un producto activo existente.
+
+Parametros URL:
+- id: ID numerico del producto.
+
+Body (JSON):
+{
+    "codigo": "ALI-002",
+    "nombre": "Melaza de caña refinada",
+    "categoria": "Alimentación",
+    "cantidad": 60,
+    "unidad": "litros",
+    "stockMinimo": 50,
+    "proveedor": "Trisan",
+    "precioUnidad": 350
+}
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Producto actualizado correctamente.",
+    "data": {
+        "id": 2,
+        "codigo": "ALI-002",
+        "nombre": "Melaza de caña refinada",
+        "categoria": "Alimentación",
+        "cantidad": 60,
+        "unidad": "litros",
+        "stockMinimo": 50,
+        "proveedor": "Trisan",
+        "precioUnidad": 350,
+        "stockBajo": false
+    }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Producto no encontrado.",
+    "error": null
+}
+
+Respuesta de error:
+409 Conflict (Código duplicado)
+{
+    "success": false,
+    "message": "Ya existe otro producto con ese código.",
+    "error": null
+}
+
+---
+
+## DELETE /api/v1/inventarios/:id
+Elimina (borrado logico) un producto por su ID.
+
+Parametros URL:
+- id: ID numerico del producto.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Producto eliminado correctamente.",
+    "data": {
+        "id": 2,
+        "codigo": "ALI-002",
+        "nombre": "Melaza de caña refinada",
+        "categoria": "Alimentación",
+        "cantidad": 60,
+        "unidad": "litros",
+        "stockMinimo": 50,
+        "proveedor": "Trisan",
+        "precioUnidad": 350
+    }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Producto no encontrado.",
+    "error": null
+}
