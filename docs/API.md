@@ -1040,3 +1040,123 @@ Respuesta de error:
     "message": "No se pudo eliminar la parasitologia.",
     "error": "Registro de parasitologia no encontrado"
 }
+
+---
+
+# Tareas
+
+## GET /api/v1/tareas
+Obtiene todas las tareas.
+
+Respuesta:
+200 OK
+{ "success": true, "message": "Tareas obtenidas correctamente.", "data": [...] }
+
+---
+
+## GET /api/v1/tareas/catalogo
+Retorna lista reducida de tareas para poblar selects en el frontend.
+
+Respuesta:
+200 OK
+{ "success": true, "message": "Catalogo de tareas obtenido correctamente.",
+  "data": [{ "id": 1, "nombre": "Limpieza de filtros" }] }
+
+---
+
+## GET /api/v1/tareas/:id
+Obtiene una tarea por su ID.
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
+
+---
+
+## POST /api/v1/tareas
+Crea una nueva tarea.
+
+Body (JSON):
+{
+    "nombre":           "Revision de aireadores",
+    "descripcion":      "Inspeccion y limpieza de aireadores.",
+    "categoria":        "preventivo",
+    "duracionEstimada": 3
+}
+
+Respuesta exitosa:   201 Created
+Respuesta de error:  400 / 422
+
+Categorias validas: preventivo, correctivo, instalacion, inspeccion
+
+---
+
+## PUT /api/v1/tareas/:id
+Actualiza una tarea existente. Mismo body que POST.
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  400 / 422 / 404
+
+---
+
+## DELETE /api/v1/tareas/:id
+Elimina una tarea por su ID.
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
+
+---
+
+# Mantenimientos
+
+## GET /api/v1/mantenimientos
+Obtiene todos los mantenimientos.
+
+Respuesta:
+200 OK
+{ "success": true, "message": "Mantenimientos obtenidos correctamente.", "data": [...] }
+
+---
+
+## GET /api/v1/mantenimientos/:id
+Obtiene un mantenimiento por su ID.
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
+
+---
+
+## POST /api/v1/mantenimientos
+Crea un nuevo ticket de mantenimiento.
+
+Body (JSON):
+{
+    "fechaHora":   "2026-07-04T10:30:00",
+    "creadoPor":   "Marco Vásquez",
+    "titulo":      "Falla en bomba estanque 3",
+    "equipo":      "Bomba estanque 3",
+    "tarea":       1,
+    "descripcion": "La bomba presenta vibracion inusual."
+}
+
+Respuesta exitosa:   201 Created
+Respuesta de error:  400 / 422
+
+Nota: creadoPor sera reemplazado por sesion JWT cuando se implemente auth.
+Estados validos: abierto, en_progreso, cerrado
+
+---
+
+## PUT /api/v1/mantenimientos/:id
+Actualiza un mantenimiento existente.
+Mismo body que POST. Adicionalmente acepta el campo "estado".
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  400 / 422 / 404
+
+---
+
+## DELETE /api/v1/mantenimientos/:id
+Elimina un mantenimiento por su ID.
+
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
