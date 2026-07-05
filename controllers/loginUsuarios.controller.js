@@ -2,15 +2,14 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo:     loginUsuarios.controller.js
-Autor:       Rodolfo Chaves
-Fecha:       28/06/2026
-Modulo:      Login
+Archivo: loginUsuarios.controller.js
+Autor: Rodolfo Chaves
+Fecha: 28/06/2026
+Modulo: Login
 Descripcion:
-Recibe las peticiones HTTP, delega al servicio,
-aplica el DTO correspondiente sobre los datos crudos
-y devuelve la respuesta JSON estandarizada al cliente.
-Toda la logica de negocio vive en el service, no aqui.
+Recibe las peticiones HTTP, consulta los modelos,
+delega validaciones al servicio, aplica el DTO
+correspondiente y devuelve la respuesta JSON al cliente.
 //////////////////////////////////////////////////////////
 */
 
@@ -21,27 +20,26 @@ IMPORTS
 
 DTOs
 */
-import { LoginAdminDTO }          from '../dtos/loginAdmin.dto.js';
-import { LoginOperarioDTO }       from '../dtos/loginOperario.dto.js';
-import { LoginSincronizacionDTO } from '../dtos/loginSincronizacion.dto.js';
+import { LoginAdminDTO }          from "../dtos/loginAdmin.dto.js";
+import { LoginOperarioDTO }       from "../dtos/loginOperario.dto.js";
+import { LoginSincronizacionDTO } from "../dtos/loginSincronizacion.dto.js";
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
+// Servicios
+import {
+    isContrasenaValida,
+    hashContrasena,
+    hashPin,
+    isPinValido,
+    isPin,
+    isContrasenaSegura,
+} from "../services/loginUsuarios.services.js";
 
-Modelos / servicios
-*/
-import * as loginService from '../services/loginUsuarios.services.js';
+// Modelos
+import * as UsuariosModel from "../models/loginUsuarios.model.js";
+import * as RolesModel    from "../models/loginRoles.model.js";
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Common
-*/
-import { exito, error } from '../common/respuestaJson.js';
+// Common
+import { exito, error } from "../common/respuestaJson.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -55,9 +53,8 @@ ruta del modulo de login.
 export async function login(req, res) {
     /*
     Descripcion:
-    Maneja el login web de administradores. Acepta usuario
-    o correo como identificador junto con la contrasena.
-    Aplica LoginAdminDTO sobre los datos crudos del service.
+    Autentica un administrador web por usuario o correo
+    y contrasena.
 
     Parametros:
     - req.body: { usuario?, correo?, contrasena }
@@ -67,27 +64,30 @@ export async function login(req, res) {
     - 404 si el usuario no existe
     - 401 si la contrasena es incorrecta
     */
-    try {
-        const { usuario, correo, contrasena } = req.body;
-        const identificador = usuario || correo;
+    const { usuario, correo, contrasena } = req.body;
+    const identificador = usuario || correo;
 
-        const { usuario: u, rol } = await loginService.loginAdmin(
-            identificador,
-            contrasena
-        );
+    const usuarioEncontrado = UsuariosModel.findByUsuarioOCorreo(identificador);
 
-        return exito(res, 'Login exitoso.', new LoginAdminDTO(u, rol.nombre));
-    } catch (err) {
-        return error(res, err.mensaje ?? 'Error en login.', null, err.codigo ?? 500);
-    }
+    if (!usuarioEncontrado || usuarioEncontrado.tipo !== "administrador")
+        return error(res, "Usuario no encontrado.", null, 404);
+
+    const contrasenaOk = await isContrasenaValida(
+        contrasena,
+        usuarioEncontrado.contrasenaHash
+    );
+    if (!contrasenaOk)
+        return error(res, "Credenciales incorrectas.", null, 401);
+
+    const rol = RolesModel.findById(usuarioEncontrado.rolId);
+
+    return exito(res, "Login exitoso.", new LoginAdminDTO(usuarioEncontrado, rol.nombre));
 }
 
 export async function registrar(req, res) {
     /*
     Descripcion:
-    Registra un nuevo administrador desde la plataforma
-    web. Aplica LoginAdminDTO sobre los datos crudos del
-    service.
+    Registra un nuevo administrador web.
 
     Parametros:
     - req.body: { nombre, apellidos, correo,
@@ -99,34 +99,40 @@ export async function registrar(req, res) {
     - 422 si la contrasena tiene menos de 8 caracteres
           o el rol no existe
     */
-    try {
-        const { usuario: u, rol } = await loginService.registrarAdmin(
-            req.body
-        );
+    const { nombre, apellidos, correo, usuario, contrasena, rolId } = req.body;
 
-        return exito(
-            res,
-            'Administrador registrado correctamente.',
-            new LoginAdminDTO(u, rol.nombre),
-            201
-        );
-    } catch (err) {
-        return error(
-            res,
-            err.mensaje ?? 'Error al registrar.',
-            null,
-            err.codigo ?? 500
-        );
-    }
+    if (!isContrasenaSegura(contrasena))
+        return error(res, "La contrasena debe tener minimo 8 caracteres.", null, 422);
+
+    if (UsuariosModel.findByCorreo(correo))
+        return error(res, "El correo ya esta registrado.", null, 409);
+
+    if (UsuariosModel.findByUsuario(usuario))
+        return error(res, "El nombre de usuario ya existe.", null, 409);
+
+    const rol = RolesModel.findById(rolId);
+    if (!rol)
+        return error(res, "El rol indicado no existe.", null, 422);
+
+    const contrasenaHash = await hashContrasena(contrasena);
+    const nuevo = UsuariosModel.create({
+        nombre, apellidos, correo, usuario,
+        contrasenaHash, rolId, tipo: "administrador"
+    });
+
+    return exito(
+        res,
+        "Administrador registrado correctamente.",
+        new LoginAdminDTO(nuevo, rol.nombre),
+        201
+    );
 }
 
 export async function registrarOperario(req, res) {
     /*
     Descripcion:
-    Registra un nuevo operario de campo. Solo el
-    administrador usa este endpoint desde la web.
-    Aplica LoginOperarioDTO sobre los datos crudos del
-    service.
+    Registra un nuevo operario de campo con PIN de
+    4 digitos. Solo accesible por administradores.
 
     Parametros:
     - req.body: { nombre, rolId, pin }
@@ -135,34 +141,37 @@ export async function registrarOperario(req, res) {
     - 201 con los datos del operario creado (sin pinHash)
     - 422 si el PIN no tiene 4 digitos o el rol no existe
     */
-    try {
-        const { operario, rol } = await loginService.registrarOperario(
-            req.body
+    const { nombre, rolId, pin } = req.body;
+
+    if (!isPin(pin))
+        return error(
+            res, "El PIN debe tener exactamente 4 digitos numericos.", null, 422
         );
 
-        return exito(
-            res,
-            'Operario registrado correctamente.',
-            new LoginOperarioDTO(operario, rol),
-            201
-        );
-    } catch (err) {
-        return error(
-            res,
-            err.mensaje ?? 'Error al registrar operario.',
-            null,
-            err.codigo ?? 500
-        );
-    }
+    const rol = RolesModel.findById(rolId);
+    if (!rol)
+        return error(res, "El rol indicado no existe.", null, 422);
+
+    const pinHash  = await hashPin(pin);
+    const operario = UsuariosModel.create({
+        nombre, apellidos: "", correo: null,
+        usuario: null, pinHash, rolId, tipo: "operario"
+    });
+
+    return exito(
+        res,
+        "Operario registrado correctamente.",
+        new LoginOperarioDTO(operario, rol),
+        201
+    );
 }
 
 export async function verificarPin(req, res) {
     /*
     Descripcion:
-    Verifica el PIN de un operario de campo desde la app
-    movil. Aplica LoginOperarioDTO que incluye las
-    pantallasPermitidas para controlar las vistas del
-    movil segun el rol.
+    Verifica el PIN de un operario desde la app movil.
+    Devuelve el rol y pantallasPermitidas para controlar
+    las vistas del dispositivo.
 
     Parametros:
     - req.body: { operarioId, pin }
@@ -173,36 +182,34 @@ export async function verificarPin(req, res) {
     - 401 si el PIN es incorrecto
     - 422 si el PIN no tiene formato de 4 digitos
     */
-    try {
-        const { operarioId, pin } = req.body;
+    const { operarioId, pin } = req.body;
 
-        const { operario, rol } = await loginService.verificarPin(
-            operarioId,
-            pin
-        );
-
-        return exito(
-            res,
-            'PIN verificado correctamente.',
-            new LoginOperarioDTO(operario, rol)
-        );
-    } catch (err) {
+    if (!isPin(pin))
         return error(
-            res,
-            err.mensaje ?? 'Error al verificar PIN.',
-            null,
-            err.codigo ?? 500
+            res, "El PIN debe tener exactamente 4 digitos numericos.", null, 422
         );
-    }
+
+    const operario = UsuariosModel.findById(operarioId);
+    if (!operario || operario.tipo !== "operario")
+        return error(res, "Operario no encontrado.", null, 404);
+
+    const pinOk = await isPinValido(pin, operario.pinHash);
+    if (!pinOk)
+        return error(res, "PIN incorrecto.", null, 401);
+
+    const rol = RolesModel.findById(operario.rolId);
+
+    return exito(
+        res, "PIN verificado correctamente.", new LoginOperarioDTO(operario, rol)
+    );
 }
 
 export function sincronizar(req, res) {
     /*
     Descripcion:
-    Devuelve la lista completa de operarios activos para
-    que la app movil la guarde en su SQLite local.
-    Aplica LoginSincronizacionDTO que incluye el pinHash
-    para verificacion offline.
+    Devuelve todos los operarios activos con su pinHash
+    para que la app movil los guarde en SQLite y pueda
+    autenticar sin conexion a internet.
 
     Parametros:
     No posee (GET sin body).
@@ -210,29 +217,20 @@ export function sincronizar(req, res) {
     Retorna:
     - 200 con el arreglo de operarios (incluye pinHash)
     */
-    try {
-        const lista = loginService.obtenerOperariosParaSincronizar();
+    const operarios = UsuariosModel.findAllOperarios();
 
-        const data = lista.map(({ operario, rol }) =>
-            new LoginSincronizacionDTO(operario, rol.nombre)
-        );
+    const data = operarios.map((operario) => {
+        const rol = RolesModel.findById(operario.rolId);
+        return new LoginSincronizacionDTO(operario, rol.nombre);
+    });
 
-        return exito(res, 'Lista de operarios obtenida correctamente.', data);
-    } catch (err) {
-        return error(
-            res,
-            err.mensaje ?? 'Error de sincronizacion.',
-            null,
-            err.codigo ?? 500
-        );
-    }
+    return exito(res, "Lista de operarios obtenida correctamente.", data);
 }
 
 export function obtenerPorId(req, res) {
     /*
     Descripcion:
-    Obtiene un usuario por su ID. Aplica LoginAdminDTO
-    sobre los datos crudos del service.
+    Obtiene un usuario por su ID.
 
     Parametros:
     - req.params.id: ID numerico del usuario.
@@ -241,20 +239,14 @@ export function obtenerPorId(req, res) {
     - 200 con los datos del usuario (sin campos sensibles)
     - 404 si el usuario no existe
     */
-    try {
-        const { usuario, rol } = loginService.obtenerPorId(req.params.id);
+    const usuario = UsuariosModel.findById(req.params.id);
 
-        return exito(
-            res,
-            'Usuario obtenido correctamente.',
-            new LoginAdminDTO(usuario, rol.nombre)
-        );
-    } catch (err) {
-        return error(
-            res,
-            err.mensaje ?? 'Error al obtener usuario.',
-            null,
-            err.codigo ?? 500
-        );
-    }
+    if (!usuario)
+        return error(res, "Usuario no encontrado.", null, 404);
+
+    const rol = RolesModel.findById(usuario.rolId);
+
+    return exito(
+        res, "Usuario obtenido correctamente.", new LoginAdminDTO(usuario, rol.nombre)
+    );
 }
