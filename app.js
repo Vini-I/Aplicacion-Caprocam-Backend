@@ -34,6 +34,8 @@ import raleoRouter from "./routes/raleo.routes.js"
 import ventasRouter from "./routes/mantVentas.routes.js";
 import mantenimientoRouter from './routes/mantenimiento.routes.js';
 import tareaRouter from './routes/tarea.routes.js';
+import loginRouter     from "./routes/loginUsuarios.routes.js";
+import fincaRoutes from "./routes/finca.routes.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -69,6 +71,8 @@ app.use("/api/v0/raleo", raleoRouter);
 app.use("/api/v0/ventas", ventasRouter);
 app.use('/api/v0/mantenimientos', mantenimientoRouter);
 app.use('/api/v0/tareas', tareaRouter);
+app.use("/api/v0/login",  loginRouter);
+app.use("/api/v0/fincas", fincaRoutes);
 
 /*
 //////////////////////////////////////////////////////////
