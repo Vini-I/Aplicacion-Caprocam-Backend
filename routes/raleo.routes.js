@@ -2,13 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: proveedor.route.js
-Autor: Oscar Mario Alvarez / Joan
-Fecha: 29/6/2026
-Modulo: proveedores
+Archivo: estanques.routes.js
+Autor: Sebastian Vilelgas Barquero
+Fecha: 03/07/2026
+Modulo: Raleo
 Descripcion:
-Route encargado de los endpoints en donde se conecta
-y valida las peticiones HTTP de proveedores.
+Define las rutas HTTP del modulo de raleo.
 //////////////////////////////////////////////////////////
 */
 
@@ -16,23 +15,23 @@ y valida las peticiones HTTP de proveedores.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
+
+Librerias externas
 */
 
 import { Router } from "express";
 
-// Importar en PLURAL (carpeta oficial del proyecto)
+// Middlewares
 import { verificarAuth } from "../middlewares/auth.middleware.js";
+import { validarBodyRaleo } from "../middlewares/raleo.middleware.js";
 
-// Importar en SINGULAR (carpeta local de proveedores)
-import { validarBodyProveedor } from "../middlewares/proveedor.middleware.js";
-
+// Controladores
 import {
-    listarProveedores,
-    obtenerProveedor,
-    crearProveedor,
-    actualizarProveedor,
-    eliminarProveedor,
-} from "../controllers/proveedor.controller.js";
+    getRaleo,
+    getRaleoById,
+    createRaleo,
+    deleteRaleo
+} from "../controllers/raleo.controller.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -48,15 +47,14 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get("/", verificarAuth, listarProveedores);
-router.get("/:id", verificarAuth, obtenerProveedor);
-router.post("/", verificarAuth, validarBodyProveedor, crearProveedor);
-router.put("/:id", verificarAuth, validarBodyProveedor, actualizarProveedor);
-router.delete("/:id", verificarAuth, eliminarProveedor);
+router.get("/", verificarAuth, getRaleo);
+router.get("/:id", verificarAuth, getRaleoById);
+router.post("/", verificarAuth, validarBodyRaleo, createRaleo);
+router.delete("/:id", verificarAuth, deleteRaleo);
 
 /*
 //////////////////////////////////////////////////////////
-EXPORTS
+EXPORT
 //////////////////////////////////////////////////////////
 */
 

@@ -2,13 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: proveedor.route.js
-Autor: Oscar Mario Alvarez / Joan
-Fecha: 29/6/2026
-Modulo: proveedores
+Archivo: estanques.routes.js
+Autor: Gerald Alfaro
+Fecha: 29/06/2026
+Modulo: Estanques
 Descripcion:
-Route encargado de los endpoints en donde se conecta
-y valida las peticiones HTTP de proveedores.
+Define las rutas HTTP del modulo de estanques.
 //////////////////////////////////////////////////////////
 */
 
@@ -16,23 +15,24 @@ y valida las peticiones HTTP de proveedores.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
+
+Librerias externas
 */
 
 import { Router } from "express";
 
-// Importar en PLURAL (carpeta oficial del proyecto)
+// Middlewares
 import { verificarAuth } from "../middlewares/auth.middleware.js";
+import { validarBodyEstanque } from "../middlewares/estanques.middleware.js";
 
-// Importar en SINGULAR (carpeta local de proveedores)
-import { validarBodyProveedor } from "../middlewares/proveedor.middleware.js";
-
+// Controladores
 import {
-    listarProveedores,
-    obtenerProveedor,
-    crearProveedor,
-    actualizarProveedor,
-    eliminarProveedor,
-} from "../controllers/proveedor.controller.js";
+    getEstanques,
+    getEstanqueById,
+    createEstanque,
+    updateEstanque,
+    deleteEstanque
+} from "../controllers/estanques.controller.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -48,15 +48,15 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get("/", verificarAuth, listarProveedores);
-router.get("/:id", verificarAuth, obtenerProveedor);
-router.post("/", verificarAuth, validarBodyProveedor, crearProveedor);
-router.put("/:id", verificarAuth, validarBodyProveedor, actualizarProveedor);
-router.delete("/:id", verificarAuth, eliminarProveedor);
+router.get("/", verificarAuth, getEstanques);
+router.get("/:id", verificarAuth, getEstanqueById);
+router.post("/", verificarAuth, validarBodyEstanque, createEstanque);
+router.put("/:id", verificarAuth, validarBodyEstanque, updateEstanque);
+router.delete("/:id", verificarAuth, deleteEstanque);
 
 /*
 //////////////////////////////////////////////////////////
-EXPORTS
+EXPORT
 //////////////////////////////////////////////////////////
 */
 
