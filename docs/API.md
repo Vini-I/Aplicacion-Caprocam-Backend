@@ -171,6 +171,11 @@ Respuesta de error:
 "error": null
 }
 
+# Productos
+
+## GET /api/v1/productos
+Obtiene todos los productos en estado ACTIVO.
+---
 ## POST /api/v0/densidad-poblacional
 
 Crea un nuevo registro de densidad poblacional.
@@ -244,15 +249,20 @@ Obtiene todos los estanques registrados.
 Respuesta:
 200 OK
 {
-"success": true,
-"message": "Registros obtenidos correctamente.",
-
+    "success": true,
+    "message": "Productos obtenidos correctamente.",
     "message": "Estanques obtenidos correctamente.",
     "data": [ ... ]
 
 }
 
 ---
+
+## GET /api/v1/productos/:id
+Obtiene un producto activo por su ID.
+
+Parametros URL:
+- id: ID numerico del producto.
 
 ## GET /api/v0/estanques/:id
 
@@ -265,9 +275,8 @@ Parametros URL:
 Respuesta exitosa:
 200 OK
 {
-"success": true,
-"message": "Registro obtenido correctamente.",
-
+    "success": true,
+    "message": "Producto obtenido correctamente.",
     "message": "Estanque obtenido correctamente.",
     "data": { ... }
 
@@ -276,15 +285,25 @@ Respuesta exitosa:
 Respuesta de error:
 404 Not Found
 {
-"success": false,
-"message": "Registro no encontrado.",
-
+    "success": false,
+    "message": "Producto no encontrado.",
     "message": "Estanque no encontrado.",
     "error": null
 
 }
 
 ---
+
+## POST /api/v1/productos
+Crea un nuevo producto.
+
+Body (JSON):
+{
+    "nombre": "Fertilizante Foliar H2",
+    "categoria": "Fertilizante",
+    "cantidad": 50,
+    "stockMinimo": 10,
+    "precioUnidad": 3500
 
 ## POST /api/v0/estanques
 
@@ -315,9 +334,8 @@ Body (JSON):
 Respuesta exitosa:
 201 Created
 {
-"success": true,
-"message": "Registro creado correctamente.",
-
+    "success": true,
+    "message": "Producto creado correctamente.",
     "message": "Estanque creado correctamente.",
     "data": { ... }
 
@@ -326,9 +344,32 @@ Respuesta exitosa:
 Respuesta de error:
 400 Bad Request
 {
-"success": false,
-"message": "Faltan campos requeridos.",
+    "success": false,
+    "message": "Nombre y categoria son requeridos.",
+    "error": null
+}
 
+---
+
+## PUT /api/v1/productos/:id/activos
+Desactiva un producto (Borrado logico).
+
+Parametros URL:
+- id: ID numerico del producto.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Producto desactivado correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Producto no encontrado.",
     "message": "Faltan campos requeridos: codigo.",
     "error": null
 
@@ -344,7 +385,19 @@ Respuesta de error:
 
 ---
 
-## PUT /api/v0/estanques/:id
+## PUT /api/v1/productos/:id
+Actualiza un producto existente.
+
+Parametros URL:
+- id: ID numerico del producto.
+
+Body (JSON):
+{
+    "nombre": "Fertilizante Foliar Premium",
+    "categoria": "Fertilizante",
+    "cantidad": 45,
+    "stockMinimo": 10,
+    "precioUnidad": 3800
 
 Actualiza un estanque existente.
 
@@ -377,9 +430,8 @@ Body (JSON):
 Respuesta exitosa:
 200 OK
 {
-"success": true,
-"message": "Registro actualizado correctamente.",
-
+    "success": true,
+    "message": "Producto actualizado correctamente.",
     "message": "Estanque actualizado correctamente.",
     "data": { ... }
 
@@ -388,9 +440,8 @@ Respuesta exitosa:
 Respuesta de error:
 404 Not Found
 {
-"success": false,
-"message": "Registro no encontrado.",
-
+    "success": false,
+    "message": "Producto no encontrado.",
     "message": "Estanque no encontrado.",
     "error": null
 
@@ -406,8 +457,28 @@ Respuesta de error:
 
 ---
 
-## DELETE /api/v0/estanques/:id
+# Compradores
 
+## GET /api/v1/compradores
+Obtiene todos los compradores en estado ACTIVO.
+
+Respuesta:
+200 OK
+{
+    "success": true,
+    "message": "Compradores obtenidos correctamente.",
+    "data": [ ... ]
+}
+
+---
+
+## GET /api/v1/compradores/:id
+Obtiene un comprador activo por su ID.
+
+Parametros URL:
+- id: ID numerico del comprador.
+
+## DELETE /api/v0/estanques/:id
 Elimina un estanque por su ID.
 
 Parametros URL:
@@ -417,9 +488,8 @@ Parametros URL:
 Respuesta exitosa:
 200 OK
 {
-"success": true,
-"message": "Registro eliminado correctamente.",
-
+    "success": true,
+    "message": "Comprador obtenido correctamente.",
     "message": "Estanque eliminado correctamente.",
     "data": { ... }
 
@@ -428,6 +498,266 @@ Respuesta exitosa:
 Respuesta de error:
 404 Not Found
 {
+    "success": false,
+    "message": "Comprador no encontrado.",
+    "error": null
+}
+
+---
+
+## POST /api/v1/compradores
+Crea un nuevo comprador.
+
+Body (JSON):
+{
+    "nombre": "AgroComercial S.A.",
+    "contacto": "Juan Pérez",
+    "telefono": "88334455"
+}
+
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Comprador creado correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+400 Bad Request
+{
+    "success": false,
+    "message": "Nombre y contacto son requeridos.",
+    "error": null
+}
+
+---
+
+## PUT /api/v1/compradores/:id/activo
+Desactiva un comprador (Borrado logico).
+
+Parametros URL:
+- id: ID numerico del comprador.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Comprador desactivado correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Comprador no encontrado.",
+    "error": null
+}
+
+---
+
+## PUT /api/v1/compradores/:id
+Actualiza un comprador existente.
+
+Parametros URL:
+- id: ID numerico del comprador.
+
+Body (JSON):
+{
+    "nombre": "AgroComercial S.A. Modificado",
+    "contacto": "Juan Pérez",
+    "telefono": "88334455"
+}
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Comprador actualizado correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Comprador no encontrado.",
+    "message": "Estanque no encontrado.",
+    "error": null
+}
+
+# Fisico Quimica
+ 
+## GET /api/v1/lecturasFisicoQuimicas
+Obtiene todas las lecturas fisico quimicas.
+ 
+Respuesta:
+200 OK
+{
+    "success": true,
+    "message": "Lecturas obtenidas correctamente.",
+    "data": [ ... ]
+}
+ 
+Respuesta de error:
+500 Internal Server Error
+{
+    "success": false,
+    "message": "Error al obtener las lecturas.",
+    "error": "Mensaje detallado del error"
+}
+ 
+---
+ 
+## GET /api/v1/lecturasFisicoQuimicas/:id
+Obtiene una lectura fisico quimica por su ID.
+ 
+Parametros URL:
+- id: ID numerico de la lectura.
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Lectura obtenida correctamente.",
+    "data": { ... }
+}
+ 
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Lectura no encontrada.",
+    "error": null
+}
+ 
+---
+ 
+## POST /api/v1/lecturasFisicoQuimicas
+Registra una nueva lectura fisico quimica.
+ 
+Body (JSON):
+{
+    "fincaId":     1,
+    "estanqueId":  "E-01",
+    "fecha":       "2026-07-03",
+    "ph":          [{ "valor": 7.8, "etiqueta": "mañana" }],
+    "salinidad":   [{ "valor": 18.0, "etiqueta": "mañana" }],
+    "temperatura": [{ "valor": 29.0, "etiqueta": "mañana" }],
+    "oxigeno":     [{ "valor": 6.2, "etiqueta": "mañana" }]
+}
+ 
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Lectura registrada correctamente.",
+    "data": { ... }
+}
+ 
+Respuesta de error:
+400 Bad Request
+{
+    "success": false,
+    "message": "Faltan campos requeridos: oxigeno.",
+    "error": null
+}
+ 
+---
+ 
+## PUT /api/v1/lecturasFisicoQuimicas/:id/activo
+Realiza el borrado logico de una lectura.
+Invierte el estado activo del registro.
+ 
+Parametros URL:
+- id: ID numerico de la lectura.
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Estado actualizado correctamente.",
+    "data": { ... }
+}
+ 
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Lectura no encontrada.",
+    "error": null
+}
+ 
+---
+ 
+# Trazabilidad
+ 
+## GET /api/v1/registrosTrazabilidad
+Obtiene todos los registros de trazabilidad.
+ 
+Respuesta:
+200 OK
+{
+    "success": true,
+    "message": "Registros obtenidos correctamente.",
+    "data": [ ... ]
+}
+ 
+Respuesta de error:
+500 Internal Server Error
+{
+    "success": false,
+    "message": "Error al obtener los registros.",
+    "error": "Mensaje detallado del error"
+}
+ 
+---
+ 
+## GET /api/v1/registrosTrazabilidad/:id
+Obtiene un registro de trazabilidad por su ID.
+ 
+Parametros URL:
+- id: ID numerico del registro.
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Registro obtenido correctamente.",
+    "data": { ... }
+}
+ 
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Registro no encontrado.",
+    "error": null
+}
+ 
+---
+ 
+## POST /api/v1/registrosTrazabilidad
+Registra un nuevo movimiento de trazabilidad.
+ 
+Body (JSON):
+{
+    "fincaId":           1,
+    "estanqueOrigenId":  "E-01",
+    "estanqueDestinoId": "E-05",
+    "fecha":             "2026-07-03",
+    "colaboradorId":     3,
+    "tamano":            8.5,
+    "dias":              45,
+    "pl":                5000
+}
+ 
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Registro guardado correctamente.",
+    "data": { ... }
+}
+ 
 "success": false,
 "message": "Registro no encontrado.",
 
@@ -926,6 +1256,34 @@ Respuesta de error:
 400 Bad Request
 {
     "success": false,
+    "message": "El estanque origen y destino no pueden ser el mismo.",
+    "error": null
+}
+ 
+---
+ 
+## PUT /api/v1/registrosTrazabilidad/:id/activo
+Realiza el borrado logico de un registro de trazabilidad.
+Invierte el estado activo del registro.
+ 
+Parametros URL:
+- id: ID numerico del registro.
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Estado actualizado correctamente.",
+    "data": { ... }
+}
+ 
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Registro no encontrado.",
+    "error": null
+}
+ 
     "message": "No se pudo obtener la parasitologia.",
     "error": "El id de la parasitologia no es valido"
 }
