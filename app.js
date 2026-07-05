@@ -32,6 +32,7 @@ import densidadPoblacionalRouter from "./routes/densidadPoblacional.routes.js";
 import alimentacionRouter from "./routes/alimentacion.routes.js";
 import raleoRouter from "./routes/raleo.routes.js"
 import ventasRouter from "./routes/mantVentas.routes.js";
+import fincaRoutes from "./routes/finca.routes.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -65,6 +66,7 @@ app.use("/api/v0/alimentaciones", alimentacionRouter);
 app.use("/api/v0/densidad-poblacional", densidadPoblacionalRouter);
 app.use("/api/v0/raleo", raleoRouter);
 app.use("/api/v0/ventas", ventasRouter);
+app.use("/api/v0/fincas", fincaRoutes);
 
 /*
 //////////////////////////////////////////////////////////
