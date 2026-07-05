@@ -28,8 +28,10 @@ import crecimientoRouter from "./routes/mantCrecimiento.routes.js";
 import estanquesRouter from "./routes/estanques.routes.js";
 import parasitologiasRouter from "./routes/parasitologias.routes.js";
 import densidadPoblacionalRouter from "./routes/densidadPoblacional.routes.js";
-import alimentacionRouter from "./alimentacion/routes/alimentacion.routes.js";
+//import alimentacionRouter from "./alimentacion/routes/alimentacion.routes.js";
 import raleoRouter from "./routes/raleo.routes.js"
+import mantenimientoRouter from './routes/mantenimiento.routes.js';
+import tareaRouter from './routes/tarea.routes.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -58,7 +60,9 @@ app.use("/api/v0/colaboradores", colaboradoresRouter);
 app.use("/api/v0/crecimiento", crecimientoRouter);
 app.use("/api/v0/estanques", estanquesRouter);
 app.use("/api/v0/parasitologias", parasitologiasRouter);
-app.use("/api/v0alimentaciones", alimentacionRouter);
+//app.use("/api/v0alimentaciones", alimentacionRouter);
+app.use('/api/v0/mantenimientos', mantenimientoRouter);
+app.use('/api/v0/tareas', tareaRouter);
 
 // Densidad Poblacional
 app.use("/api/v1/densidades-poblacionales", densidadPoblacionalRouter);
