@@ -24,7 +24,7 @@ import { Router } from "express";
 import { verificarAuth } from "../middlewares/auth.middleware.js";
 
 // Importar en SINGULAR (carpeta local de proveedores)
-import { validarBodyProveedor } from "../middleware/proveedor.middleware.js";
+import { validarBodyProveedor } from "../middlewares/proveedor.middleware.js";
 
 import {
     listarProveedores,

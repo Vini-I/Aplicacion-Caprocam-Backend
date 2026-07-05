@@ -1610,6 +1610,221 @@ Respuesta de error:
 
 # Documentacion de APIs
 
+
+---
+
+# Inventario
+
+## GET /api/v1/inventarios
+Obtiene todos los productos activos del inventario con la bandera calculada de stock bajo.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Productos de inventario obtenidos correctamente.",
+    "data": [
+        {
+            "id": 1,
+            "codigo": "ALI-001",
+            "nombre": "Alimento Biomar 35%",
+            "categoria": "Alimentación",
+            "cantidad": 250,
+            "unidad": "kg",
+            "stockMinimo": 50,
+            "proveedor": "Biomar",
+            "precioUnidad": 1450,
+            "stockBajo": false
+        },
+        ...
+    ]
+}
+
+---
+
+## GET /api/v1/inventarios/:id
+Obtiene un producto activo por su ID.
+
+Parametros URL:
+- id: ID numerico del producto.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Producto obtenido correctamente.",
+    "data": {
+        "id": 2,
+        "codigo": "ALI-002",
+        "nombre": "Melaza de caña",
+        "categoria": "Alimentación",
+        "cantidad": 30,
+        "unidad": "litros",
+        "stockMinimo": 50,
+        "proveedor": "Trisan",
+        "precioUnidad": 320,
+        "stockBajo": true
+    }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Producto no encontrado.",
+    "error": null
+}
+
+---
+
+## POST /api/v1/inventarios
+Crea un nuevo producto de inventario.
+
+Body (JSON):
+{
+    "codigo": "ALI-004",
+    "nombre": "Alimento Biomar 40%",
+    "categoria": "Alimentación",
+    "cantidad": 100,
+    "unidad": "kg",
+    "stockMinimo": 20,
+    "proveedor": "Biomar",
+    "precioUnidad": 1600
+}
+
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Producto creado correctamente.",
+    "data": {
+        "id": 8,
+        "codigo": "ALI-004",
+        "nombre": "Alimento Biomar 40%",
+        "categoria": "Alimentación",
+        "cantidad": 100,
+        "unidad": "kg",
+        "stockMinimo": 20,
+        "proveedor": "Biomar",
+        "precioUnidad": 1600,
+        "stockBajo": false
+    }
+}
+
+Respuesta de error:
+400 Bad Request (Faltan campos)
+{
+    "success": false,
+    "message": "Faltan campos requeridos: nombre, categoria.",
+    "error": null
+}
+
+Respuesta de error:
+409 Conflict (Código duplicado)
+{
+    "success": false,
+    "message": "Ya existe un producto con ese código.",
+    "error": null
+}
+
+Respuesta de error:
+422 Unprocessable Entity (Validaciones)
+{
+    "success": false,
+    "message": "La cantidad debe ser mayor o igual a 0.",
+    "error": null
+}
+
+---
+
+## PUT /api/v1/inventarios/:id
+Actualiza un producto activo existente.
+
+Parametros URL:
+- id: ID numerico del producto.
+
+Body (JSON):
+{
+    "codigo": "ALI-002",
+    "nombre": "Melaza de caña refinada",
+    "categoria": "Alimentación",
+    "cantidad": 60,
+    "unidad": "litros",
+    "stockMinimo": 50,
+    "proveedor": "Trisan",
+    "precioUnidad": 350
+}
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Producto actualizado correctamente.",
+    "data": {
+        "id": 2,
+        "codigo": "ALI-002",
+        "nombre": "Melaza de caña refinada",
+        "categoria": "Alimentación",
+        "cantidad": 60,
+        "unidad": "litros",
+        "stockMinimo": 50,
+        "proveedor": "Trisan",
+        "precioUnidad": 350,
+        "stockBajo": false
+    }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Producto no encontrado.",
+    "error": null
+}
+
+Respuesta de error:
+409 Conflict (Código duplicado)
+{
+    "success": false,
+    "message": "Ya existe otro producto con ese código.",
+    "error": null
+}
+
+---
+
+## DELETE /api/v1/inventarios/:id
+Elimina (borrado logico) un producto por su ID.
+
+Parametros URL:
+- id: ID numerico del producto.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Producto eliminado correctamente.",
+    "data": {
+        "id": 2,
+        "codigo": "ALI-002",
+        "nombre": "Melaza de caña refinada",
+        "categoria": "Alimentación",
+        "cantidad": 60,
+        "unidad": "litros",
+        "stockMinimo": 50,
+        "proveedor": "Trisan",
+        "precioUnidad": 350
+    }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Producto no encontrado.",
+    "error": null
+}
+# Documentacion de APIs
+
 En esta carpeta se documentan todas las rutas disponibles del proyecto. En el
 futuro se migrara a Swagger.
 
@@ -1801,3 +2016,278 @@ Desactiva un proveedor por su ID (borrado logico).
       "error": null
     }
     ```
+    ---
+
+# Siembra (Lotes de Larva y Pre-crías)
+
+## GET /api/v1/siembra/lotes
+Obtiene todos los lotes de larva activos.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Lotes de larva obtenidos correctamente.",
+    "data": [
+        {
+            "id": 1,
+            "codigo_lote": "LOT-2026-01",
+            "proveedor": "Alimentos del Pacífico",
+            "laboratorio": "LabMar",
+            "procedencia": "Nacional",
+            "certificado_larva": "CERT-092",
+            "pl_inicial": 10,
+            "cantidad_inicial": 100000,
+            "fecha_ingreso": "2026-06-25"
+        }
+    ]
+}
+
+---
+
+## GET /api/v1/siembra/lotes/:id
+Obtiene un lote de larva activo por su ID.
+
+Parametros URL:
+- id: ID numerico del lote de larva.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Lote de larva obtenido correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+404 Not Found
+{
+    "success": false,
+    "message": "Lote de larva no encontrado.",
+    "error": null
+}
+
+---
+
+## POST /api/v1/siembra/lotes
+Crea un nuevo lote de larva.
+
+Body (JSON):
+{
+    "codigo_lote": "LOT-2026-02",
+    "proveedor": "Alimentos del Pacífico",
+    "laboratorio": "LabMar",
+    "procedencia": "Nacional",
+    "certificado_larva": "CERT-093",
+    "pl_inicial": 12,
+    "cantidad_inicial": 150000,
+    "fecha_ingreso": "2026-07-04"
+}
+
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Lote de larva creado correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+400 Bad Request (Proveedor inexistente)
+{
+    "success": false,
+    "message": "El proveedor indicado no existe.",
+    "error": null
+}
+
+Respuesta de error:
+409 Conflict (Codigo repetido)
+{
+    "success": false,
+    "message": "Ya existe un lote con ese codigo.",
+    "error": null
+}
+
+Respuesta de error:
+422 Unprocessable Entity (Validaciones)
+{
+    "success": false,
+    "message": "Datos invalidos para el lote.",
+    "error": [ "El campo pl_inicial debe ser un entero positivo." ]
+}
+
+---
+
+## PUT /api/v1/siembra/lotes/:id
+Actualiza un lote de larva existente.
+
+Parametros URL:
+- id: ID numerico del lote de larva.
+
+Body (JSON):
+{
+    "codigo_lote": "LOT-2026-02-REV",
+    "proveedor": "Alimentos del Pacífico",
+    "laboratorio": "LabMar",
+    "procedencia": "Nacional",
+    "certificado_larva": "CERT-093",
+    "pl_inicial": 12,
+    "cantidad_inicial": 150000,
+    "fecha_ingreso": "2026-07-04"
+}
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Lote de larva actualizado correctamente.",
+    "data": { ... }
+}
+
+---
+
+## DELETE /api/v1/siembra/lotes/:id
+Elimina (borrado logico) un lote de larva por su ID.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Lote de larva eliminado correctamente.",
+    "data": { ... }
+}
+
+---
+
+## GET /api/v1/siembra/precrias
+Obtiene todas las pre-crias activas.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Pre-crias obtenidas correctamente.",
+    "data": [
+        {
+            "id": 1,
+            "id_lote_larva": 1,
+            "id_finca": 1,
+            "unidad_precria": "Precria A",
+            "fecha_inicio": "2026-06-26",
+            "cantidad_inicial": 100000,
+            "pl_inicial": 10,
+            "estado": "ACTIVA",
+            "fecha_fin": null,
+            "cantidad_final": null,
+            "pl_final": null
+        }
+    ]
+}
+
+---
+
+## GET /api/v1/siembra/precrias/:id
+Obtiene una pre-cria activa por su ID.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Pre-cria obtenida correctamente.",
+    "data": { ... }
+}
+
+---
+
+## POST /api/v1/siembra/precrias
+Crea una nueva pre-cria.
+
+Body (JSON):
+{
+    "id_lote_larva": 1,
+    "id_finca": 1,
+    "unidad_precria": "Precria B",
+    "fecha_inicio": "2026-07-04",
+    "cantidad_inicial": 80000,
+    "pl_inicial": 10
+}
+
+Respuesta exitosa:
+201 Created
+{
+    "success": true,
+    "message": "Pre-cria creada correctamente.",
+    "data": { ... }
+}
+
+Respuesta de error:
+400 Bad Request (Lote de larva inexistente)
+{
+    "success": false,
+    "message": "El lote de larva indicado no existe.",
+    "error": null
+}
+
+---
+
+## POST /api/v1/siembra/precrias/:id/finalizar
+Finaliza una pre-cria en estado ACTIVA aplicando las reglas del negocio.
+
+Parametros URL:
+- id: ID de la pre-cria a finalizar.
+
+Body (JSON):
+{
+    "fecha_fin": "2026-07-10",
+    "cantidad_final": 75000,
+    "pl_final": 15
+}
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Pre-cria finalizada correctamente.",
+    "data": {
+        "id": 1,
+        "id_lote_larva": 1,
+        "id_finca": 1,
+        "unidad_precria": "Precria A",
+        "fecha_inicio": "2026-06-26",
+        "cantidad_inicial": 100000,
+        "pl_inicial": 10,
+        "estado": "FINALIZADA",
+        "fecha_fin": "2026-07-10",
+        "cantidad_final": 75000,
+        "pl_final": 15
+    }
+}
+
+Respuesta de error:
+400 Bad Request (Reglas de negocio)
+{
+    "success": false,
+    "message": "fecha_fin no puede ser menor que fecha_inicio.",
+    "error": null
+}
+
+Respuesta de error:
+422 Unprocessable Entity (Formatos incorrectos)
+{
+    "success": false,
+    "message": "Datos invalidos para finalizar pre-cria.",
+    "error": [ "cantidad_final debe ser entero positivo." ]
+}
+
+---
+
+## DELETE /api/v1/siembra/precrias/:id
+Elimina (borrado logico) una pre-cria por su ID.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Pre-cria eliminada correctamente.",
+    "data": { ... }
+}
