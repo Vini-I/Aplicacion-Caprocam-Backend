@@ -1,12 +1,11 @@
 {
   "name": "aplicacion-caprocam-backend",
-  "version": "0.1.2",
+  "version": "0.3.11",
   "description": "",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "keywords": [],
   "author": "",
