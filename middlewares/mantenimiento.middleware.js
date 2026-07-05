@@ -2,49 +2,43 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: colaborador.middleware.js
-Autor: Sebastian Villegas Barquero
-Fecha: 02/07/2026
-Modulo: Raleo
+Archivo: mantenimiento.middleware.js
+Autor: Marco Vásquez
+Fecha: 04/07/2026
+Modulo: Mantenimientos
 Descripcion:
-Middleware de validacion de body para raleo.
+Middleware de validacion de body para mantenimientos.
 //////////////////////////////////////////////////////////
 */
+
 /*
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
+
 Common
 */
+
 import { error } from '../common/respuestaJson.js';
+
 /*
 //////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
-Campos minimos requeridos en el body para raleo.
+
+Campos minimos requeridos en el body para mantenimientos.
+creadoPor no esta aqui porque viene de sesion, no del form.
 */
-const camposRequeridos = [
-    "idFinca",
-    "idEstanque",
-    "idResponsable",
-    "fecha",
-    "porcentaje",
-    "pesoEstimado",
-    "biomasaEstimado",
-    "objetivo",
-    "metodo"
-];
+
+const camposRequeridos = ['titulo', 'equipo', 'tarea', 'descripcion'];
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-
-Contiene los middlewares de validacion de body
-para el modulo de raleo.
 */
 
-export function validarBodyRaleo(req, res, next) {
+export function validarBodyMantenimiento(req, res, next) {
     /*
     Descripcion:
     Verifica que el body no este vacio y contenga

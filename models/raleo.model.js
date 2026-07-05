@@ -20,7 +20,7 @@ IMPORTS
 
 DTOs
 */
-import { MetodoRaleo, metodoRaleo } from '../dtos/raleo.dto.js';
+import { MetodoRaleo } from '../dtos/raleo.dto.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -101,6 +101,7 @@ export function findById(id) {
     Retorna:
     - El raleo encontrado, o null si no existe.
     */
+    id = Number(id);
     for (let i = 0; i < raleos.length; i++) {
         if (raleos[i].id === id) {
             return raleos[i];
@@ -173,6 +174,7 @@ function filtrarPorFinca(idFinca) {
 }
 
 function buscarIndicePorId(id) {
+    id = Number(id);
     for (let i = 0; i < raleos.length; i++) {
         if (raleos[i].id === id) {
             return i;
