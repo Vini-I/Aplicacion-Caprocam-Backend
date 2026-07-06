@@ -30,7 +30,7 @@ const camposRequeridos = [
     "fecha",
     "porcentaje",
     "pesoEstimado",
-    "BiomasaEstimado",
+    "biomasaEstimado",
     "objetivo",
     "metodo"
 ];
