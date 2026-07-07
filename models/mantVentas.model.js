@@ -179,9 +179,7 @@ export async function update(id, dto) {
             id
         ]
    );
-
-       console.log("RESULTADO UPDATE:", result);
-
+   
    return await findById(id);
 }
 
