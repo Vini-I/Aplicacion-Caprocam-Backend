@@ -27,7 +27,7 @@ FUNCIONES PRINCIPALES
 */
 
 export function validarMantFinca(req, res, next) {
-    /*
+  /*
     Descripcion:
     Valida los datos recibidos para la creacion o actualizacion de un registro de finca.
 
@@ -40,58 +40,72 @@ export function validarMantFinca(req, res, next) {
     - Llama a next() si los datos son validos.
     - Retorna un error si los datos son invalidos.
     */
-    const {
-        idCBO,
-        nombreFinca,
-        provincia,
-        canton,
-        distrito,
-        otrasSenas,
-        propietarioResponsable,
-        telefono,
-        areaTotal,
-        espejosAgua
-    } = req.body;
+  const {
+    grupoDatos,
+    idCBO,
+    nombreFinca,
+    provincia,
+    canton,
+    distrito,
+    otrasSenas,
+    propietarioResponsable,
+    telefono,
+    areaTotal,
+    espejosAgua,
+  } = req.body;
 
-    if (!idCBO || String(idCBO).trim() === "") {
-        return error(res, "El ID CBO es obligatorio.", null, 400);
-    }
+  if (!grupoDatos) {
+    return error(res, "El grupo de datos es obligatorio.", null, 400);
+  }
 
-    if (!nombreFinca || String(nombreFinca).trim() === "") {
-        return error(res, "El nombre de la finca es obligatorio.", null, 400);
-    }
+  if (!idCBO || String(idCBO).trim() === "") {
+    return error(res, "El ID CBO es obligatorio.", null, 400);
+  }
 
-    if (!provincia || String(provincia).trim() === "") {
-        return error(res, "La provincia es obligatoria.", null, 400);
-    }
+  if (!nombreFinca || String(nombreFinca).trim() === "") {
+    return error(res, "El nombre de la finca es obligatorio.", null, 400);
+  }
 
-    if (!canton || String(canton).trim() === "") {
-        return error(res, "El cantón es obligatorio.", null, 400);
-    }
+  if (!provincia || String(provincia).trim() === "") {
+    return error(res, "La provincia es obligatoria.", null, 400);
+  }
 
-    if (!distrito || String(distrito).trim() === "") {
-        return error(res, "El distrito es obligatorio.", null, 400);
-    }
+  if (!canton || String(canton).trim() === "") {
+    return error(res, "El cantón es obligatorio.", null, 400);
+  }
 
-    if (!otrasSenas || String(otrasSenas).trim() === "") {
-        return error(res, "Las otras señas son obligatorias.", null, 400);
-    }
+  if (!distrito || String(distrito).trim() === "") {
+    return error(res, "El distrito es obligatorio.", null, 400);
+  }
 
-    if (!propietarioResponsable || String(propietarioResponsable).trim() === "") {
-        return error(res, "El propietario responsable es obligatorio.", null, 400);
-    }
+  if (!otrasSenas || String(otrasSenas).trim() === "") {
+    return error(res, "Las otras señas son obligatorias.", null, 400);
+  }
 
-    if (!telefono || String(telefono).trim() === "") {
-        return error(res, "El teléfono es obligatorio.", null, 400);
-    }
+  if (!propietarioResponsable || String(propietarioResponsable).trim() === "") {
+    return error(res, "El propietario responsable es obligatorio.", null, 400);
+  }
 
-    if (areaTotal === undefined || isNaN(areaTotal) || Number(areaTotal) <= 0) {
-        return error(res, "El área total debe ser mayor que cero.", null, 400);
-    }
+  if (!telefono || String(telefono).trim() === "") {
+    return error(res, "El teléfono es obligatorio.", null, 400);
+  }
 
-    if (espejosAgua === undefined || isNaN(espejosAgua) || Number(espejosAgua) <= 0) {
-        return error(res, "El área de espejos de agua debe ser mayor que cero.", null, 400);
-    }
+  if (areaTotal === undefined || isNaN(areaTotal) || Number(areaTotal) <= 0) {
+    return error(res, "El área total debe ser mayor que cero.", null, 400);
+  }
 
-    next();
+  if (
+    espejosAgua === undefined ||
+    isNaN(espejosAgua) ||
+    Number(espejosAgua) <= 0
+  ) {
+    return error(
+      res,
+      "El área de espejos de agua debe ser mayor que cero.",
+      null,
+      400,
+    );
+  }
+
+  next();
 }
