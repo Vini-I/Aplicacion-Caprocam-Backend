@@ -26,10 +26,10 @@ import { error } from '../common/respuestaJson.js';
 CONSTANTES
 //////////////////////////////////////////////////////////
 
-Campos minimos requeridos en el body para tareas.
+duracionEstimada renombrado a horas para reflejar la columna real en DB.
 */
 
-const camposRequeridos = ['nombre', 'descripcion', 'categoria', 'duracionEstimada'];
+const camposRequeridos = ['nombre', 'descripcion', 'categoria', 'horas'];
 
 /*
 //////////////////////////////////////////////////////////
