@@ -30,15 +30,19 @@ DTOs
 
 export class LoteLarvaDTO {
     constructor({
-        id,
         codigo_lote,
-        proveedor,
+        grupo_datos,
+        proveedor_id,
         laboratorio,
         procedencia,
         certificado_larva,
         pl_inicial,
         cantidad_inicial,
-        fecha_ingreso
+        fecha_ingreso,
+        estado_lote,
+        activo,
+        fecha_creacion,
+        fecha_actualizacion
     }) {
         /*
         Descripcion:
@@ -55,31 +59,42 @@ export class LoteLarvaDTO {
         - cantidad_inicial: Cantidad inicial (numero entero positivo).
         - fecha_ingreso: Fecha de ingreso de la larva.
         */
-        this.id = id;
         this.codigo_lote = String(codigo_lote).trim();
-        this.proveedor = String(proveedor).trim();
+        this.grupo_datos = grupo_datos ? String(grupo_datos).trim() : null;
+        this.proveedor_id = Number(proveedor_id);
         this.laboratorio = String(laboratorio).trim();
         this.procedencia = String(procedencia).trim();
         this.certificado_larva = String(certificado_larva).trim();
         this.pl_inicial = Number(pl_inicial);
         this.cantidad_inicial = Number(cantidad_inicial);
         this.fecha_ingreso = String(fecha_ingreso).trim();
+        this.estado_lote = String(estado_lote).trim();
+        this.activo = Boolean(activo);
+        this.fecha_creacion = fecha_creacion;
+        this.fecha_actualizacion = fecha_actualizacion;
     }
 }
 
 export class PrecriaDTO {
     constructor({
-        id,
+        uuid,
+        grupo_datos,
         id_lote_larva,
         id_finca,
+        estanque_id,
         unidad_precria,
         fecha_inicio,
+        duracion_dias,
         cantidad_inicial,
         pl_inicial,
         estado,
         fecha_fin,
         cantidad_final,
-        pl_final
+        pl_final,
+        estado,
+        activo,
+        fecha_creacion,
+        fecha_actualizacion
     }) {
         /*
         Descripcion:
@@ -98,10 +113,12 @@ export class PrecriaDTO {
         - cantidad_final: Cantidad final (opcional).
         - pl_final: PL final (opcional).
         */
-        this.id = id;
         this.id_lote_larva = Number(id_lote_larva);
         this.id_finca = Number(id_finca);
+        this.estanque_id = Number(estanque_id);
+        this.grupo_datos = grupo_datos ? String(grupo_datos).trim() : null;
         this.unidad_precria = String(unidad_precria).trim();
+        this.duracion_dias = Number(duracion_dias);
         this.fecha_inicio = String(fecha_inicio).trim();
         this.cantidad_inicial = Number(cantidad_inicial);
         this.pl_inicial = Number(pl_inicial);
@@ -115,5 +132,8 @@ export class PrecriaDTO {
         this.pl_final = pl_final !== undefined && pl_final !== null
             ? Number(pl_final)
             : null;
+        this.activo = Boolean(activo);
+        this.fecha_creacion = fecha_creacion;
+        this.fecha_actualizacion = fecha_actualizacion;
     }
 }

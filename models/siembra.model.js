@@ -25,37 +25,6 @@ MOCK DATA
 //////////////////////////////////////////////////////////
 */
 
-let lotes = [
-    {
-        id: 1,
-        codigo_lote: "LOT-2026-01",
-        proveedor: "Alimentos del Pacífico",
-        laboratorio: "LabMar",
-        procedencia: "Nacional",
-        certificado_larva: "CERT-092",
-        pl_inicial: 10,
-        cantidad_inicial: 100000,
-        fecha_ingreso: "2026-06-25",
-        activo: true
-    }
-];
-
-let precrias = [
-    {
-        id: 1,
-        id_lote_larva: 1,
-        id_finca: 1,
-        unidad_precria: "Precria A",
-        fecha_inicio: "2026-06-26",
-        cantidad_inicial: 100000,
-        pl_inicial: 10,
-        estado: "ACTIVA",
-        fecha_fin: null,
-        cantidad_final: null,
-        pl_final: null,
-        activo: true
-    }
-];
 
 /*
 //////////////////////////////////////////////////////////
@@ -63,86 +32,160 @@ FUNCIONES PRINCIPALES - LOTES DE LARVA
 //////////////////////////////////////////////////////////
 */
 
-export function findLotesAll() {
+export async function findLotesAll() {
     /*
     Descripcion:
     Obtiene todos los lotes de larva activos.
     */
-    return lotes.filter(l => l.activo === true);
+        const [rows] = await pool.execute(`
+        SELECT *
+        FROM   lotes_larva
+        WHERE  activo = TRUE
+        AND    deleted_at IS NULL
+        ORDER BY id ASC
+    `);
+    return rows;
 }
 
-export function findLoteById(id) {
+export async function findLoteById(id) {
     /*
     Descripcion:
     Busca un lote de larva activo por su ID.
     */
-    const lote = lotes.find(l => l.id === Number(id));
-    if (!lote || lote.activo === false) return null;
-    return lote;
+    const [rows] = await pool.execute(`
+        SELECT *
+        FROM   lotes_larva
+        WHERE  id = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(id)]);
+    return rows[0] || null;
 }
 
-export function findLoteByCodigo(codigo) {
+export async function findLoteByCodigo(codigo) {
     /*
     Descripcion:
     Busca un lote activo por su codigo (case-insensitive).
     */
-    const cod = String(codigo).trim().toLowerCase();
-    return lotes.find(l => 
-        l.codigo_lote.trim().toLowerCase() === cod && l.activo === true
-    ) || null;
+    const [rows] = await pool.execute(`
+        SELECT *
+        FROM   lotes_larva
+        WHERE  LOWER(TRIM(codigo_lote)) = LOWER(TRIM(?))
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        LIMIT  1
+    `, [codigo]);
+     return rows[0] || null;
 }
 
-export function findLoteByCodigoIgnorandoId(codigo, id) {
+export async function findLoteByCodigoIgnorandoId(codigo, id) {
     /*
     Descripcion:
     Busca un lote por codigo ignorando un ID especifico.
     */
-    const cod = String(codigo).trim().toLowerCase();
-    const numeroId = Number(id);
-    return lotes.find(l => 
-        l.codigo_lote.trim().toLowerCase() === cod && 
-        l.activo === true && 
-        l.id !== numeroId
-    ) || null;
+    const [rows] = await pool.execute(`
+        SELECT *
+        FROM   lotes_larva
+        WHERE  LOWER(TRIM(codigo_lote)) = LOWER(TRIM(?))
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        AND    id != ?
+        LIMIT  1
+    `, [codigo, Number(id)]);
+    return rows[0] || null;
 }
 
-export function createLote(dto) {
+export async function createLote(dto) {
     /*
     Descripcion:
     Crea un nuevo lote de larva.
     */
-    const nuevo = {
-        ...dto,
-        id: lotes.length + 1,
-        activo: true
-    };
-    lotes.push(nuevo);
-    return nuevo;
+    const sql = `
+        INSERT INTO lotes_larva (
+            grupo_datos,
+            codigo_lote,
+            proveedor_id,
+            laboratorio,
+            lugar_procedencia,
+            certificado_larva,
+            pl_inicial,
+            cantidad_inicial,
+            fecha_ingreso,
+            estado_lote
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const [result] = await pool.execute(sql, [
+        GRUPO_DATOS,
+        dto.codigo_lote,
+        dto.proveedor_id  || null,
+        dto.laboratorio,
+        dto.lugar_procedencia,
+        dto.certificado_larva,
+        dto.pl_inicial,
+        dto.cantidad_inicial,
+        dto.fecha_ingreso,
+        dto.estado_lote || 'Disponible',
+    ]);
+    return findLoteById(result.insertId);
 }
 
-export function updateLote(id, dto) {
+export async function updateLote(id, dto) {
     /*
     Descripcion:
     Actualiza un lote de larva activo.
     */
-    const index = lotes.findIndex(l => l.id === Number(id));
-    if (index === -1 || lotes[index].activo === false) return null;
-    lotes[index] = {
-        ...lotes[index],
-        ...dto
-    };
-    return lotes[index];
+    const sql = `
+        UPDATE lotes_larva
+        SET    codigo_lote       = ?,
+               proveedor_id      = ?,
+               laboratorio       = ?,
+               lugar_procedencia = ?,
+               certificado_larva = ?,
+               pl_inicial        = ?,
+               cantidad_inicial   = ?,
+               fecha_ingreso      = ?,
+               estado_lote        = ?,
+               version           = version + 1
+        WHERE  id = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `;
+    const [result] = await pool.execute(sql, [
+        dto.codigo_lote,
+        dto.proveedor_id  || null,
+        dto.laboratorio,
+        dto.lugar_procedencia,
+        dto.certificado_larva,
+        dto.pl_inicial,
+        dto.cantidad_inicial,
+        dto.fecha_ingreso,
+        dto.estado_lote || 'Disponible',
+        Number(id),
+    ]);
+    if (result.affectedRows === 0) return null;
+    return findLoteById(id);
 }
 
-export function removeLote(id) {
+export async function removeLote(id) {
     /*
     Descripcion:
     Borrado logico de un lote de larva.
     */
-    const index = lotes.findIndex(l => l.id === Number(id));
-    if (index === -1 || lotes[index].activo === false) return null;
-    lotes[index].activo = false;
-    return lotes[index];
+    const lote = await findLoteById(id);
+    if (!lote) return null;
+
+    const [result] = await pool.execute(`
+        UPDATE lotes_larva
+        SET    activo     = FALSE,
+               deleted_at = NOW(),
+               version    = version + 1
+        WHERE  id = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(id)]);
+
+    if (result.affectedRows === 0) return null;
+    return { ...lote, activo: false };
 }
 
 /*
@@ -151,68 +194,154 @@ FUNCIONES PRINCIPALES - PRE-CRIAS
 //////////////////////////////////////////////////////////
 */
 
-export function findPrecriasAll() {
+export async function findPrecriasAll() {
     /*
     Descripcion:
     Obtiene todas las pre-crias activas.
     */
-    return precrias.filter(p => p.activo === true);
+        const [rows] = await pool.execute(`
+        SELECT *
+        FROM   precrias
+        WHERE  activo = TRUE
+        AND    deleted_at IS NULL
+        ORDER BY id ASC
+    `);
+    return rows;
 }
 
-export function findPrecriaById(id) {
+export async function findPrecriaById(id) {
     /*
     Descripcion:
     Busca una pre-cria activa por su ID.
     */
-    const pc = precrias.find(p => p.id === Number(id));
-    if (!pc || pc.activo === false) return null;
-    return pc;
+    const [rows] = await pool.execute(`
+        SELECT *
+        FROM   precrias
+        WHERE  id = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(id)]);
+    return rows[0];
 }
 
-export function createPrecria(dto) {
+export async function createPrecria(dto) {
     /*
     Descripcion:
     Crea una nueva pre-cria.
     */
-    const nuevo = {
-        ...dto,
-        id: precrias.length + 1,
-        activo: true
-    };
-    precrias.push(nuevo);
-    return nuevo;
+    const sql = `
+        INSERT INTO precrias (
+            grupo_datos,
+            lote_larva_id,
+            finca_id,
+            estanque_id,
+            fecha_inicio,
+            fecha_fin,
+            duracion_dias,
+            cantidad_inicial,
+            cantidad_final,
+            pl_inicial,
+            pl_final,
+            estado
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const [result] = await pool.execute(sql, [
+        GRUPO_DATOS,
+        dto.lote_larva_id,
+        dto.finca_id,
+        dto.estanque_id,
+        dto.fecha_inicio,
+        dto.fecha_fin,
+        dto.duracion_dias,
+        dto.cantidad_inicial,
+        dto.cantidad_final,
+        dto.pl_inicial,
+        dto.pl_final,
+        dto.estado || 'Activa',
+    ]);
+    return findPrecriaById(result.insertId);
 }
 
-export function updatePrecria(id, dto) {
+export async function updatePrecria(id, datos) {
     /*
     Descripcion:
     Actualiza una pre-cria activa.
     */
-    const index = precrias.findIndex(p => p.id === Number(id));
-    if (index === -1 || precrias[index].activo === false) return null;
-    precrias[index] = {
-        ...precrias[index],
-        ...dto
+    const mapaCampos = {
+        lote_larva_id:   'lote_larva_id',
+        finca_id:        'finca_id',
+        estanque_id:     'estanque_id',
+        fecha_inicio:    'fecha_inicio',
+        cantidad_inicial:'cantidad_inicial',
+        pl_inicial:      'pl_inicial',
+        estado:          'estado',
+        fecha_fin:       'fecha_fin',
+        cantidad_final:  'cantidad_final',
+        pl_final:        'pl_final',
+        duracion_dias:   'duracion_dias',
     };
-    return precrias[index];
+
+    const setParts = [];
+    const valores  = [];
+
+    for (const [clave, columna] of Object.entries(mapaCampos)) {
+        if (datos[clave] !== undefined) {
+            setParts.push(`${columna} = ?`);
+            valores.push(datos[clave]);
+        }
+    }
+
+    if (setParts.length === 0) return findPrecriaById(id);
+
+    setParts.push('version = version + 1');
+    valores.push(Number(id));
+
+    const sql = `
+        UPDATE precrias
+        SET    ${setParts.join(', ')}
+        WHERE  id = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `;
+    const [result] = await pool.execute(sql, valores);
+    if (result.affectedRows === 0) return null;
+    return findPrecriaById(id);
 }
 
-export function removePrecria(id) {
+export async function removePrecria(id) {
     /*
     Descripcion:
     Borrado logico de una pre-cria.
     */
-    const index = precrias.findIndex(p => p.id === Number(id));
-    if (index === -1 || precrias[index].activo === false) return null;
-    precrias[index].activo = false;
-    return precrias[index];
+    const pc = await findPrecriaById(id);
+    if (!pc) return null;
+
+    const [result] = await pool.execute(`
+        UPDATE precrias
+        SET    activo     = FALSE,
+               deleted_at = NOW(),
+               version    = version + 1
+        WHERE  id = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(id)]);
+
+    if (result.affectedRows === 0) return null;
+    return { ...pc, activo: false };
 }
 
-export function verificarProveedorExiste(nombre) {
+export async function verificarProveedorExiste(proveedorId) {
     /*
     Descripcion:
     Verifica que el nombre del proveedor exista en el modulo de proveedores.
     */
-    const p = proveedorModel.findByName(nombre);
-    return p !== null;
+    if (!proveedorId) return false;
+    const [rows] = await pool.execute(`
+        SELECT id
+        FROM   proveedores
+        WHERE  id = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(proveedorId)]);
+    return rows.length > 0;
 }
