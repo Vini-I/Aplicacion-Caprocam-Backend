@@ -8,6 +8,7 @@ Fecha: 04/07/2026
 Modulo: Mantenimientos
 Descripcion:
 Middleware de validacion de body para mantenimientos.
+Actualizado para reflejar los campos reales de la DB.
 //////////////////////////////////////////////////////////
 */
 
@@ -27,10 +28,13 @@ CONSTANTES
 //////////////////////////////////////////////////////////
 
 Campos minimos requeridos en el body para mantenimientos.
-creadoPor no esta aqui porque viene de sesion, no del form.
+- titulo/descripcion renombrados a tituloTicket/descripcionTicket
+- equipo string reemplazado por equipoId (FK numerico)
+- fechaHora removido, la DB lo genera automaticamente
+- creadoPor removido, viene de sesion (TO-DO: JWT)
 */
 
-const camposRequeridos = ['titulo', 'equipo', 'tarea', 'descripcion'];
+const camposRequeridos = ['tituloTicket', 'descripcionTicket', 'equipoId'];
 
 /*
 //////////////////////////////////////////////////////////

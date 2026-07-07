@@ -20,86 +20,72 @@ IMPORTS
 DTOs
 */
 
-import { MantenimientoDTO, EstadoMantenimiento } from '../dtos/mantenimiento.dto.js';
+import { MantenimientoDTO, EstadoTicket } from '../dtos/mantenimiento.dto.js';
 
 // Servicios
 import { isEstadoValido, isEmpty } from '../services/mantenimiento.service.js';
 
 // Modelos
 import * as MantenimientoModel from '../models/mantenimiento.model.js';
-import * as TareaModel         from '../models/tarea.model.js';
+
+// Config @Joches29 reemplazar por modelo de equipo
+import pool from '../config/database.js';
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
 
 /*
 //////////////////////////////////////////////////////////
+CONSTANTES
+//////////////////////////////////////////////////////////
+
+TO-DO: reemplazar con req.user.grupoDatos cuando haya auth.
+*/
+
+const GRUPO_DATOS_PROVISIONAL = 1;
+
+/*
+//////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 
-La funcion createMantenimiento() y updateMantenimiento()
-dependen de validarCuerpo().
-
-Las funciones getMantenimientos() y getMantenimientoById()
-dependen de enriquecerMantenimiento().
+createMantenimiento() y updateMantenimiento() dependen de validarCuerpo().
 */
 
-function validarCuerpo({ titulo, equipo, tarea, descripcion }, res) {
+function validarCuerpo({ tituloTicket, descripcionTicket, equipoId }, res) {
     /*
     Descripcion:
     Valida los campos del body antes de construir el DTO.
 
     Parametros:
-    - titulo, equipo, tarea, descripcion: Campos del body
+    - tituloTicket, descripcionTicket, equipoId: Campos del body
     - res: Objeto response de Express
 
     Retorna:
     - Una respuesta de error si algo falla, null si todo esta bien.
     */
-    if (isEmpty(titulo))
-        return error(res, 'El titulo es requerido.', null, 400);
+    if (isEmpty(tituloTicket))
+        return error(res, 'El titulo del ticket es requerido.', null, 400);
 
-    if (isEmpty(equipo))
+    if (isEmpty(descripcionTicket))
+        return error(res, 'La descripcion del ticket es requerida.', null, 400);
+
+    if (!equipoId)
         return error(res, 'El equipo es requerido.', null, 400);
 
-    if (!tarea)
-        return error(res, 'La tarea es requerida.', null, 400);
-
-    if (isEmpty(descripcion))
-        return error(res, 'La descripcion es requerida.', null, 400);
-
     return null;
-}
-
-function enriquecerMantenimiento(mantenimiento) {
-    /*
-    Descripcion:
-    Reemplaza el ID de tarea con el objeto tarea completo
-    para que el frontend no necesite hacer una segunda llamada.
-
-    Parametros:
-    - mantenimiento: Objeto mantenimiento crudo del model.
-
-    Retorna:
-    - Mantenimiento con tarea como objeto en lugar de solo ID.
-    */
-    const tarea = TareaModel.findById(mantenimiento.tarea);
-    return { ...mantenimiento, tarea: tarea ?? mantenimiento.tarea };
 }
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-
-Contiene las funciones exportables que manejan cada
-ruta del modulo de mantenimientos.
 */
 
-export function getMantenimientos(req, res) {
+export async function getMantenimientos(req, res) {
     /*
     Descripcion:
-    Obtiene todos los mantenimientos con su tarea enriquecida.
+    Obtiene todos los tickets de mantenimiento del grupo.
 
     Parametros:
     - req: Objeto request de Express
@@ -108,115 +94,139 @@ export function getMantenimientos(req, res) {
     Retorna:
     - 200 con lista de mantenimientos
     */
-    const data = MantenimientoModel.findAll().map(enriquecerMantenimiento);
-    return exito(res, 'Mantenimientos obtenidos correctamente.', data);
+    try {
+        const data = await MantenimientoModel.findAll(GRUPO_DATOS_PROVISIONAL);
+        return exito(res, 'Mantenimientos obtenidos correctamente.', data);
+    } catch (err) {
+        return error(res, 'Error al obtener mantenimientos.', err);
+    }
 }
 
-export function getMantenimientoById(req, res) {
+export async function getMantenimientoById(req, res) {
     /*
     Descripcion:
-    Obtiene un mantenimiento por su ID con su tarea enriquecida.
+    Obtiene un ticket de mantenimiento por su ID.
 
     Parametros:
     - req: Objeto request de Express (req.params.id)
     - res: Objeto response de Express
 
     Retorna:
-    - 200 con el mantenimiento encontrado
+    - 200 con el ticket encontrado
     - 404 si no existe
     */
-    const mantenimiento = MantenimientoModel.findById(req.params.id);
+    try {
+        const mantenimiento = await MantenimientoModel.findById(req.params.id, GRUPO_DATOS_PROVISIONAL);
 
-    if (!mantenimiento)
-        return error(res, 'Mantenimiento no encontrado.', null, 404);
+        if (!mantenimiento)
+            return error(res, 'Mantenimiento no encontrado.', null, 404);
 
-    return exito(res, 'Mantenimiento obtenido correctamente.', enriquecerMantenimiento(mantenimiento));
+        return exito(res, 'Mantenimiento obtenido correctamente.', mantenimiento);
+    } catch (err) {
+        return error(res, 'Error al obtener mantenimiento.', err);
+    }
 }
 
-export function createMantenimiento(req, res) {
+export async function createMantenimiento(req, res) {
     /*
     Descripcion:
     Crea un nuevo ticket de mantenimiento.
-    La fecha y hora se genera automaticamente del sistema.
+    Valida que el equipo referenciado exista antes de insertar.
 
     Parametros:
     - req: Objeto request de Express (req.body)
     - res: Objeto response de Express
 
     Retorna:
-    - 201 con el mantenimiento creado
-    - 400/422 si hay errores de validacion
+    - 201 con el ticket creado
+    - 400 si hay errores de validacion
+    - 404 si el equipo no existe
     */
+    try {
+        // TO-DO: reemplazar creadoPorColaboradorId con req.user.id cuando JWT este implementado
+        const { tituloTicket, descripcionTicket, equipoId,
+                creadoPorColaboradorId, estadoEquipo } = req.body;
 
-    // TO-DO: reemplazar req.body.creadoPor con req.user.nombre cuando JWT este implementado
-    const { creadoPor, titulo, equipo, tarea, descripcion } = req.body;
-    const fechaHora = new Date().toISOString().slice(0, 19);
+        const err = validarCuerpo({ tituloTicket, descripcionTicket, equipoId }, res);
+        if (err) return err;
 
-    const err = validarCuerpo({ titulo, equipo, tarea, descripcion }, res);
-    if (err) return err;
+        // @Joches29 agregar su query de equipos aqui, con esto el import
+        const [equipos] = await pool.query(
+            `SELECT id FROM equipos WHERE id = ? AND activo = TRUE AND deleted_at IS NULL`,
+            [equipoId]
+        );
 
-    const tareaExiste = TareaModel.findById(tarea);
-    if (!tareaExiste)
-        return error(res, 'La tarea indicada no existe.', null, 404);
+        if (equipos.length === 0)
+            return error(res, 'El equipo indicado no existe.', null, 404);
 
-    const dto   = new MantenimientoDTO({ fechaHora, creadoPor, titulo, equipo, tarea, descripcion });
-    const nuevo = MantenimientoModel.create(dto);
+        const dto   = new MantenimientoDTO({ tituloTicket, descripcionTicket, equipoId,
+                                             creadoPorColaboradorId, estadoEquipo });
+        const nuevo = await MantenimientoModel.create(dto, GRUPO_DATOS_PROVISIONAL);
 
-    return exito(res, 'Mantenimiento creado correctamente.', enriquecerMantenimiento(nuevo), 201);
+        return exito(res, 'Mantenimiento creado correctamente.', nuevo, 201);
+    } catch (err) {
+        return error(res, 'Error al crear mantenimiento.', err);
+    }
 }
 
-export function updateMantenimiento(req, res) {
+export async function updateMantenimiento(req, res) {
     /*
     Descripcion:
-    Actualiza un mantenimiento existente por su ID.
+    Actualiza un ticket de mantenimiento existente por su ID.
 
     Parametros:
     - req: Objeto request de Express (req.params.id, req.body)
     - res: Objeto response de Express
 
     Retorna:
-    - 200 con el mantenimiento actualizado
+    - 200 con el ticket actualizado
     - 400/422 si hay errores de validacion
     - 404 si no existe
     */
-    const { creadoPor, titulo, equipo, tarea, descripcion, estado } = req.body;
+    try {
+        const { tituloTicket, descripcionTicket, equipoId,
+                estadoTicket, estadoEquipo } = req.body;
 
-    const err = validarCuerpo({ titulo, equipo, tarea, descripcion }, res);
-    if (err) return err;
+        const err = validarCuerpo({ tituloTicket, descripcionTicket, equipoId }, res);
+        if (err) return err;
 
-    if (estado && !isEstadoValido(estado))
-        return error(res, `Estado invalido. Opciones: ${Object.values(EstadoMantenimiento).join(', ')}`, null, 422);
+        if (estadoTicket && !isEstadoValido(estadoTicket))
+            return error(res, `Estado invalido. Opciones: ${Object.values(EstadoTicket).join(', ')}`, null, 422);
 
-    const tareaExiste = TareaModel.findById(tarea);
-    if (!tareaExiste)
-        return error(res, 'La tarea indicada no existe.', null, 404);
+        const dto         = new MantenimientoDTO({ tituloTicket, descripcionTicket,
+                                                   equipoId, estadoTicket, estadoEquipo });
+        const actualizado = await MantenimientoModel.update(req.params.id, dto, GRUPO_DATOS_PROVISIONAL);
 
-    const dto         = new MantenimientoDTO({ creadoPor, titulo, equipo, tarea, descripcion, estado });
-    const actualizado = MantenimientoModel.update(req.params.id, dto);
+        if (!actualizado)
+            return error(res, 'Mantenimiento no encontrado.', null, 404);
 
-    if (!actualizado)
-        return error(res, 'Mantenimiento no encontrado.', null, 404);
-
-    return exito(res, 'Mantenimiento actualizado correctamente.', enriquecerMantenimiento(actualizado));
+        return exito(res, 'Mantenimiento actualizado correctamente.', actualizado);
+    } catch (err) {
+        return error(res, 'Error al actualizar mantenimiento.', err);
+    }
 }
 
-export function deleteMantenimiento(req, res) {
+export async function deleteMantenimiento(req, res) {
     /*
     Descripcion:
-    Elimina un mantenimiento por su ID.
+    Borrado logico de un ticket de mantenimiento por su ID.
 
     Parametros:
     - req: Objeto request de Express (req.params.id)
     - res: Objeto response de Express
 
     Retorna:
-    - 200 con el mantenimiento eliminado
+    - 200 con el ticket desactivado
     - 404 si no existe
     */
-    const eliminado = MantenimientoModel.remove(req.params.id);
+    try {
+        const eliminado = await MantenimientoModel.remove(req.params.id, GRUPO_DATOS_PROVISIONAL);
 
-    if (!eliminado)
-        return error(res, 'Mantenimiento no encontrado.', null, 404);
+        if (!eliminado)
+            return error(res, 'Mantenimiento no encontrado.', null, 404);
 
-    return exito(res, 'Mantenimiento eliminado correctamente.', eliminado);
+        return exito(res, 'Mantenimiento eliminado correctamente.', eliminado);
+    } catch (err) {
+        return error(res, 'Error al eliminar mantenimiento.', err);
+    }
 }
