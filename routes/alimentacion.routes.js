@@ -23,8 +23,8 @@ Librerias externas
 import { Router } from 'express';
  
 // Middlewares globales
-import { verificarAuth }
-    from '../../../middlewares/auth.middleware.js';
+ import { verificarAuth }
+     from '../../../middlewares/auth.middleware.js';
  
 // Middlewares del modulo
 import { validarBodyAlimentacion }
