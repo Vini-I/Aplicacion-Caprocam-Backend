@@ -17,9 +17,9 @@ IMPORTS
 //////////////////////////////////////////////////////////
 */
 
-import { FincaDTO } from '../dtos/finca.dto.js';
-import * as FincaModel from '../models/finca.model.js';
-import { exito, error } from '../common/respuestaJson.js';
+import { FincaDTO } from "../dtos/finca.dto.js";
+import * as FincaModel from "../models/finca.model.js";
+import { exito, error } from "../common/respuestaJson.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -27,8 +27,8 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export function getFincas(req, res) {
-    /*
+export async function getFincas(req, res) {
+  /*
     Descripcion:
     Obtiene todos los registros de fincas.
 
@@ -39,12 +39,12 @@ export function getFincas(req, res) {
     - Una respuesta JSON con todos los registros de fincas.
     */
 
-    const data = FincaModel.findAll();
-    return exito(res, 'Fincas obtenidas correctamente.', data);
+  const data = await FincaModel.findAll();
+  return exito(res, "Fincas obtenidas correctamente.", data);
 }
 
-export function getFincaById(req, res) {
-    /*
+export async function getFincaById(req, res) {
+  /*
     Descripcion:
     Obtiene un registro de finca por su ID CBO.
 
@@ -54,17 +54,17 @@ export function getFincaById(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de finca correspondiente al ID CBO proporcionado.
     */
-    const registro = FincaModel.findByIdCBO(req.params.idCBO);
+  const registro = await FincaModel.findByIdCBO(req.params.idCBO);
 
-    if (!registro) {
-        return error(res, 'Finca no encontrada.', null, 404);
-    }
+  if (!registro) {
+    return error(res, "Finca no encontrada.", null, 404);
+  }
 
-    return exito(res, 'Finca obtenida correctamente.', registro);
+  return exito(res, "Finca obtenida correctamente.", registro);
 }
 
-export function createFinca(req, res) {
-    /*
+export async function createFinca(req, res) {
+  /*
     Descripcion:
     Crea un nuevo registro de finca.
 
@@ -74,39 +74,39 @@ export function createFinca(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de finca creado.
     */
-    const {
-        id,
-        idCBO,
-        nombreFinca,
-        provincia,
-        canton,
-        distrito,
-        otrasSenas,
-        propietarioResponsable,
-        telefono,
-        areaTotal,
-        espejosAgua
-    } = req.body;
+  const {
+    grupoDatos,
+    idCBO,
+    nombreFinca,
+    provincia,
+    canton,
+    distrito,
+    otrasSenas,
+    propietarioResponsable,
+    telefono,
+    areaTotal,
+    espejosAgua,
+  } = req.body;
+  const dto = new FincaDTO(
+    grupoDatos,
+    idCBO,
+    nombreFinca,
+    provincia,
+    canton,
+    distrito,
+    otrasSenas,
+    propietarioResponsable,
+    telefono,
+    areaTotal,
+    espejosAgua,
+  );
 
-    const dto = new FincaDTO(
-        id,
-        idCBO,
-        nombreFinca,
-        provincia,
-        canton,
-        distrito,
-        otrasSenas,
-        propietarioResponsable,
-        telefono,
-        areaTotal,
-        espejosAgua
-    );
-    const nuevaFinca = FincaModel.create(dto);
-    return exito(res, "Finca creada correctamente.", nuevaFinca, 201);
+  const nuevaFinca = await FincaModel.create(dto);
+  return exito(res, "Finca creada correctamente.", nuevaFinca, 201);
 }
 
-export function updateFinca(req, res) {
-    /*
+export async function updateFinca(req, res) {
+  /*
     Descripcion:
     Actualiza un registro de finca existente.
 
@@ -117,43 +117,42 @@ export function updateFinca(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de finca actualizado.
     */
-    const {
-        id,
-        idCBO,
-        nombreFinca,
-        provincia,
-        canton,
-        distrito,
-        otrasSenas,
-        propietarioResponsable,
-        telefono,
-        areaTotal,
-        espejosAgua
-    } = req.body;
+  const {
+    grupoDatos,
+    idCBO,
+    nombreFinca,
+    provincia,
+    canton,
+    distrito,
+    otrasSenas,
+    propietarioResponsable,
+    telefono,
+    areaTotal,
+    espejosAgua,
+  } = req.body;
+  const dto = new FincaDTO(
+    grupoDatos,
+    idCBO,
+    nombreFinca,
+    provincia,
+    canton,
+    distrito,
+    otrasSenas,
+    propietarioResponsable,
+    telefono,
+    areaTotal,
+    espejosAgua,
+  );
 
-    const dto = new FincaDTO(
-        id,
-        idCBO,
-        nombreFinca,
-        provincia,
-        canton,
-        distrito,
-        otrasSenas,
-        propietarioResponsable,
-        telefono,
-        areaTotal,
-        espejosAgua
-    );
-
-    const actualizado = FincaModel.update(req.params.idCBO, dto);
-    if (!actualizado) {
-        return error(res, "Finca no encontrada.", null, 404);
-    }
-    return exito(res, "Finca actualizada correctamente.", actualizado);
+  const actualizado = await FincaModel.update(req.params.idCBO, dto);
+  if (!actualizado) {
+    return error(res, "Finca no encontrada.", null, 404);
+  }
+  return exito(res, "Finca actualizada correctamente.", actualizado);
 }
 
-export function deleteFinca(req, res) {
-    /*
+export async function deleteFinca(req, res) {
+  /*
     Descripcion:
     Elimina un registro de finca existente.
 
@@ -163,9 +162,9 @@ export function deleteFinca(req, res) {
     Retorna:
     - Una respuesta JSON indicando si la eliminación fue exitosa o no.
     */
-    const eliminado = FincaModel.remove(req.params.idCBO);
-    if (!eliminado) {
-        return error(res, "Finca no encontrada.", null, 404);
-    }
-    return exito(res, "Finca eliminada correctamente.", eliminado);
+  const eliminado = await FincaModel.remove(req.params.idCBO);
+  if (!eliminado) {
+    return error(res, "Finca no encontrada.", null, 404);
+  }
+  return exito(res, "Finca eliminada correctamente.", eliminado);
 }

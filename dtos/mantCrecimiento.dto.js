@@ -19,21 +19,32 @@ DTO
 Caparazon de datos para el modulo de crecimiento.
 */
 export class MantCrecimientoDto {
-    constructor(id, finca, estanque, pesoActual) {
+    constructor(
+        grupoDatos,
+        finca,
+        estanque,
+        colaborador,
+        fechaRegistro,
+        pesoActual
+    ) {
         /*
         Descripcion:
-        Construye un objeto CrecimientoDTO con los datos recibidos.
+        Construye un objeto MantCrecimientoDto con los datos recibidos.
 
         Parametros:
-        - id: Identificador unico del crecimiento (opcional)
-        - finca: Identificador de la finca (requerido)
-        - estanque: Identificador del estanque (requerido)
-        - pesoActual: Peso actual del pez (requerido)
+        - grupoDatos: Identificador del grupo de datos.
+        - finca: Identificador de la finca.
+        - estanque: Identificador del estanque.
+        - colaborador: Identificador del colaborador.
+        - fechaRegistro: Fecha del registro.
+        - pesoActual: Peso actual registrado.
         */
 
-        this.id = id || null;
+        this.grupoDatos = grupoDatos;
         this.finca = finca;
         this.estanque = estanque;
+        this.colaborador = colaborador;
+        this.fechaRegistro = fechaRegistro;
         this.pesoActual = pesoActual;
     }
 }
