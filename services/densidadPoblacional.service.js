@@ -4,25 +4,13 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: densidadPoblacional.service.js
 Autor: Eduard Salas
-Fecha: 29/06/2026
+Fecha: 6/07/2026
 Modulo: Densidad Poblacional
 Descripcion:
-Define las reglas de negocio del modulo de
-Densidad Poblacional.
+Define las reglas de negocio y validaciones del modulo
+de densidad poblacional.
 //////////////////////////////////////////////////////////
 */
-
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-
-Expresiones regulares utilizadas para validar
-campos numericos.
-*/
-
-const decimalRegex = /^\d+(\.\d+)?$/;
-const integerRegex = /^\d+$/;
 
 /*
 //////////////////////////////////////////////////////////
@@ -30,91 +18,184 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
 Contiene las funciones exportables de validacion
-utilizadas por el controlador.
+que utiliza el controller para verificar los datos.
 */
 
-/**
- * Verifica si un valor esta vacio.
- *
- * @param {*} value Valor a verificar.
- *
- * @returns {boolean}
- */
-export function isEmpty(value) {
-    if (value === null || value === undefined)
+export function isEmpty(valor) {
+    /*
+    Descripcion:
+    Verifica si un valor esta vacio.
+
+    Parametros:
+    - valor: Valor a revisar
+
+    Retorna:
+    - true si esta vacio, false si tiene contenido
+    */
+    if (valor === undefined) {
         return true;
+    }
 
-    return String(value).trim().length === 0;
+    if (valor === null) {
+        return true;
+    }
+
+    if (typeof valor === "string") {
+        if (valor.trim().length === 0) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
-/**
- * Verifica si un valor es un numero entero.
- *
- * @param {*} value Valor a validar.
- *
- * @returns {boolean}
- */
-export function isInteger(value) {
-    return integerRegex.test(String(value).trim());
+export function isNumeroMayorCero(valor) {
+    /*
+    Descripcion:
+    Valida que un valor sea numerico y mayor a cero.
+
+    Parametros:
+    - valor: Valor a validar
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        return false;
+    }
+
+    if (numero <= 0) {
+        return false;
+    }
+
+    return true;
 }
 
-/**
- * Verifica si un valor es un numero decimal.
- *
- * @param {*} value Valor a validar.
- *
- * @returns {boolean}
- */
-export function isDecimal(value) {
-    return decimalRegex.test(String(value).trim());
+export function isNumeroMayorIgualCero(valor) {
+    /*
+    Descripcion:
+    Valida que un valor sea numerico y mayor o igual a cero.
+
+    Parametros:
+    - valor: Valor a validar
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        return false;
+    }
+
+    if (numero < 0) {
+        return false;
+    }
+
+    return true;
 }
 
-/**
- * Verifica que un numero sea mayor que cero.
- *
- * @param {*} value Valor a validar.
- *
- * @returns {boolean}
- */
-export function isPositive(value) {
-    return Number(value) > 0;
+export function isNumeroOpcionalMayorIgualCero(valor) {
+    /*
+    Descripcion:
+    Valida que un valor opcional sea numerico y mayor o igual a cero.
+    Si viene vacio, se considera valido.
+
+    Parametros:
+    - valor: Valor a validar
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    if (isEmpty(valor)) {
+        return true;
+    }
+
+    return isNumeroMayorIgualCero(valor);
 }
 
-/**
- * Verifica que un porcentaje este entre
- * 0 y 100.
- *
- * @param {*} value Valor a validar.
- *
- * @returns {boolean}
- */
-export function isPercentage(value) {
-    const porcentaje = Number(value);
+export function isPercentageOpcional(valor) {
+    /*
+    Descripcion:
+    Valida que un porcentaje opcional este entre 0 y 100.
+    Si viene vacio, se considera valido.
 
-    return porcentaje >= 0 &&
-           porcentaje <= 100;
+    Parametros:
+    - valor: Valor a validar
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    if (isEmpty(valor)) {
+        return true;
+    }
+
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        return false;
+    }
+
+    if (numero < 0) {
+        return false;
+    }
+
+    if (numero > 100) {
+        return false;
+    }
+
+    return true;
 }
 
-/**
- * Verifica que una fecha sea valida.
- *
- * @param {*} value Fecha a validar.
- *
- * @returns {boolean}
- */
-export function isDate(value) {
-    return !Number.isNaN(Date.parse(value));
+export function isFechaValida(valor) {
+    /*
+    Descripcion:
+    Valida que una fecha sea valida.
+
+    Parametros:
+    - valor: Fecha a validar
+
+    Retorna:
+    - true si es valida, false si no
+    */
+    if (isEmpty(valor)) {
+        return false;
+    }
+
+    return !Number.isNaN(Date.parse(valor));
 }
 
-/**
- * Verifica que el texto no sobrepase
- * una longitud maxima.
- *
- * @param {string} value Texto.
- * @param {number} max   Longitud maxima.
- *
- * @returns {boolean}
- */
-export function maxLength(value, max) {
-    return String(value).trim().length <= max;
+export function isIdValido(id) {
+    /*
+    Descripcion:
+    Valida que un id sea numerico y mayor a cero.
+
+    Parametros:
+    - id: Id recibido
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    return isNumeroMayorCero(id);
+}
+
+export function maxLength(valor, max) {
+    /*
+    Descripcion:
+    Verifica que el texto no sobrepase una longitud maxima.
+
+    Parametros:
+    - valor: Texto a validar.
+    - max: Longitud maxima permitida.
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    if (isEmpty(valor)) {
+        return true;
+    }
+
+    return String(valor).trim().length <= max;
 }
