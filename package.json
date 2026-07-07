@@ -1,11 +1,11 @@
 {
   "name": "aplicacion-caprocam-backend",
-  "version": "0.2.0",
+  "version": "0.3.11",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "keywords": [],
   "author": "",
