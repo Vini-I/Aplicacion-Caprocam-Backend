@@ -2,153 +2,209 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo:     alimentacion.service.js
-Autor:       Felipe Salas
-Fecha:       29/06/2026
-Modulo:      Alimentacion
+Archivo: alimentacion.service.js
+Autor: Felipe Salas
+Fecha: 06/07/2026
+Modulo: Alimentacion
 Descripcion:
-Capa de logica de negocio del modulo de alimentacion.
-Define todas las reglas de validacion de los campos.
-No accede a la BD ni instancia DTOs.
+Define las reglas de negocio y validaciones del modulo
+de alimentacion.
 //////////////////////////////////////////////////////////
 */
- 
+
 /*
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
- 
-DTOs — solo para acceder a los enums, no para instanciar.
+
+DTOs
 */
- 
-import {
-    MetodoAlimentacion,
-    HoraAlimentacion,
-} from '../dtos/alimentacion.dto.js';
- 
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
- 
-Expresion regular para fechas en formato DD/MM/AAAA.
-*/
- 
-const FECHA_REGEX = /^\d{2}\/\d{2}\/\d{4}$/;
- 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
- 
-Validaciones atomicas que usa validarRegistro internamente.
-*/
- 
-function esFechaValida(fecha) {
-    /*
-    Descripcion:
-    Verifica que el string tenga el formato DD/MM/AAAA.
- 
-    Parametros:
-    - fecha: String a evaluar.
- 
-    Retorna:
-    - true si cumple el formato, false si no.
-    */
-    return typeof fecha === 'string' && FECHA_REGEX.test(fecha.trim());
-}
- 
-function esMetodoValido(metodo) {
-    /*
-    Descripcion:
-    Verifica que el metodo sea uno de los definidos
-    en el enum MetodoAlimentacion.
- 
-    Parametros:
-    - metodo: String a evaluar.
- 
-    Retorna:
-    - true si el valor es valido, false si no.
-    */
-    return Object.values(MetodoAlimentacion).includes(metodo);
-}
- 
-function esHoraValida(hora) {
-    /*
-    Descripcion:
-    Verifica que la hora sea una de las opciones
-    definidas en el enum HoraAlimentacion.
- 
-    Parametros:
-    - hora: String a evaluar.
- 
-    Retorna:
-    - true si el valor es valido, false si no.
-    */
-    return Object.values(HoraAlimentacion).includes(hora);
-}
- 
+
+import { MetodoAlimentacion, HoraAlimentacion } from "../dtos/alimentacion.dto.js";
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
- 
-Logica de negocio exportable que usa el controlador.
+
+Contiene las funciones exportables de validacion
+que utiliza el controller para verificar los datos.
 */
- 
-export function validarRegistro({
-    finca,
-    estanque,
-    fecha,
-    hora,
-    metodo,
-    cantidadKg,
-}) {
+
+export function isEmpty(valor) {
     /*
     Descripcion:
-    Valida los campos requeridos de un registro de
-    alimentacion. Devuelve un array con los mensajes de
-    error encontrados. Array vacio = datos validos.
- 
+    Verifica si un valor esta vacio.
+
     Parametros:
-    - finca:      Nombre de la finca (requerido).
-    - estanque:   Identificador del estanque (requerido).
-    - fecha:      Fecha en formato DD/MM/AAAA (requerido).
-    - hora:       Hora de alimentacion, valor del enum.
-    - metodo:     Metodo de alimentacion, valor del enum.
-    - cantidadKg: Cantidad en kg (entero positivo, requerido).
- 
+    - valor: Valor a revisar
+
     Retorna:
-    - errores: Array de strings. Vacio si todo es valido.
+    - true si esta vacio, false si tiene contenido
     */
-    const errores = [];
- 
-    if (!finca || String(finca).trim().length === 0)
-        errores.push('La finca es requerida.');
- 
-    if (!estanque || String(estanque).trim().length === 0)
-        errores.push('El estanque es requerido.');
- 
-    if (!esFechaValida(fecha))
-        errores.push('La fecha debe tener el formato DD/MM/AAAA.');
- 
-    if (!esHoraValida(hora))
-        errores.push(
-            `Hora invalida. ` +
-            `Opciones: ${Object.values(HoraAlimentacion).join(', ')}.`
-        );
- 
-    if (!esMetodoValido(metodo))
-        errores.push(
-            `Metodo invalido. ` +
-            `Opciones: ${Object.values(MetodoAlimentacion).join(', ')}.`
-        );
- 
-    const kg = Number(cantidadKg);
-    if (!Number.isInteger(kg) || kg <= 0)
-        errores.push(
-            'La cantidad en kg debe ser un entero positivo.'
-        );
- 
-    return errores;
+    if (valor === undefined) {
+        return true;
+    }
+
+    if (valor === null) {
+        return true;
+    }
+
+    if (typeof valor === "string") {
+        if (valor.trim().length === 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export function isNumeroMayorCero(valor) {
+    /*
+    Descripcion:
+    Valida que un valor sea numerico y mayor a cero.
+
+    Parametros:
+    - valor: Valor a validar
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        return false;
+    }
+
+    if (numero <= 0) {
+        return false;
+    }
+
+    return true;
+}
+
+export function isNumeroOpcionalMayorIgualCero(valor) {
+    /*
+    Descripcion:
+    Valida que un valor opcional sea numerico y mayor o igual a cero.
+    Si viene vacio, se considera valido.
+
+    Parametros:
+    - valor: Valor a validar
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    if (isEmpty(valor)) {
+        return true;
+    }
+
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        return false;
+    }
+
+    if (numero < 0) {
+        return false;
+    }
+
+    return true;
+}
+
+export function isFechaValida(valor) {
+    /*
+    Descripcion:
+    Valida que una fecha sea valida.
+
+    Parametros:
+    - valor: Fecha a validar
+
+    Retorna:
+    - true si es valida, false si no
+    */
+    if (isEmpty(valor)) {
+        return false;
+    }
+
+    return !Number.isNaN(Date.parse(valor));
+}
+
+export function isMetodoAlimentacion(metodo) {
+    /*
+    Descripcion:
+    Valida que el metodo recibido exista dentro de los metodos
+    permitidos del modulo.
+
+    Parametros:
+    - metodo: Metodo recibido
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    const metodos = Object.values(MetodoAlimentacion);
+
+    for (let i = 0; i < metodos.length; i++) {
+        if (metodo === metodos[i]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export function isHoraAlimentacion(hora) {
+    /*
+    Descripcion:
+    Valida que la hora recibida exista dentro de las horas
+    permitidas del modulo.
+
+    Parametros:
+    - hora: Hora recibida
+
+    Retorna:
+    - true si es valida, false si no
+    */
+    const horas = Object.values(HoraAlimentacion);
+
+    for (let i = 0; i < horas.length; i++) {
+        if (hora === horas[i]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export function isIdValido(id) {
+    /*
+    Descripcion:
+    Valida que un id sea numerico y mayor a cero.
+
+    Parametros:
+    - id: Id recibido
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    return isNumeroMayorCero(id);
+}
+
+export function maxLength(valor, max) {
+    /*
+    Descripcion:
+    Verifica que el texto no sobrepase una longitud maxima.
+
+    Parametros:
+    - valor: Texto a validar.
+    - max: Longitud maxima permitida.
+
+    Retorna:
+    - true si es valido, false si no
+    */
+    if (isEmpty(valor)) {
+        return true;
+    }
+
+    return String(valor).trim().length <= max;
 }
