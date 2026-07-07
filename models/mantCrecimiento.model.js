@@ -18,33 +18,13 @@ solo este archivo cambia.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
+*/
+
+// IMPORT DTO
+import { MantCrecimientoDto } from "../dtos/mantCrecimiento.dto.js";
+
+//IMPORT DE CONEXION DE BASE DE DATOS
 import pool from "../config/database.js";
-*/
-
-
-/*
-//////////////////////////////////////////////////////////
-MOCK DATA
-//////////////////////////////////////////////////////////
-
-Datos de prueba que simulan la base de datos.
-Cuando se conecte una DB real, esta seccion desaparece.
-*/
-
-let crecimientos = [
-    {
-        id: '1',
-        finca: 'Finca La Perla',
-        estanque: 'EST-01',
-        pesoActual: 2.5
-    },
-    {
-        id: '2',
-        finca: 'Finca La Perla',
-        estanque: 'EST-02',
-        pesoActual: 3.1
-    }
-];
 
 /*
 //////////////////////////////////////////////////////////
@@ -54,80 +34,161 @@ FUNCIONES PRINCIPALES
 Contiene las funciones exportables que interactuan
 con la fuente de datos del modulo de crecimiento.
 */
-export function findAll() {
+export async function findAll() {
     /*
     Descripcion:
     Obtiene todos los registros de crecimiento.
+
     Parametros:
     No posee.
+
     Retorna:
-    - crecimientos: Lista con todos los registros.
+    - Lista con todos los registros de crecimiento.
     */
-    return crecimientos;
+
+    const [rows] = await pool.execute(
+        `SELECT *
+        FROM crecimientos
+        WHERE deleted_at IS NULL`
+    );
+
+    return rows;
 }
-export function findById(id) {
+
+export async function findById(id) {
     /*
     Descripcion:
     Busca un registro de crecimiento por su ID.
+
     Parametros:
-    - id: ID del registro a buscar.
+    - id: Identificador del crecimiento.
+
     Retorna:
-    - El registro encontrado, o null si no existe.
+    - El registro encontrado o null si no existe.
     */
-    return crecimientos.find(c => c.id === id) || null;
+
+    const [rows] = await pool.execute(
+        `SELECT *
+        FROM crecimientos
+        WHERE id = ?
+        AND deleted_at IS NULL`,
+        [id]
+    );
+
+    return rows[0] || null;
 }
 
-export function create(dto) {
+export async function create(dto) {
     /*
     Descripcion:
-    Agrega un nuevo registro de crecimiento a la lista.
+    Crea un nuevo registro de crecimiento.
+
     Parametros:
-    - dto: Objeto CrecimientoDTO con los datos del nuevo registro.
+    - dto: Objeto con los datos del crecimiento.
+
     Retorna:
-    - nuevo: El registro recien creado.
+    - El registro creado.
     */
-    const nuevoRegistro = {
-        id: dto.id,
-        finca: dto.finca,
-        estanque: dto.estanque,
-        pesoActual: dto.pesoActual
-    };
-    crecimientos.push(nuevoRegistro);
-    return nuevoRegistro;
+
+    console.log(dto);
+console.log([
+    dto.grupoDatos,
+    dto.finca,
+    dto.estanque,
+    dto.colaborador,
+    dto.fechaRegistro,
+    dto.pesoActual
+]);
+
+
+    const [result] = await pool.execute(
+        `INSERT INTO crecimientos (
+            grupo_datos,
+            finca_id,
+            estanque_id,
+            colaborador_id,
+            fecha_registro,
+            peso_actual
+        ) VALUES (?,?,?,?,?,?)`,
+        [
+            dto.grupoDatos,
+            dto.finca,
+            dto.estanque,
+            dto.colaborador,
+            dto.fechaRegistro,
+            dto.pesoActual
+        ]
+    );
+
+    return await findById(result.insertId);
 }
 
-export function update(id, dto) {
+export async function update(id, dto) {
     /*
     Descripcion:
-    Actualiza los datos de un registro de crecimiento existente.
+    Actualiza un registro de crecimiento.
+
     Parametros:
-    - id: ID del registro a actualizar.
-    - dto: Objeto CrecimientoDTO con los nuevos datos.
+    - id: Identificador del crecimiento.
+    - dto: Datos actualizados.
+
     Retorna:
-    - El registro actualizado, o null si no se encontro.
+    - El registro actualizado o null si no existe.
     */
-    const index = crecimientos.findIndex(c => c.id === id);
-    if (index === -1) return null;
-    crecimientos[index] = {
-        ...crecimientos[index],
-        finca: dto.finca || crecimientos[index].finca,
-        estanque: dto.estanque || crecimientos[index].estanque,
-        pesoActual: dto.pesoActual !== undefined ? dto.pesoActual : crecimientos[index].pesoActual
-    };
-    return crecimientos[index];
+
+    const registro = await findById(id);
+
+    if (!registro) {
+        return null;
+    }
+
+    await pool.execute(
+        `UPDATE crecimientos
+        SET
+            grupo_datos = ?,
+            finca_id = ?,
+            estanque_id = ?,
+            colaborador_id = ?,
+            fecha_registro = ?,
+            peso_actual = ?
+        WHERE id = ?`,
+        [
+            dto.grupoDatos,
+            dto.finca,
+            dto.estanque,
+            dto.colaborador,
+            dto.fechaRegistro,
+            dto.pesoActual,
+            id
+        ]
+    );
+    return await findById(id);
 }
 
-export function remove(id) {
+export async function remove(id) {
     /*
     Descripcion:
-    Elimina un registro de crecimiento por su ID.
+    Elimina logicamente un registro de crecimiento.
+
     Parametros:
-    - id: ID del registro a eliminar.
+    - id: Identificador del crecimiento.
+
     Retorna:
-    - El registro eliminado, o null si no se encontro.
+    - El registro eliminado o null si no existe.
     */
-    const index = crecimientos.findIndex(c => c.id === id);
-    if (index === -1) return null;
-    const eliminado = crecimientos.splice(index, 1);
-    return eliminado[0];
+
+    const registro = await findById(id);
+
+    if (!registro) {
+        return null;
+    }
+
+    await pool.execute(
+        `UPDATE crecimientos
+        SET deleted_at = NOW()
+        WHERE id = ?`,
+        [id]
+    );
+
+    return registro;
 }
