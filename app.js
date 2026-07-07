@@ -95,10 +95,6 @@ app.get("/", (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`El server esta corriendo en http://localhost:${PORT}`);
-});
-
 /*
 //////////////////////////////////////////////////////////
 EXPORTACION
