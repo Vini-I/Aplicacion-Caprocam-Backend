@@ -90,17 +90,6 @@ export async function create(dto) {
     - El registro creado.
     */
 
-    console.log(dto);
-console.log([
-    dto.grupoDatos,
-    dto.finca,
-    dto.estanque,
-    dto.colaborador,
-    dto.fechaRegistro,
-    dto.pesoActual
-]);
-
-
     const [result] = await pool.execute(
         `INSERT INTO crecimientos (
             grupo_datos,
