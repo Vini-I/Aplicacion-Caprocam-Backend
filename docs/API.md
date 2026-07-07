@@ -317,6 +317,11 @@ Crea un nuevo producto.
 
 Body (JSON):
 {
+    "nombre": "Fertilizante Foliar H2",
+    "categoria": "Fertilizante",
+    "cantidad": 50,
+    "stockMinimo": 10,
+    "precioUnidad": 3500
 "nombre": "Fertilizante Foliar H2",
 "categoria": "Fertilizante",
 "cantidad": 50,
@@ -420,6 +425,11 @@ Parametros URL:
 
 Body (JSON):
 {
+    "nombre": "Fertilizante Foliar Premium",
+    "categoria": "Fertilizante",
+    "cantidad": 45,
+    "stockMinimo": 10,
+    "precioUnidad": 3800
 "nombre": "Fertilizante Foliar Premium",
 "categoria": "Fertilizante",
 "cantidad": 45,
@@ -527,6 +537,23 @@ Obtiene un comprador activo por su ID.
 Parametros URL:
 
 - id: ID numerico del comprador.
+
+## DELETE /api/v0/estanques/:id
+Elimina un estanque por su ID.
+
+Parametros URL:
+
+- id: ID numerico del estanque.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Comprador obtenido correctamente.",
+    "message": "Estanque eliminado correctamente.",
+    "data": { ... }
+
+}
 
 ## DELETE /api/v0/estanques/:id
 
@@ -677,6 +704,14 @@ Obtiene una lectura fisico quimica por su ID.
 Parametros URL:
 
 - id: ID numerico de la lectura.
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Lectura obtenida correctamente.",
+    "data": { ... }
+}
+ 
   Respuesta exitosa:
   200 OK
   {
@@ -694,6 +729,7 @@ Respuesta de error:
 }
 
 ---
+ 
 
 ## POST /api/v1/lecturasFisicoQuimicas
 
@@ -732,6 +768,8 @@ Respuesta de error:
 
 Realiza el borrado logico de una lectura.
 Invierte el estado activo del registro.
+ 
+Parametros URL:
 
 Parametros URL:
 

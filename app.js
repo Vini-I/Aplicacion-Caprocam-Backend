@@ -101,6 +101,24 @@ app.use('/api/v0/mantenimientos', mantenimientoRouter);
 app.use('/api/v0/tareas', tareaRouter);
 app.use("/api/v0/login",  loginRouter);
 app.use("/api/v0/fincas", fincaRoutes);
+app.use('/api/v0/lecturasFisicoQuimicas', fisicoQuimicaRoutes);
+app.use('/api/v0/registrosTrazabilidad', trazabilidadRoutes);
+
+/*
+//////////////////////////////////////////////////////////
+app.use("/api/v0/colaboradores", colaboradoresRouter);
+app.use("/api/v0/crecimiento", crecimientoRouter);
+app.use("/api/v0/estanques", estanquesRouter);
+app.use("/api/v0/parasitologias", parasitologiasRouter);
+app.use("/api/v0/enfermedades", enfermedadesRouter);
+app.use("/api/v0/alimentaciones", alimentacionRouter);
+app.use("/api/v0/densidad-poblacional", densidadPoblacionalRouter);
+app.use("/api/v0/raleo", raleoRouter);
+app.use("/api/v0/ventas", ventasRouter);
+app.use('/api/v0/mantenimientos', mantenimientoRouter);
+app.use('/api/v0/tareas', tareaRouter);
+app.use("/api/v0/login",  loginRouter);
+app.use("/api/v0/fincas", fincaRoutes);
 app.use("/api/v0/equipos", equipoRouter);
 app.use('/api/v0/lecturasFisicoQuimicas', fisicoQuimicaRoutes);
 app.use('/api/v0/registrosTrazabilidad', trazabilidadRoutes);
