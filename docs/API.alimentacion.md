@@ -12,6 +12,26 @@ Respuesta:
     "success": true,
     "message": "Registros obtenidos correctamente.",
     "data": [ ... ]
+        {"id":9,
+        "uuid":"9bbe3da9-7986-11f1-a3af-02f56c154965",
+        "grupoDatos":1,
+        "idFinca":1,
+        "idEstanque":1,
+        "idProveedor":null,
+        "idProducto":null,
+        "fecha":"2026-07-06",
+        "hora":"7:00 AM",
+        "metodo":"Plato",
+        "cantidadKg":18.5,
+        "presentacion":"Granulado",
+        "proveedor":"Biomar",
+        "tipoAlimento":"Antibitico",
+        "observaciones":"Primera alimentación del día",
+        "activo":true,
+        "fechaCreacion":"2026-07-07T04:04:07.000Z",
+        "fechaActualizacion":"2026-07-07T04:04:07.000Z",
+        "deletedAt":null,
+        "version":1}
 }
 ```
 
@@ -57,16 +77,19 @@ Crea un nuevo registro de alimentación.
 
 ```json
 {
-    "finca": 1,
-    "estanque": 2,
-    "fecha": "2026-06-29",
-    "hora": "7:00 AM",
-    "metodo": "Boleo",
-    "cantidadKg": 10,
+    "grupoDatos": 1,
+    "idFinca": 1,
+    "idEstanque": 1,
+    "idProveedor": null,
+    "idProducto": null,
+    "fecha": "2026-07-06",
+    "hora": "3:00 PM",
+    "metodo": "Plato",
+    "cantidadKg": 18.5,
     "presentacion": "Granulado",
     "proveedor": "Biomar",
-    "tipoAlimento": "Balanceado engorde 38%",
-    "observaciones": "Sin novedad."
+    "tipoAlimento": "Antibiotico",
+    "observaciones": "Primera alimentación del día"
 }
 ```
 
@@ -107,15 +130,15 @@ Actualiza un registro existente de alimentación.
 ```json
 {
     "finca": 1,
-    "estanque": 2,
-    "fecha": "2026-06-30",
-    "hora": "3:00 PM",
-    "metodo": "Plato",
+    "estanque": 1,
+    "fecha": "2026-07-06",
+    "hora": "7:00 AM",
+    "metodo": "Boleo",
     "cantidadKg": 12,
-    "presentacion": "Polvo",
+    "presentacion": "Granulado",
     "proveedor": "Biomar",
-    "tipoAlimento": "Balanceado premium 40%",
-    "observaciones": "Actualizacion de registro."
+    "tipoAlimento": "Antibiotico",
+    "observaciones": "Actualizacion de registro"
 }
 ```
 
