@@ -8,8 +8,8 @@ Fecha: 03/07/2026
 Modulo: Enfermedades
 Descripcion:
 Capa de datos del modulo de enfermedades.
-Por ahora trabaja con datos mock. Cuando haya DB,
-solo este archivo cambia.
+Trabaja con MySQL mediante config/database.js.
+No realiza DELETE fisico, solo borrado logico.
 //////////////////////////////////////////////////////////
 */
 
@@ -18,62 +18,10 @@ solo este archivo cambia.
 IMPORTS
 //////////////////////////////////////////////////////////
 
-DTOs
+Base de datos
 */
 
-import { TipoEnfermedad, SeveridadEnfermedad } from '../dtos/enfermedades.dto.js';
-
-/*
-//////////////////////////////////////////////////////////
-MOCK DATA
-//////////////////////////////////////////////////////////
-
-Datos de prueba que simulan la base de datos.
-Cuando se conecte una DB real, esta seccion desaparece.
-*/
-
-let siguienteId = 3;
-
-let enfermedades = [
-    {
-        id:                   1,
-        tipoRegistro:         'enfermedad',
-        finca:                '1',
-        fincaNombre:          'Finca La Reina',
-        estanque:             'EST-001',
-        fechaReporte:         '2026-06-27',
-        responsable:          'Isaac',
-        enfermedades:         [TipoEnfermedad.WSSV, TipoEnfermedad.VIBRIOSIS],
-        enfermedadesNombre:   ['WSSV - Mancha Blanca', 'Vibriosis'],
-        severidad:            SeveridadEnfermedad.MEDIA,
-        severidadNombre:      'Media',
-        mortalidad:           2,
-        reporte:              'Caso mock con sintomas leves y seguimiento sanitario.',
-        activo:               true,
-        fechaCreacion:        '2026-06-27T00:00:00.000Z',
-        fechaActualizacion:   '2026-06-27T00:00:00.000Z',
-        fechaEliminacion:     null,
-    },
-    {
-        id:                   2,
-        tipoRegistro:         'enfermedad',
-        finca:                '2',
-        fincaNombre:          'Finca La Esperanza',
-        estanque:             'EST-002',
-        fechaReporte:         '2026-06-28',
-        responsable:          'Maria',
-        enfermedades:         [TipoEnfermedad.NHP],
-        enfermedadesNombre:   ['NHP - Hepatobacter penaei'],
-        severidad:            SeveridadEnfermedad.ALTA,
-        severidadNombre:      'Alta',
-        mortalidad:           5,
-        reporte:              'Caso mock con mortalidad registrada y observacion activa.',
-        activo:               true,
-        fechaCreacion:        '2026-06-28T00:00:00.000Z',
-        fechaActualizacion:   '2026-06-28T00:00:00.000Z',
-        fechaEliminacion:     null,
-    },
-];
+import db from '../config/database.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -81,14 +29,14 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
 Contiene las funciones exportables que interactuan
-con la fuente de datos mock del modulo de enfermedades.
+con la tabla enfermedades.
 */
 
-export function findAll(filtros) {
+export async function findAll(filtros) {
     /*
     Descripcion:
     Obtiene todos los registros activos de enfermedades.
-    Permite aplicar filtros opcionales.
+    Filtra por grupo_datos y filtros opcionales.
 
     Parametros:
     - filtros: Objeto con filtros de busqueda.
@@ -97,144 +45,260 @@ export function findAll(filtros) {
     - Lista con los registros encontrados.
     */
 
-    const resultado = [];
+    const valores = [];
+    const condiciones = [
+        'grupo_datos = ?',
+        'activo = TRUE',
+        'deleted_at IS NULL',
+    ];
 
-    for (let i = 0; i < enfermedades.length; i++) {
-        const registro = enfermedades[i];
+    valores.push(filtros.grupoDatos);
 
-        if (registro.activo === true) {
-            if (coincideConFiltros(registro, filtros)) {
-                resultado.push(registro);
-            }
-        }
-    }
+    agregarFiltro(condiciones, valores, 'finca_id', filtros.fincaId);
+    agregarFiltro(condiciones, valores, 'estanque_id', filtros.estanqueId);
+    agregarFiltro(condiciones, valores, 'colaborador_id', filtros.colaboradorId);
+    agregarFiltro(condiciones, valores, 'enfermedad', filtros.enfermedad);
+    agregarFiltro(condiciones, valores, 'severidad', filtros.severidad);
+    agregarFiltro(condiciones, valores, 'fecha_reporte', filtros.fechaReporte);
 
-    return resultado;
+    const sql = seleccionarCampos() +
+        ' WHERE ' + condiciones.join(' AND ') +
+        ' ORDER BY fecha_reporte DESC, id DESC';
+
+    const [rows] = await db.execute(sql, valores);
+
+    return mapearFilas(rows);
 }
 
-export function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
-    Busca un registro de enfermedad por su ID.
+    Busca un registro activo de enfermedad por su ID y grupo_datos.
 
     Parametros:
-    - id: ID del registro a buscar.
+    - id: ID del registro.
+    - grupoDatos: Grupo de datos al que pertenece el registro.
 
     Retorna:
-    - El registro encontrado.
-    - null si no existe o esta inactivo.
+    - Registro encontrado.
+    - null si no existe.
     */
 
-    for (let i = 0; i < enfermedades.length; i++) {
-        const registro = enfermedades[i];
+    const sql = seleccionarCampos() +
+        ' WHERE id = ?' +
+        ' AND grupo_datos = ?' +
+        ' AND activo = TRUE' +
+        ' AND deleted_at IS NULL' +
+        ' LIMIT 1';
 
-        if (registro.id === Number(id)) {
-            if (registro.activo === true) {
-                return registro;
-            }
+    const valores = [id, grupoDatos];
+    const [rows] = await db.execute(sql, valores);
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return mapearFila(rows[0]);
+}
+
+
+export async function validarReferencias(dto) {
+    /*
+    Descripcion:
+    Valida que grupoDatos, fincaId, estanqueId y colaboradorId
+    pertenezcan correctamente al mismo grupo de datos.
+
+    Parametros:
+    - dto: Objeto EnfermedadDTO normalizado.
+
+    Retorna:
+    - Lista de errores encontrados.
+    */
+
+    const errores = [];
+
+    const grupoExiste = await existeGrupoDatos(dto.grupoDatos);
+
+    if (grupoExiste === false) {
+        errores.push('El grupoDatos indicado no existe o esta inactivo.');
+    }
+
+    const fincaExiste = await existeFinca(dto.fincaId, dto.grupoDatos);
+
+    if (fincaExiste === false) {
+        errores.push('La fincaId indicada no existe o no pertenece al grupoDatos.');
+    }
+
+    const estanqueExiste = await existeEstanque(
+        dto.estanqueId,
+        dto.fincaId,
+        dto.grupoDatos
+    );
+
+    if (estanqueExiste === false) {
+        errores.push(
+            'El estanqueId indicado no existe, no pertenece a la fincaId ' +
+            'o no pertenece al grupoDatos.'
+        );
+    }
+
+    if (dto.colaboradorId !== null) {
+        const colaboradorExiste = await existeColaborador(
+            dto.colaboradorId,
+            dto.grupoDatos
+        );
+
+        if (colaboradorExiste === false) {
+            errores.push('El colaboradorId indicado no existe o no pertenece al grupoDatos.');
         }
     }
 
-    return null;
+    return errores;
 }
 
-export function create(dto) {
+export async function create(dto) {
     /*
     Descripcion:
-    Agrega un nuevo registro de enfermedad a la lista mock.
+    Crea un nuevo registro de enfermedad en MySQL.
 
     Parametros:
     - dto: Objeto EnfermedadDTO con los datos del nuevo registro.
 
     Retorna:
-    - nuevo: El registro recien creado con su ID asignado.
+    - Registro creado.
     */
 
-    const fechaActual = new Date().toISOString();
+    const sql = `
+        INSERT INTO enfermedades (
+            grupo_datos,
+            finca_id,
+            estanque_id,
+            colaborador_id,
+            tipo_registro,
+            fecha_reporte,
+            responsable,
+            enfermedad,
+            severidad,
+            mortalidad_registrada,
+            reporte
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
 
-    const nuevo = {
-        ...dto,
-        id:                 siguienteId,
-        activo:             true,
-        fechaCreacion:      fechaActual,
-        fechaActualizacion: fechaActual,
-        fechaEliminacion:   null,
-    };
+    const valores = [
+        dto.grupoDatos,
+        dto.fincaId,
+        dto.estanqueId,
+        dto.colaboradorId,
+        dto.tipoRegistro,
+        dto.fechaReporte,
+        dto.responsable,
+        dto.enfermedad,
+        dto.severidad,
+        dto.mortalidadRegistrada,
+        dto.reporte,
+    ];
 
-    siguienteId = siguienteId + 1;
-    enfermedades.push(nuevo);
+    const [resultado] = await db.execute(sql, valores);
 
-    return nuevo;
+    return findById(resultado.insertId, dto.grupoDatos);
 }
 
-export function update(id, dto) {
+export async function update(id, grupoDatos, dto) {
     /*
     Descripcion:
-    Actualiza un registro de enfermedad existente por su ID.
+    Actualiza un registro de enfermedad existente.
+    Aumenta la version del registro.
 
     Parametros:
-    - id:  ID del registro a actualizar.
+    - id: ID del registro.
+    - grupoDatos: Grupo de datos del registro.
     - dto: Objeto EnfermedadDTO con los nuevos datos.
 
     Retorna:
-    - El registro actualizado.
-    - null si no existe o esta inactivo.
+    - Registro actualizado.
+    - null si no existe.
     */
 
-    const index = buscarIndicePorId(id);
+    const sql = `
+        UPDATE enfermedades
+        SET
+            finca_id = ?,
+            estanque_id = ?,
+            colaborador_id = ?,
+            tipo_registro = ?,
+            fecha_reporte = ?,
+            responsable = ?,
+            enfermedad = ?,
+            severidad = ?,
+            mortalidad_registrada = ?,
+            reporte = ?,
+            version = version + 1
+        WHERE id = ?
+        AND grupo_datos = ?
+        AND activo = TRUE
+        AND deleted_at IS NULL
+    `;
 
-    if (index === -1) {
+    const valores = [
+        dto.fincaId,
+        dto.estanqueId,
+        dto.colaboradorId,
+        dto.tipoRegistro,
+        dto.fechaReporte,
+        dto.responsable,
+        dto.enfermedad,
+        dto.severidad,
+        dto.mortalidadRegistrada,
+        dto.reporte,
+        id,
+        grupoDatos,
+    ];
+
+    const [resultado] = await db.execute(sql, valores);
+
+    if (resultado.affectedRows === 0) {
         return null;
     }
 
-    if (enfermedades[index].activo === false) {
-        return null;
-    }
-
-    const fechaActual = new Date().toISOString();
-
-    enfermedades[index] = {
-        ...enfermedades[index],
-        ...dto,
-        id:                 Number(id),
-        activo:             true,
-        fechaActualizacion: fechaActual,
-        fechaEliminacion:   null,
-    };
-
-    return enfermedades[index];
+    return findById(id, grupoDatos);
 }
 
-export function remove(id) {
+export async function remove(id, grupoDatos) {
     /*
     Descripcion:
-    Elimina logicamente un registro de enfermedad por su ID.
+    Elimina logicamente un registro de enfermedad.
+    No realiza DELETE fisico.
 
     Parametros:
-    - id: ID del registro a eliminar.
+    - id: ID del registro.
+    - grupoDatos: Grupo de datos del registro.
 
     Retorna:
-    - El registro eliminado logicamente.
-    - null si no existe o ya estaba inactivo.
+    - Registro eliminado logicamente.
+    - null si no existe.
     */
 
-    const index = buscarIndicePorId(id);
+    const sql = `
+        UPDATE enfermedades
+        SET
+            activo = FALSE,
+            deleted_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE id = ?
+        AND grupo_datos = ?
+        AND activo = TRUE
+        AND deleted_at IS NULL
+    `;
 
-    if (index === -1) {
+    const valores = [id, grupoDatos];
+    const [resultado] = await db.execute(sql, valores);
+
+    if (resultado.affectedRows === 0) {
         return null;
     }
 
-    if (enfermedades[index].activo === false) {
-        return null;
-    }
-
-    const fechaActual = new Date().toISOString();
-
-    enfermedades[index].activo = false;
-    enfermedades[index].fechaActualizacion = fechaActual;
-    enfermedades[index].fechaEliminacion = fechaActual;
-
-    return enfermedades[index];
+    return findByIdIncluyendoEliminados(id, grupoDatos);
 }
 
 /*
@@ -242,97 +306,378 @@ export function remove(id) {
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 
-Funciones internas de busqueda y filtrado.
+Funciones internas para SQL y mapeo de datos.
 */
 
-function buscarIndicePorId(id) {
+function seleccionarCampos() {
     /*
     Descripcion:
-    Busca el indice de un registro por su ID.
+    Define los campos que se consultan en la tabla enfermedades.
 
     Parametros:
-    - id: ID del registro.
+    No posee.
 
     Retorna:
-    - Indice encontrado.
-    - -1 si no existe.
+    - Fragmento SQL con alias camelCase.
     */
 
-    for (let i = 0; i < enfermedades.length; i++) {
-        if (enfermedades[i].id === Number(id)) {
-            return i;
-        }
-    }
-
-    return -1;
+    return `
+        SELECT
+            id,
+            uuid,
+            grupo_datos AS grupoDatos,
+            finca_id AS fincaId,
+            estanque_id AS estanqueId,
+            colaborador_id AS colaboradorId,
+            tipo_registro AS tipoRegistro,
+            fecha_reporte AS fechaReporte,
+            responsable,
+            enfermedad,
+            enfermedad AS enfermedadNombre,
+            severidad,
+            mortalidad_registrada AS mortalidadRegistrada,
+            reporte,
+            activo,
+            fecha_creacion AS fechaCreacion,
+            fecha_actualizacion AS fechaActualizacion,
+            deleted_at AS deletedAt,
+            version
+        FROM enfermedades
+    `;
 }
 
-function coincideConFiltros(registro, filtros) {
+function agregarFiltro(condiciones, valores, campo, valor) {
     /*
     Descripcion:
-    Verifica si un registro coincide con los filtros recibidos.
+    Agrega un filtro SQL cuando el valor tiene contenido.
 
     Parametros:
-    - registro: Registro a evaluar.
-    - filtros: Objeto con filtros.
+    - condiciones: Lista de condiciones SQL.
+    - valores: Lista de valores parametrizados.
+    - campo: Campo de la tabla.
+    - valor: Valor del filtro.
 
     Retorna:
-    - true si coincide.
-    - false si no coincide.
+    No retorna valor.
     */
 
-    if (!filtros) {
-        return true;
+    if (valor === undefined) {
+        return;
     }
 
-    if (!coincideFiltro(registro.finca, filtros.finca)) {
-        return false;
+    if (valor === null) {
+        return;
     }
 
-    if (!coincideFiltro(registro.estanque, filtros.estanque)) {
-        return false;
+    if (String(valor).trim().length === 0) {
+        return;
     }
 
-    if (!coincideFiltro(registro.severidad, filtros.severidad)) {
-        return false;
-    }
-
-    if (!coincideFiltro(registro.fechaReporte, filtros.fechaReporte)) {
-        return false;
-    }
-
-    return true;
+    condiciones.push(campo + ' = ?');
+    valores.push(valor);
 }
 
-function coincideFiltro(valorRegistro, valorFiltro) {
+
+async function existeGrupoDatos(grupoDatos) {
     /*
     Descripcion:
-    Compara un valor del registro con un filtro opcional.
+    Verifica si existe un grupo de datos activo.
 
     Parametros:
-    - valorRegistro: Valor almacenado en el registro.
-    - valorFiltro: Valor recibido como filtro.
+    - grupoDatos: Codigo del grupo de datos.
 
     Retorna:
-    - true si el filtro esta vacio o si coincide.
-    - false si no coincide.
+    - true si existe.
+    - false si no existe.
     */
 
-    if (valorFiltro === undefined) {
-        return true;
-    }
+    const sql = `
+        SELECT codigo
+        FROM grupos_datos
+        WHERE codigo = ?
+        AND activo = TRUE
+        AND deleted_at IS NULL
+        LIMIT 1
+    `;
 
-    if (valorFiltro === null) {
-        return true;
-    }
+    const [rows] = await db.execute(sql, [grupoDatos]);
 
-    if (String(valorFiltro).trim().length === 0) {
-        return true;
-    }
-
-    if (String(valorRegistro) === String(valorFiltro)) {
+    if (rows.length > 0) {
         return true;
     }
 
     return false;
+}
+
+async function existeFinca(fincaId, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica si existe una finca activa dentro del grupo de datos.
+
+    Parametros:
+    - fincaId: ID de la finca.
+    - grupoDatos: Codigo del grupo de datos.
+
+    Retorna:
+    - true si existe.
+    - false si no existe.
+    */
+
+    const sql = `
+        SELECT id
+        FROM fincas
+        WHERE id = ?
+        AND grupo_datos = ?
+        AND activo = TRUE
+        AND deleted_at IS NULL
+        LIMIT 1
+    `;
+
+    const valores = [fincaId, grupoDatos];
+    const [rows] = await db.execute(sql, valores);
+
+    if (rows.length > 0) {
+        return true;
+    }
+
+    return false;
+}
+
+async function existeEstanque(estanqueId, fincaId, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica si existe un estanque activo dentro de la finca
+    y grupo de datos indicados.
+
+    Parametros:
+    - estanqueId: ID del estanque.
+    - fincaId: ID de la finca.
+    - grupoDatos: Codigo del grupo de datos.
+
+    Retorna:
+    - true si existe.
+    - false si no existe.
+    */
+
+    const sql = `
+        SELECT id
+        FROM estanques
+        WHERE id = ?
+        AND finca_id = ?
+        AND grupo_datos = ?
+        AND activo = TRUE
+        AND deleted_at IS NULL
+        LIMIT 1
+    `;
+
+    const valores = [estanqueId, fincaId, grupoDatos];
+    const [rows] = await db.execute(sql, valores);
+
+    if (rows.length > 0) {
+        return true;
+    }
+
+    return false;
+}
+
+async function existeColaborador(colaboradorId, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica si existe un colaborador activo dentro del grupo de datos.
+
+    Parametros:
+    - colaboradorId: ID del colaborador.
+    - grupoDatos: Codigo del grupo de datos.
+
+    Retorna:
+    - true si existe.
+    - false si no existe.
+    */
+
+    const sql = `
+        SELECT id
+        FROM colaboradores
+        WHERE id = ?
+        AND grupo_datos = ?
+        AND activo = TRUE
+        AND deleted_at IS NULL
+        LIMIT 1
+    `;
+
+    const valores = [colaboradorId, grupoDatos];
+    const [rows] = await db.execute(sql, valores);
+
+    if (rows.length > 0) {
+        return true;
+    }
+
+    return false;
+}
+
+async function findByIdIncluyendoEliminados(id, grupoDatos) {
+    /*
+    Descripcion:
+    Busca un registro incluyendo los eliminados logicamente.
+    Se usa para devolver el registro despues del borrado logico.
+
+    Parametros:
+    - id: ID del registro.
+    - grupoDatos: Grupo de datos.
+
+    Retorna:
+    - Registro encontrado.
+    - null si no existe.
+    */
+
+    const sql = seleccionarCampos() +
+        ' WHERE id = ?' +
+        ' AND grupo_datos = ?' +
+        ' LIMIT 1';
+
+    const valores = [id, grupoDatos];
+    const [rows] = await db.execute(sql, valores);
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return mapearFila(rows[0]);
+}
+
+function mapearFilas(rows) {
+    /*
+    Descripcion:
+    Convierte una lista de filas MySQL a objetos camelCase.
+
+    Parametros:
+    - rows: Filas devueltas por MySQL.
+
+    Retorna:
+    - Lista mapeada.
+    */
+
+    const lista = [];
+
+    for (let i = 0; i < rows.length; i++) {
+        lista.push(mapearFila(rows[i]));
+    }
+
+    return lista;
+}
+
+function mapearFila(row) {
+    /*
+    Descripcion:
+    Convierte una fila MySQL a un objeto usado por el frontend.
+
+    Parametros:
+    - row: Fila devuelta por MySQL.
+
+    Retorna:
+    - Objeto camelCase.
+    */
+
+    return {
+        id: row.id,
+        uuid: row.uuid,
+        grupoDatos: row.grupoDatos,
+        fincaId: row.fincaId,
+        estanqueId: row.estanqueId,
+        colaboradorId: row.colaboradorId,
+        tipoRegistro: row.tipoRegistro,
+        fechaReporte: formatearFecha(row.fechaReporte),
+        responsable: row.responsable,
+        enfermedad: row.enfermedad,
+        enfermedadNombre: row.enfermedadNombre,
+        severidad: row.severidad,
+        severidadNombre: obtenerNombreSeveridad(row.severidad),
+        mortalidadRegistrada: row.mortalidadRegistrada,
+        reporte: row.reporte,
+        activo: row.activo === 1 || row.activo === true,
+        fechaCreacion: formatearFechaHora(row.fechaCreacion),
+        fechaActualizacion: formatearFechaHora(row.fechaActualizacion),
+        deletedAt: formatearFechaHora(row.deletedAt),
+        version: row.version,
+    };
+}
+
+function formatearFecha(valor) {
+    /*
+    Descripcion:
+    Formatea una fecha DATE a yyyy-mm-dd.
+
+    Parametros:
+    - valor: Valor fecha recibido desde MySQL.
+
+    Retorna:
+    - Fecha formateada o null.
+    */
+
+    if (valor === undefined) {
+        return null;
+    }
+
+    if (valor === null) {
+        return null;
+    }
+
+    if (valor instanceof Date) {
+        return valor.toISOString().slice(0, 10);
+    }
+
+    return String(valor).slice(0, 10);
+}
+
+function formatearFechaHora(valor) {
+    /*
+    Descripcion:
+    Formatea una fecha DATETIME a ISO string.
+
+    Parametros:
+    - valor: Valor fecha recibido desde MySQL.
+
+    Retorna:
+    - Fecha formateada o null.
+    */
+
+    if (valor === undefined) {
+        return null;
+    }
+
+    if (valor === null) {
+        return null;
+    }
+
+    if (valor instanceof Date) {
+        return valor.toISOString();
+    }
+
+    return String(valor);
+}
+
+function obtenerNombreSeveridad(severidad) {
+    /*
+    Descripcion:
+    Obtiene el nombre visible de la severidad.
+
+    Parametros:
+    - severidad: Valor de severidad.
+
+    Retorna:
+    - Nombre visible.
+    */
+
+    if (severidad === 'medio') {
+        return 'Medio';
+    }
+
+    if (severidad === 'alto') {
+        return 'Alto';
+    }
+
+    if (severidad === 'critica') {
+        return 'Critica';
+    }
+
+    return 'Bajo';
 }

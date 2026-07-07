@@ -7,12 +7,12 @@ Autor: Isaac
 Fecha: 03/07/2026
 Modulo: Enfermedades
 Descripcion:
-Define las reglas de negocio, validaciones, catalogos y
-calculos del modulo de enfermedades.
+Define las reglas de negocio, validaciones, catalogos,
+mapeos y resumenes del modulo de enfermedades.
 
 Importante:
-Este archivo NO debe usar el modelo. El acceso al modelo
-se realiza desde el controller.
+Este archivo NO usa el modelo. El acceso a la base de datos
+se realiza desde el controller por medio del model.
 //////////////////////////////////////////////////////////
 */
 
@@ -32,53 +32,61 @@ CONSTANTES
 //////////////////////////////////////////////////////////
 
 Catalogos visibles del modulo de enfermedades.
+El campo value usa el mismo valor que la base de datos.
+El campo codigo ayuda al frontend a usar valores cortos.
 */
 
 const catalogoEnfermedades = [
     {
         label: 'WSSV - Mancha Blanca',
         value: TipoEnfermedad.WSSV,
+        codigo: 'wssv',
         tipo: 'viral',
     },
     {
         label: 'AHPND - Necrosis hepatopancreatica aguda',
         value: TipoEnfermedad.AHPND,
+        codigo: 'ahpnd',
         tipo: 'bacteriana',
     },
     {
         label: 'Vibriosis',
         value: TipoEnfermedad.VIBRIOSIS,
+        codigo: 'vibriosis',
         tipo: 'bacteriana',
     },
     {
         label: 'IHHNV',
         value: TipoEnfermedad.IHHNV,
+        codigo: 'ihhnv',
         tipo: 'viral',
     },
     {
         label: 'NHP - Hepatobacter penaei',
         value: TipoEnfermedad.NHP,
+        codigo: 'nhp',
         tipo: 'bacteriana',
     },
     {
         label: 'Otro',
         value: TipoEnfermedad.OTRO,
+        codigo: 'otro',
         tipo: 'otro',
     },
 ];
 
 const catalogoSeveridades = [
     {
-        label: 'Baja',
-        value: SeveridadEnfermedad.BAJA,
+        label: 'Bajo',
+        value: SeveridadEnfermedad.BAJO,
     },
     {
-        label: 'Media',
-        value: SeveridadEnfermedad.MEDIA,
+        label: 'Medio',
+        value: SeveridadEnfermedad.MEDIO,
     },
     {
-        label: 'Alta',
-        value: SeveridadEnfermedad.ALTA,
+        label: 'Alto',
+        value: SeveridadEnfermedad.ALTO,
     },
     {
         label: 'Critica',
@@ -92,7 +100,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
 Contiene las funciones exportables de validacion,
-catalogo y resumen que utiliza el controller.
+normalizacion, catalogo y resumen que utiliza el controller.
 */
 
 export function isEmpty(valor) {
@@ -120,20 +128,51 @@ export function isEmpty(valor) {
     return String(valor).trim().length === 0;
 }
 
+
 export function isIdValido(id) {
     /*
     Descripcion:
-    Valida que un id sea numerico y mayor que cero.
+    Valida que un id sea numerico, entero y mayor que cero.
 
     Parametros:
     - id: ID recibido por parametro.
 
     Retorna:
     - true si el id es valido.
-    - false si el id no es valido.
+    - false si no es valido.
     */
 
     const numero = Number(id);
+
+    if (Number.isNaN(numero)) {
+        return false;
+    }
+
+    if (Number.isInteger(numero) === false) {
+        return false;
+    }
+
+    if (numero <= 0) {
+        return false;
+    }
+
+    return true;
+}
+
+export function isNumeroMayorCero(valor) {
+    /*
+    Descripcion:
+    Valida que un valor sea numerico y mayor que cero.
+
+    Parametros:
+    - valor: Valor a validar.
+
+    Retorna:
+    - true si cumple la regla.
+    - false si no cumple.
+    */
+
+    const numero = Number(valor);
 
     if (Number.isNaN(numero)) {
         return false;
@@ -155,8 +194,8 @@ export function isNumeroMayorIgualCero(valor) {
     - valor: Valor a validar.
 
     Retorna:
-    - true si es numerico y mayor o igual que cero.
-    - false si no cumple la regla.
+    - true si cumple la regla.
+    - false si no cumple.
     */
 
     const numero = Number(valor);
@@ -172,17 +211,19 @@ export function isNumeroMayorIgualCero(valor) {
     return true;
 }
 
+
 export function isFechaValida(fecha) {
     /*
     Descripcion:
-    Valida que una fecha tenga el formato estandar yyyy-mm-dd.
+    Valida que una fecha tenga formato yyyy-mm-dd
+    y que sea una fecha real.
 
     Parametros:
     - fecha: Fecha a validar.
 
     Retorna:
-    - true si la fecha tiene formato valido.
-    - false si la fecha no cumple el formato.
+    - true si la fecha es valida.
+    - false si no es valida.
     */
 
     if (isEmpty(fecha)) {
@@ -192,82 +233,291 @@ export function isFechaValida(fecha) {
     const fechaTexto = String(fecha).trim();
     const patronIso = /^\d{4}-\d{2}-\d{2}$/;
 
-    if (patronIso.test(fechaTexto)) {
-        return true;
-    }
-
-    return false;
-}
-
-export function isEnfermedadesValidas(enfermedades) {
-    /*
-    Descripcion:
-    Valida que enfermedades sea una lista y que cada valor
-    exista dentro del catalogo permitido.
-
-    Parametros:
-    - enfermedades: Lista de enfermedades recibida.
-
-    Retorna:
-    - true si la lista es valida.
-    - false si la lista es invalida.
-    */
-
-    if (Array.isArray(enfermedades) === false) {
+    if (patronIso.test(fechaTexto) === false) {
         return false;
     }
 
-    if (enfermedades.length === 0) {
+    const fechaObjeto = new Date(fechaTexto + 'T00:00:00.000Z');
+
+    if (Number.isNaN(fechaObjeto.getTime())) {
         return false;
     }
 
-    for (let i = 0; i < enfermedades.length; i++) {
-        if (isEnfermedadValida(enfermedades[i]) === false) {
-            return false;
-        }
+    if (fechaObjeto.toISOString().slice(0, 10) !== fechaTexto) {
+        return false;
     }
 
     return true;
 }
 
-export function isEnfermedadValida(enfermedad) {
+export function normalizarEnfermedad(enfermedad) {
     /*
     Descripcion:
-    Valida que una enfermedad exista dentro del enum permitido.
+    Convierte una enfermedad recibida desde el frontend al valor
+    exacto que espera el ENUM de MySQL.
 
     Parametros:
     - enfermedad: Enfermedad recibida.
 
     Retorna:
-    - true si la enfermedad es valida.
-    - false si no es valida.
+    - Valor valido para MySQL.
+    - String vacio si no se reconoce.
     */
 
     if (isEmpty(enfermedad)) {
-        return false;
+        return '';
     }
 
-    return Object.values(TipoEnfermedad).includes(String(enfermedad).trim());
+    const texto = String(enfermedad).trim();
+    const codigo = texto.toLowerCase();
+
+    if (texto === TipoEnfermedad.WSSV || codigo === 'wssv') {
+        return TipoEnfermedad.WSSV;
+    }
+
+    if (texto === TipoEnfermedad.AHPND || codigo === 'ahpnd') {
+        return TipoEnfermedad.AHPND;
+    }
+
+    if (texto === TipoEnfermedad.VIBRIOSIS || codigo === 'vibriosis') {
+        return TipoEnfermedad.VIBRIOSIS;
+    }
+
+    if (texto === TipoEnfermedad.IHHNV || codigo === 'ihhnv') {
+        return TipoEnfermedad.IHHNV;
+    }
+
+    if (texto === TipoEnfermedad.NHP || codigo === 'nhp') {
+        return TipoEnfermedad.NHP;
+    }
+
+    if (texto === TipoEnfermedad.OTRO || codigo === 'otro') {
+        return TipoEnfermedad.OTRO;
+    }
+
+    return '';
 }
 
-export function isSeveridadValida(severidad) {
+export function normalizarSeveridad(severidad) {
     /*
     Descripcion:
-    Valida que una severidad exista dentro del enum permitido.
+    Convierte una severidad recibida desde el frontend al valor
+    exacto que espera el ENUM de MySQL.
 
     Parametros:
     - severidad: Severidad recibida.
 
     Retorna:
-    - true si la severidad es valida.
-    - false si no es valida.
+    - Valor valido para MySQL.
+    - String vacio si no se reconoce.
     */
 
     if (isEmpty(severidad)) {
+        return '';
+    }
+
+    const texto = String(severidad).trim().toLowerCase();
+
+    if (texto === 'bajo' || texto === 'baja') {
+        return SeveridadEnfermedad.BAJO;
+    }
+
+    if (texto === 'medio' || texto === 'media') {
+        return SeveridadEnfermedad.MEDIO;
+    }
+
+    if (texto === 'alto' || texto === 'alta') {
+        return SeveridadEnfermedad.ALTO;
+    }
+
+    if (texto === 'critica' || texto === 'crítica') {
+        return SeveridadEnfermedad.CRITICA;
+    }
+
+    return '';
+}
+
+export function isEnfermedadValida(enfermedad) {
+    /*
+    Descripcion:
+    Valida que la enfermedad exista dentro del catalogo permitido.
+
+    Parametros:
+    - enfermedad: Enfermedad recibida.
+
+    Retorna:
+    - true si es valida.
+    - false si no es valida.
+    */
+
+    const enfermedadNormalizada = normalizarEnfermedad(enfermedad);
+
+    if (isEmpty(enfermedadNormalizada)) {
         return false;
     }
 
-    return Object.values(SeveridadEnfermedad).includes(String(severidad).trim());
+    return Object.values(TipoEnfermedad).includes(enfermedadNormalizada);
+}
+
+export function isSeveridadValida(severidad) {
+    /*
+    Descripcion:
+    Valida que la severidad exista dentro del catalogo permitido.
+
+    Parametros:
+    - severidad: Severidad recibida.
+
+    Retorna:
+    - true si es valida.
+    - false si no es valida.
+    */
+
+    const severidadNormalizada = normalizarSeveridad(severidad);
+
+    if (isEmpty(severidadNormalizada)) {
+        return false;
+    }
+
+    return Object.values(SeveridadEnfermedad).includes(severidadNormalizada);
+}
+
+export function normalizarDatosEnfermedad(body, grupoDatos) {
+    /*
+    Descripcion:
+    Construye un objeto normalizado para trabajar con la tabla
+    enfermedades de MySQL.
+
+    Parametros:
+    - body: Cuerpo de la peticion.
+    - grupoDatos: Grupo de datos obtenido del usuario o del body.
+
+    Retorna:
+    - Objeto normalizado.
+    */
+
+    return {
+        grupoDatos: normalizarEntero(grupoDatos),
+        fincaId: normalizarEntero(body.fincaId),
+        estanqueId: normalizarEntero(body.estanqueId),
+        colaboradorId: normalizarEnteroOpcional(body.colaboradorId),
+        tipoRegistro: 'enfermedad',
+        fechaReporte: limpiarTexto(body.fechaReporte),
+        responsable: limpiarTextoOpcional(body.responsable),
+        enfermedad: normalizarEnfermedad(body.enfermedad),
+        enfermedadNombre: obtenerNombreEnfermedad(normalizarEnfermedad(body.enfermedad)),
+        severidad: normalizarSeveridad(body.severidad),
+        severidadNombre: obtenerNombreSeveridad(normalizarSeveridad(body.severidad)),
+        mortalidadRegistrada: normalizarEnteroOpcional(body.mortalidadRegistrada),
+        reporte: limpiarTextoOpcional(body.reporte),
+    };
+}
+
+
+export function normalizarFiltrosEnfermedad(query, grupoDatos) {
+    /*
+    Descripcion:
+    Construye los filtros de busqueda para consultar enfermedades.
+    Conserva los valores originales para detectar filtros invalidos.
+
+    Parametros:
+    - query: Query params recibidos.
+    - grupoDatos: Grupo de datos del usuario o query.
+
+    Retorna:
+    - Objeto con filtros normalizados.
+    */
+
+    const enfermedadOriginal = limpiarTextoOpcional(query.enfermedad);
+    const severidadOriginal = limpiarTextoOpcional(query.severidad);
+
+    return {
+        grupoDatos: normalizarEntero(grupoDatos),
+        fincaId: normalizarEnteroOpcional(query.fincaId),
+        estanqueId: normalizarEnteroOpcional(query.estanqueId),
+        colaboradorId: normalizarEnteroOpcional(query.colaboradorId),
+        enfermedadOriginal: enfermedadOriginal,
+        severidadOriginal: severidadOriginal,
+        enfermedad: normalizarEnfermedad(enfermedadOriginal),
+        severidad: normalizarSeveridad(severidadOriginal),
+        fechaReporte: limpiarTextoOpcional(query.fechaReporte),
+    };
+}
+
+export function validarDatosEnfermedad(datos) {
+    /*
+    Descripcion:
+    Valida las reglas de negocio para crear o actualizar
+    un registro de enfermedad.
+
+    Parametros:
+    - datos: Datos normalizados.
+
+    Retorna:
+    - Lista de errores encontrados.
+    */
+
+    const errores = [];
+
+    validarEnteroMayorCero(datos.grupoDatos, 'grupoDatos', errores);
+    validarEnteroMayorCero(datos.fincaId, 'fincaId', errores);
+    validarEnteroMayorCero(datos.estanqueId, 'estanqueId', errores);
+    validarColaboradorOpcional(datos.colaboradorId, errores);
+    validarFechaReporte(datos.fechaReporte, errores);
+    validarEnfermedad(datos.enfermedad, errores);
+    validarSeveridad(datos.severidad, errores);
+    validarMortalidad(datos.mortalidadRegistrada, errores);
+
+    return errores;
+}
+
+
+export function validarFiltrosEnfermedad(filtros) {
+    /*
+    Descripcion:
+    Valida los filtros usados para consultar registros.
+
+    Parametros:
+    - filtros: Filtros normalizados.
+
+    Retorna:
+    - Lista de errores encontrados.
+    */
+
+    const errores = [];
+
+    validarEnteroMayorCero(filtros.grupoDatos, 'grupoDatos', errores);
+
+    if (filtros.fincaId !== null) {
+        validarEnteroMayorCero(filtros.fincaId, 'fincaId', errores);
+    }
+
+    if (filtros.estanqueId !== null) {
+        validarEnteroMayorCero(filtros.estanqueId, 'estanqueId', errores);
+    }
+
+    if (filtros.colaboradorId !== null) {
+        validarEnteroMayorCero(filtros.colaboradorId, 'colaboradorId', errores);
+    }
+
+    if (!isEmpty(filtros.enfermedadOriginal)) {
+        if (isEmpty(filtros.enfermedad)) {
+            errores.push('El campo enfermedad no es valido.');
+        }
+    }
+
+    if (!isEmpty(filtros.severidadOriginal)) {
+        if (isEmpty(filtros.severidad)) {
+            errores.push('El campo severidad no es valido.');
+        }
+    }
+
+    if (!isEmpty(filtros.fechaReporte)) {
+        if (!isFechaValida(filtros.fechaReporte)) {
+            errores.push('El campo fechaReporte debe tener formato yyyy-mm-dd.');
+        }
+    }
+
+    return errores;
 }
 
 export function obtenerNombreEnfermedad(enfermedad) {
@@ -279,7 +529,7 @@ export function obtenerNombreEnfermedad(enfermedad) {
     - enfermedad: Valor interno de la enfermedad.
 
     Retorna:
-    - Nombre visible de la enfermedad.
+    - Nombre visible.
     */
 
     for (let i = 0; i < catalogoEnfermedades.length; i++) {
@@ -291,32 +541,6 @@ export function obtenerNombreEnfermedad(enfermedad) {
     return 'Otro';
 }
 
-export function obtenerNombresEnfermedades(enfermedades) {
-    /*
-    Descripcion:
-    Convierte una lista de enfermedades internas en una lista
-    de nombres visibles.
-
-    Parametros:
-    - enfermedades: Lista de enfermedades internas.
-
-    Retorna:
-    - Lista de nombres visibles.
-    */
-
-    const nombres = [];
-
-    if (Array.isArray(enfermedades) === false) {
-        return nombres;
-    }
-
-    for (let i = 0; i < enfermedades.length; i++) {
-        nombres.push(obtenerNombreEnfermedad(enfermedades[i]));
-    }
-
-    return nombres;
-}
-
 export function obtenerNombreSeveridad(severidad) {
     /*
     Descripcion:
@@ -326,7 +550,7 @@ export function obtenerNombreSeveridad(severidad) {
     - severidad: Valor interno de severidad.
 
     Retorna:
-    - Nombre visible de la severidad.
+    - Nombre visible.
     */
 
     for (let i = 0; i < catalogoSeveridades.length; i++) {
@@ -335,7 +559,7 @@ export function obtenerNombreSeveridad(severidad) {
         }
     }
 
-    return 'Baja';
+    return 'Bajo';
 }
 
 export function obtenerCatalogoEnfermedades() {
@@ -347,7 +571,7 @@ export function obtenerCatalogoEnfermedades() {
     No posee.
 
     Retorna:
-    - Lista de enfermedades con label, value y tipo.
+    - Lista de enfermedades.
     */
 
     return catalogoEnfermedades;
@@ -362,7 +586,7 @@ export function obtenerCatalogoSeveridades() {
     No posee.
 
     Retorna:
-    - Lista de severidades con label y value.
+    - Lista de severidades.
     */
 
     return catalogoSeveridades;
@@ -374,7 +598,7 @@ export function construirResumenEnfermedades(registros) {
     Construye un resumen general de los registros de enfermedades.
 
     Parametros:
-    - registros: Lista de registros de enfermedades.
+    - registros: Lista de registros.
 
     Retorna:
     - Objeto con totales y frecuencias.
@@ -382,7 +606,7 @@ export function construirResumenEnfermedades(registros) {
 
     const resumen = {
         totalRegistros: registros.length,
-        totalMortalidad: 0,
+        totalMortalidadRegistrada: 0,
         enfermedadesFrecuentes: [],
         severidadesFrecuentes: [],
     };
@@ -394,7 +618,7 @@ export function construirResumenEnfermedades(registros) {
         const registro = registros[i];
 
         sumarMortalidad(resumen, registro);
-        contarEnfermedades(contadorEnfermedades, registro);
+        contarValor(contadorEnfermedades, registro.enfermedad);
         contarValor(contadorSeveridades, registro.severidad);
     }
 
@@ -409,51 +633,269 @@ export function construirResumenEnfermedades(registros) {
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 
-Funciones auxiliares utilizadas para construir resumenes.
+Funciones internas usadas para normalizar, validar y
+construir resumenes.
 */
 
-function sumarMortalidad(resumen, registro) {
+function limpiarTexto(valor) {
     /*
     Descripcion:
-    Suma la mortalidad de un registro al resumen general.
+    Limpia un texto requerido.
 
     Parametros:
-    - resumen: Objeto resumen donde se acumula la mortalidad.
-    - registro: Registro actual de enfermedad.
+    - valor: Valor recibido.
+
+    Retorna:
+    - Texto limpio.
+    */
+
+    if (valor === undefined) {
+        return '';
+    }
+
+    if (valor === null) {
+        return '';
+    }
+
+    return String(valor).trim();
+}
+
+function limpiarTextoOpcional(valor) {
+    /*
+    Descripcion:
+    Limpia un texto opcional.
+
+    Parametros:
+    - valor: Valor recibido.
+
+    Retorna:
+    - Texto limpio o null.
+    */
+
+    if (valor === undefined) {
+        return null;
+    }
+
+    if (valor === null) {
+        return null;
+    }
+
+    if (String(valor).trim().length === 0) {
+        return null;
+    }
+
+    return String(valor).trim();
+}
+
+function normalizarEntero(valor) {
+    /*
+    Descripcion:
+    Convierte un valor a numero entero.
+
+    Parametros:
+    - valor: Valor recibido.
+
+    Retorna:
+    - Numero entero o NaN.
+    */
+
+    return Number(valor);
+}
+
+function normalizarEnteroOpcional(valor) {
+    /*
+    Descripcion:
+    Convierte un valor opcional a numero entero.
+
+    Parametros:
+    - valor: Valor recibido.
+
+    Retorna:
+    - Numero entero o null.
+    */
+
+    if (valor === undefined) {
+        return null;
+    }
+
+    if (valor === null) {
+        return null;
+    }
+
+    if (String(valor).trim().length === 0) {
+        return null;
+    }
+
+    return Number(valor);
+}
+
+
+function validarEnteroMayorCero(valor, campo, errores) {
+    /*
+    Descripcion:
+    Valida que un valor sea numerico, entero y mayor que cero.
+
+    Parametros:
+    - valor: Valor recibido.
+    - campo: Nombre del campo.
+    - errores: Lista donde se agregan los errores.
 
     Retorna:
     No retorna valor.
     */
 
-    const mortalidad = Number(registro.mortalidad);
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        errores.push('El campo ' + campo + ' debe ser numerico.');
+        return;
+    }
+
+    if (Number.isInteger(numero) === false) {
+        errores.push('El campo ' + campo + ' debe ser un numero entero.');
+        return;
+    }
+
+    if (numero <= 0) {
+        errores.push('El campo ' + campo + ' debe ser mayor que cero.');
+    }
+}
+
+function validarColaboradorOpcional(valor, errores) {
+    /*
+    Descripcion:
+    Valida el colaborador cuando viene informado.
+
+    Parametros:
+    - valor: Colaborador recibido.
+    - errores: Lista donde se agregan los errores.
+
+    Retorna:
+    No retorna valor.
+    */
+
+    if (valor === null) {
+        return;
+    }
+
+    validarEnteroMayorCero(valor, 'colaboradorId', errores);
+}
+
+function validarFechaReporte(fechaReporte, errores) {
+    /*
+    Descripcion:
+    Valida la fecha de reporte.
+
+    Parametros:
+    - fechaReporte: Fecha recibida.
+    - errores: Lista donde se agregan los errores.
+
+    Retorna:
+    No retorna valor.
+    */
+
+    if (isEmpty(fechaReporte)) {
+        errores.push('El campo fechaReporte es requerido.');
+        return;
+    }
+
+    if (!isFechaValida(fechaReporte)) {
+        errores.push('El campo fechaReporte debe tener formato yyyy-mm-dd.');
+    }
+}
+
+function validarEnfermedad(enfermedad, errores) {
+    /*
+    Descripcion:
+    Valida la enfermedad.
+
+    Parametros:
+    - enfermedad: Enfermedad recibida.
+    - errores: Lista donde se agregan los errores.
+
+    Retorna:
+    No retorna valor.
+    */
+
+    if (isEmpty(enfermedad)) {
+        errores.push('El campo enfermedad no es valido.');
+    }
+}
+
+function validarSeveridad(severidad, errores) {
+    /*
+    Descripcion:
+    Valida la severidad.
+
+    Parametros:
+    - severidad: Severidad recibida.
+    - errores: Lista donde se agregan los errores.
+
+    Retorna:
+    No retorna valor.
+    */
+
+    if (isEmpty(severidad)) {
+        errores.push('El campo severidad no es valido.');
+    }
+}
+
+
+function validarMortalidad(mortalidadRegistrada, errores) {
+    /*
+    Descripcion:
+    Valida la mortalidad registrada.
+
+    Parametros:
+    - mortalidadRegistrada: Mortalidad recibida.
+    - errores: Lista donde se agregan los errores.
+
+    Retorna:
+    No retorna valor.
+    */
+
+    if (mortalidadRegistrada === null) {
+        return;
+    }
+
+    const numero = Number(mortalidadRegistrada);
+
+    if (Number.isNaN(numero)) {
+        errores.push('El campo mortalidadRegistrada debe ser numerico.');
+        return;
+    }
+
+    if (Number.isInteger(numero) === false) {
+        errores.push('El campo mortalidadRegistrada debe ser un numero entero.');
+        return;
+    }
+
+    if (numero < 0) {
+        errores.push('El campo mortalidadRegistrada debe ser mayor o igual que cero.');
+    }
+}
+
+function sumarMortalidad(resumen, registro) {
+    /*
+    Descripcion:
+    Suma la mortalidad registrada al resumen.
+
+    Parametros:
+    - resumen: Objeto resumen.
+    - registro: Registro actual.
+
+    Retorna:
+    No retorna valor.
+    */
+
+    const mortalidad = Number(registro.mortalidadRegistrada);
 
     if (Number.isNaN(mortalidad)) {
         return;
     }
 
-    resumen.totalMortalidad = resumen.totalMortalidad + mortalidad;
-}
-
-function contarEnfermedades(contador, registro) {
-    /*
-    Descripcion:
-    Cuenta las apariciones de cada enfermedad en un registro.
-
-    Parametros:
-    - contador: Objeto donde se almacenan las cantidades.
-    - registro: Registro actual de enfermedad.
-
-    Retorna:
-    No retorna valor.
-    */
-
-    if (Array.isArray(registro.enfermedades) === false) {
-        return;
-    }
-
-    for (let i = 0; i < registro.enfermedades.length; i++) {
-        contarValor(contador, registro.enfermedades[i]);
-    }
+    resumen.totalMortalidadRegistrada =
+        resumen.totalMortalidadRegistrada + mortalidad;
 }
 
 function contarValor(contador, valor) {
@@ -462,7 +904,7 @@ function contarValor(contador, valor) {
     Suma una ocurrencia dentro de un objeto contador.
 
     Parametros:
-    - contador: Objeto donde se almacenan las cantidades.
+    - contador: Objeto donde se almacenan cantidades.
     - valor: Valor que se desea contar.
 
     Retorna:
@@ -483,13 +925,13 @@ function contarValor(contador, valor) {
 function construirListaEnfermedades(contador) {
     /*
     Descripcion:
-    Convierte el contador de enfermedades en una lista ordenada.
+    Convierte el contador de enfermedades en una lista.
 
     Parametros:
-    - contador: Objeto con enfermedades y cantidades.
+    - contador: Objeto contador.
 
     Retorna:
-    - Lista de enfermedades con valor, nombre y cantidad.
+    - Lista ordenada.
     */
 
     const lista = [];
@@ -515,13 +957,13 @@ function construirListaEnfermedades(contador) {
 function construirListaSeveridades(contador) {
     /*
     Descripcion:
-    Convierte el contador de severidades en una lista ordenada.
+    Convierte el contador de severidades en una lista.
 
     Parametros:
-    - contador: Objeto con severidades y cantidades.
+    - contador: Objeto contador.
 
     Retorna:
-    - Lista de severidades con valor, nombre y cantidad.
+    - Lista ordenada.
     */
 
     const lista = [];
