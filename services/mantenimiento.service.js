@@ -20,7 +20,7 @@ IMPORTS
 DTOs
 */
 
-import { EstadoMantenimiento } from '../dtos/mantenimiento.dto.js';
+import { EstadoTicket } from '../dtos/mantenimiento.dto.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -39,10 +39,26 @@ Contiene las funciones exportables de validacion
 que utiliza el controller para verificar los datos.
 */
 
+export function isEstadoValido(estado) {
+    /*
+    Descripcion:
+    Valida que el estado del ticket sea uno de los valores
+    permitidos por el enum EstadoTicket.
+
+    Parametros:
+    - estado: String a validar.
+
+    Retorna:
+    - true si es un estado valido, false si no.
+    */
+    return Object.values(EstadoTicket).includes(estado);
+}
+
 export function isFechaHoraValida(fechaHora) {
     /*
     Descripcion:
     Valida que la fecha y hora tenga formato ISO 8601.
+    Mantenido por si se necesita en el futuro.
     Ejemplo valido: 2026-07-04T10:30:00
 
     Parametros:
@@ -52,20 +68,6 @@ export function isFechaHoraValida(fechaHora) {
     - true si el formato es valido, false si no.
     */
     return fechaHoraRegex.test(String(fechaHora).trim());
-}
-
-export function isEstadoValido(estado) {
-    /*
-    Descripcion:
-    Valida que el estado sea uno de los valores permitidos.
-
-    Parametros:
-    - estado: String a validar.
-
-    Retorna:
-    - true si es un estado valido, false si no.
-    */
-    return Object.values(EstadoMantenimiento).includes(estado);
 }
 
 export function isEmpty(string) {

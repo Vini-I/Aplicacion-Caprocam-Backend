@@ -2,14 +2,14 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo:     loginUsuarios.model.js
-Autor:       Rodolfo Chaves
-Fecha:       28/06/2026
-Modulo:      Login
+Archivo: loginUsuarios.model.js
+Autor: Rodolfo Chaves
+Fecha: 28/06/2026
+Modulo: Login
 Descripcion:
-Capa de datos del modulo de login para usuarios.
-Por ahora trabaja con datos mock. Cuando haya DB,
-solo este archivo cambia.
+Capa de datos del modulo de login para usuarios y
+colaboradores.
+Trabaja con las tablas reales de MySQL.
 //////////////////////////////////////////////////////////
 */
 
@@ -20,53 +20,8 @@ IMPORTS
 
 Librerias externas
 */
-import bcrypt from 'bcrypt';
 
-/*
-//////////////////////////////////////////////////////////
-MOCK DATA
-//////////////////////////////////////////////////////////
-
-Datos de prueba que simulan la tabla usuarios.
-Las contrasenas/PINs en texto plano se indican en cada
-comentario unicamente para facilitar las pruebas en
-Postman. No usar estos valores en produccion.
-*/
-
-const usuarios = [
-    {
-        id:             1,
-        nombre:         'Marco',
-        apellidos:      'Vasquez',
-        correo:         'marco@caprocam.com',
-        usuario:        'admin01',
-        contrasenaHash: bcrypt.hashSync('Admin1234', 10), // texto: Admin1234
-        rolId:          1,
-        tipo:           'administrador'
-    },
-    {
-        id:        2,
-        nombre:    'Carlos Mendoza',
-        apellidos: '',
-        correo:    null,
-        usuario:   null,
-        pinHash:   bcrypt.hashSync('1984', 10), // PIN: 1984
-        rolId:     2,
-        tipo:      'operario'
-    },
-    {
-        id:        3,
-        nombre:    'Ana Solis',
-        apellidos: '',
-        correo:    null,
-        usuario:   null,
-        pinHash:   bcrypt.hashSync('4521', 10), // PIN: 4521
-        rolId:     3,
-        tipo:      'operario'
-    }
-];
-
-let siguienteId = 4;
+import pool from "../config/database.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -76,27 +31,53 @@ FUNCIONES PRINCIPALES
 Contiene las funciones exportables que interactuan
 con la fuente de datos del modulo de login para usuarios.
 */
-
-export function findByUsuarioOCorreo(identificador) {
+export async function findUsuarioByIdentificador(identificador) {
     /*
     Descripcion:
-    Busca un usuario por su campo usuario o correo.
+    Busca un usuario por su campo identificador.
     Usado en el login web donde el admin puede ingresar
-    cualquiera de los dos como identificador.
+    con su identificador.
 
     Parametros:
-    - identificador: String con el usuario o correo.
+    - identificador: String con el identificador del usuario.
 
     Retorna:
     - El objeto usuario si existe, o null si no se encuentra.
     */
-    return usuarios.find(
-        (u) => u.usuario === identificador
-            || u.correo  === identificador
-    ) ?? null;
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            rol_id,
+            nombre,
+            apellidos,
+            email,
+            nombre_usuario,
+            password_hash,
+            telefono,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM usuarios
+        WHERE deleted_at IS NULL
+          AND activo = TRUE
+          AND (
+                LOWER(TRIM(nombre_usuario)) = LOWER(TRIM(?))
+             OR LOWER(TRIM(email)) = LOWER(TRIM(?))
+          )
+        LIMIT 1
+        `,
+        [identificador, identificador]
+    );
+
+    return rows.length === 0 ? null : mapearUsuario(rows[0]);
 }
 
-export function findById(id) {
+export async function findUsuarioById(id) {
     /*
     Descripcion:
     Busca un usuario por su ID numerico.
@@ -107,11 +88,38 @@ export function findById(id) {
     Retorna:
     - El objeto usuario si existe, o null si no se encuentra.
     */
-    return usuarios.find((u) => u.id === Number(id)) ?? null;
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            rol_id,
+            nombre,
+            apellidos,
+            email,
+            nombre_usuario,
+            password_hash,
+            telefono,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM usuarios
+        WHERE id = ?
+          AND deleted_at IS NULL
+          AND activo = TRUE
+        LIMIT 1
+        `,
+        [id]
+    );
+
+    return rows.length === 0 ? null : mapearUsuario(rows[0]);
 }
 
-export function findByCorreo(correo) {
-    /*
+export async function findUsuarioByCorreo(correo) {
+     /*
     Descripcion:
     Busca un usuario por su correo electronico.
     Usada para validar unicidad al registrar un admin.
@@ -122,10 +130,22 @@ export function findByCorreo(correo) {
     Retorna:
     - El objeto usuario si existe, o null si no se encuentra.
     */
-    return usuarios.find((u) => u.correo === correo) ?? null;
+    const [rows] = await pool.execute(
+        `
+        SELECT id
+        FROM usuarios
+        WHERE deleted_at IS NULL
+          AND activo = TRUE
+          AND LOWER(TRIM(email)) = LOWER(TRIM(?))
+        LIMIT 1
+        `,
+        [correo]
+    );
+
+    return rows.length === 0 ? null : rows[0];
 }
 
-export function findByUsuario(usuario) {
+export async function findUsuarioByNombreUsuario(nombreUsuario) {
     /*
     Descripcion:
     Busca un usuario por su nombre de usuario.
@@ -137,38 +157,236 @@ export function findByUsuario(usuario) {
     Retorna:
     - El objeto usuario si existe, o null si no se encuentra.
     */
-    return usuarios.find((u) => u.usuario === usuario) ?? null;
+    const [rows] = await pool.execute(
+        `
+        SELECT id
+        FROM usuarios
+        WHERE deleted_at IS NULL
+          AND activo = TRUE
+          AND LOWER(TRIM(nombre_usuario)) = LOWER(TRIM(?))
+        LIMIT 1
+        `,
+        [nombreUsuario]
+    );
+
+    return rows.length === 0 ? null : rows[0];
 }
 
-export function findAllOperarios() {
-    /*
-    Descripcion:
-    Devuelve todos los usuarios de tipo operario.
-    Usada por el endpoint de sincronizacion movil.
+export async function createUsuario(dto) {
+    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
 
-    Parametros:
-    No posee.
+    const [result] = await pool.execute(
+        `
+        INSERT INTO usuarios (
+            grupo_datos,
+            rol_id,
+            nombre,
+            apellidos,
+            email,
+            nombre_usuario,
+            password_hash,
+            telefono
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+            grupoDatos,
+            dto.rolId,
+            dto.nombre,
+            dto.apellidos,
+            dto.email,
+            dto.nombreUsuario,
+            dto.passwordHash,
+            dto.telefono ?? null
+        ]
+    );
 
-    Retorna:
-    - Arreglo con todos los objetos de tipo operario.
-    */
-    return usuarios.filter((u) => u.tipo === 'operario');
+    return await findUsuarioById(result.insertId);
 }
 
-export function create(nuevoUsuario) {
-    /*
-    Descripcion:
-    Agrega un nuevo usuario al arreglo en memoria y le
-    asigna un ID autoincremental.
+export async function findColaboradorById(id) {
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            rol_id,
+            nombre,
+            apellidos,
+            telefono,
+            email,
+            nombre_usuario,
+            pin_hash,
+            tipo_colaborador,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM colaboradores
+        WHERE id = ?
+          AND deleted_at IS NULL
+          AND activo = TRUE
+        LIMIT 1
+        `,
+        [id]
+    );
 
-    Parametros:
-    - nuevoUsuario: Objeto con los campos del usuario
-                    a crear (sin el campo id).
+    return rows.length === 0 ? null : mapearColaborador(rows[0]);
+}
 
-    Retorna:
-    - El objeto usuario recien creado, incluyendo su id.
-    */
-    const registro = { ...nuevoUsuario, id: siguienteId++ };
-    usuarios.push(registro);
-    return registro;
+export async function findColaboradorByNombreUsuario(nombreUsuario) {
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            rol_id,
+            nombre,
+            apellidos,
+            telefono,
+            email,
+            nombre_usuario,
+            pin_hash,
+            tipo_colaborador,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM colaboradores
+        WHERE deleted_at IS NULL
+          AND activo = TRUE
+          AND LOWER(TRIM(nombre_usuario)) = LOWER(TRIM(?))
+        LIMIT 1
+        `,
+        [nombreUsuario]
+    );
+
+    return rows.length === 0 ? null : mapearColaborador(rows[0]);
+}
+
+export async function createColaborador(dto) {
+    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
+
+    const [result] = await pool.execute(
+        `
+        INSERT INTO colaboradores (
+            grupo_datos,
+            finca_id,
+            rol_id,
+            nombre,
+            apellidos,
+            telefono,
+            email,
+            nombre_usuario,
+            pin_hash,
+            tipo_colaborador
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+            grupoDatos,
+            dto.fincaId ?? null,
+            dto.rolId,
+            dto.nombre,
+            dto.apellidos,
+            dto.telefono ?? null,
+            dto.email ?? null,
+            dto.nombreUsuario,
+            dto.pinHash,
+            dto.tipoColaborador ?? "external_collab"
+        ]
+    );
+
+    return await findColaboradorById(result.insertId);
+}
+
+export async function findAllColaboradores() {
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            rol_id,
+            nombre,
+            apellidos,
+            telefono,
+            email,
+            nombre_usuario,
+            pin_hash,
+            tipo_colaborador,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM colaboradores
+        WHERE deleted_at IS NULL
+          AND activo = TRUE
+        ORDER BY id DESC
+        `
+    );
+
+    return rows.map(mapearColaborador);
+}
+
+function mapearUsuario(row) {
+    return {
+        id: row.id,
+        uuid: row.uuid,
+        grupoDatos: row.grupo_datos,
+        rolId: row.rol_id,
+        nombre: row.nombre,
+        apellidos: row.apellidos,
+        email: row.email,
+        correo: row.email,
+        nombreUsuario: row.nombre_usuario,
+        usuario: row.nombre_usuario,
+        passwordHash: row.password_hash,
+        telefono: row.telefono,
+        activo: Boolean(row.activo),
+        fechaCreacion: row.fecha_creacion,
+        fechaActualizacion: row.fecha_actualizacion,
+        deletedAt: row.deleted_at,
+        version: row.version
+    };
+}
+
+function mapearColaborador(row) {
+    return {
+        id: row.id,
+        uuid: row.uuid,
+        grupoDatos: row.grupo_datos,
+        fincaId: row.finca_id,
+        rolId: row.rol_id,
+        nombre: row.nombre,
+        apellidos: row.apellidos,
+        telefono: row.telefono,
+        email: row.email,
+        correo: row.email,
+        nombreUsuario: row.nombre_usuario,
+        usuario: row.nombre_usuario,
+        pinHash: row.pin_hash,
+        tipoColaborador: row.tipo_colaborador,
+        activo: Boolean(row.activo),
+        fechaCreacion: row.fecha_creacion,
+        fechaActualizacion: row.fecha_actualizacion,
+        deletedAt: row.deleted_at,
+        version: row.version
+    };
+}
+
+function obtenerGrupoDatos(valor) {
+    if (valor === undefined || valor === null || String(valor).trim() === "") {
+        return 1;
+    }
+
+    return Number(valor);
 }

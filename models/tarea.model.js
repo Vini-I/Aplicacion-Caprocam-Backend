@@ -8,8 +8,7 @@ Fecha: 04/07/2026
 Modulo: Tareas
 Descripcion:
 Capa de datos del modulo de tareas.
-Por ahora trabaja con datos mock. Cuando haya DB,
-solo este archivo cambia.
+Conectado a MySQL via pool. Usa borrado logico.
 //////////////////////////////////////////////////////////
 */
 
@@ -18,122 +17,175 @@ solo este archivo cambia.
 IMPORTS
 //////////////////////////////////////////////////////////
 
-DTOs
+Config
 */
 
-import { CategoriasTarea } from '../dtos/tarea.dto.js';
+import pool from '../config/database.js';
 
 /*
 //////////////////////////////////////////////////////////
-MOCK DATA
+FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 
-Datos de prueba que simulan la base de datos.
-Cuando se conecte una DB real, esta seccion desaparece.
+Todas las funciones principales dependen de mapearTarea().
 */
 
-let tareas = [
-    {
-        id: 1,
-        nombre: 'Limpieza de filtros',
-        descripcion: 'Limpieza y reemplazo de filtros de agua.',
-        categoria: CategoriasTarea.PREVENTIVO,
-        duracionEstimada: 2,
-    },
-    {
-        id: 2,
-        nombre: 'Revision de bombas',
-        descripcion: 'Inspeccion general del sistema de bombeo.',
-        categoria: CategoriasTarea.INSPECCION,
-        duracionEstimada: 1,
-    },
-];
+function mapearTarea(fila) {
+    /*
+    Descripcion:
+    Convierte una fila MySQL (snake_case) a camelCase.
+
+    Parametros:
+    - fila: Objeto crudo de MySQL.
+
+    Retorna:
+    - Objeto tarea en camelCase.
+    */
+    return {
+        id:            fila.id,
+        uuid:          fila.uuid,
+        grupoDatos:    fila.grupo_datos,
+        colaboradorId: fila.colaborador_id,
+        equipoId:      fila.equipo_id,
+        nombre:        fila.nombre,
+        descripcion:   fila.descripcion,
+        categoria:     fila.categoria,
+        horas:         fila.horas,
+        estado:        fila.estado,
+        fechaCreacion: fila.fecha_creacion,
+        fechaActualizacion: fila.fecha_actualizacion,
+    };
+}
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-
-Contiene las funciones exportables que interactuan
-con la fuente de datos del modulo de tareas.
 */
 
-export function findAll() {
+export async function findAll(grupoDatos) {
     /*
     Descripcion:
-    Obtiene todas las tareas.
+    Obtiene todas las tareas activas del grupo.
 
     Parametros:
-    No posee.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
-    - tareas: Lista con todas las tareas.
+    - Lista de tareas mapeadas a camelCase.
     */
-    return tareas;
+    const [filas] = await pool.query(
+        `SELECT * FROM tareas
+         WHERE grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
+        [grupoDatos]
+    );
+    return filas.map(mapearTarea);
 }
 
-export function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
-    Busca una tarea por su ID.
+    Busca una tarea por ID dentro del grupo.
 
     Parametros:
-    - id: ID de la tarea a buscar.
+    - id:          ID de la tarea.
+    - grupoDatos:  Grupo de datos del usuario en sesion.
 
     Retorna:
-    - La tarea encontrada, o null si no existe.
+    - La tarea encontrada o null.
     */
-    return tareas.find(t => t.id === Number(id)) || null;
+    const [filas] = await pool.query(
+        `SELECT * FROM tareas
+         WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
+        [id, grupoDatos]
+    );
+    return filas.length > 0 ? mapearTarea(filas[0]) : null;
 }
 
-export function create(dto) {
+export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Agrega una nueva tarea a la lista.
+    Inserta una nueva tarea en la DB.
 
     Parametros:
-    - dto: Objeto TareaDTO con los datos de la nueva tarea.
+    - dto:         Objeto TareaDTO con los datos.
+    - grupoDatos:  Grupo de datos del usuario en sesion.
 
     Retorna:
-    - nueva: La tarea recien creada con su ID asignado.
+    - La tarea recien creada.
     */
-    const nueva = { ...dto, id: tareas.length + 1 };
-    tareas.push(nueva);
-    return nueva;
+    const [result] = await pool.query(
+        `INSERT INTO tareas
+         (grupo_datos, colaborador_id, equipo_id, nombre, descripcion, categoria, horas, estado)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            grupoDatos,
+            dto.colaboradorId,
+            dto.equipoId,
+            dto.nombre,
+            dto.descripcion,
+            dto.categoria,
+            dto.horas,
+            dto.estado,
+        ]
+    );
+    return findById(result.insertId, grupoDatos);
 }
 
-export function update(id, dto) {
+export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
-    Actualiza una tarea existente por su ID.
+    Actualiza una tarea existente e incrementa version.
 
     Parametros:
-    - id:  ID de la tarea a actualizar.
-    - dto: Objeto TareaDTO con los nuevos datos.
+    - id:          ID de la tarea.
+    - dto:         Objeto TareaDTO con los nuevos datos.
+    - grupoDatos:  Grupo de datos del usuario en sesion.
 
     Retorna:
-    - La tarea actualizada, o null si no existe.
+    - La tarea actualizada o null si no existe.
     */
-    const index = tareas.findIndex(t => t.id === Number(id));
-    if (index === -1) return null;
-    tareas[index] = { ...tareas[index], ...dto };
-    return tareas[index];
+    const [result] = await pool.query(
+        `UPDATE tareas
+         SET colaborador_id = ?, equipo_id = ?, nombre = ?, descripcion = ?,
+             categoria = ?, horas = ?, estado = ?, version = version + 1
+         WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
+        [
+            dto.colaboradorId,
+            dto.equipoId,
+            dto.nombre,
+            dto.descripcion,
+            dto.categoria,
+            dto.horas,
+            dto.estado,
+            id,
+            grupoDatos,
+        ]
+    );
+    if (result.affectedRows === 0) return null;
+    return findById(id, grupoDatos);
 }
 
-export function remove(id) {
+export async function remove(id, grupoDatos) {
     /*
     Descripcion:
-    Elimina una tarea por su ID.
+    Borrado logico de la tarea. No elimina el registro.
 
     Parametros:
-    - id: ID de la tarea a eliminar.
+    - id:          ID de la tarea.
+    - grupoDatos:  Grupo de datos del usuario en sesion.
 
     Retorna:
-    - La tarea eliminada, o null si no existe.
+    - La tarea antes de ser desactivada, o null si no existe.
     */
-    const index = tareas.findIndex(t => t.id === Number(id));
-    if (index === -1) return null;
-    const eliminada = tareas[index];
-    tareas.splice(index, 1);
-    return eliminada;
+    const tarea = await findById(id, grupoDatos);
+    if (!tarea) return null;
+
+    await pool.query(
+        `UPDATE tareas
+         SET activo = FALSE, deleted_at = CURRENT_TIMESTAMP, version = version + 1
+         WHERE id = ? AND grupo_datos = ?`,
+        [id, grupoDatos]
+    );
+    return tarea;
 }

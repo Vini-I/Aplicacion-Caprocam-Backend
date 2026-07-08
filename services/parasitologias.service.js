@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: parasitologias.service.js
 Autor: Andres Gutierrez
-Fecha: 30/06/2026
+Fecha: 03/07/2026
 Modulo: Parasitologias
 Descripcion:
 Define las reglas de negocio, validaciones y calculos
@@ -20,7 +20,7 @@ IMPORTS
 DTOs
 */
 
-import { ParasitoParasitologia, GradoInfeccion } from '../dtos/parasitologias.dto.js';
+import { ParasitoParasitologia, GradoInfeccion } from "../dtos/parasitologias.dto.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -32,25 +32,25 @@ Catalogo visible de parasitos disponibles.
 
 const catalogoParasitos = [
     {
-        label: 'Gregarina',
-        value: ParasitoParasitologia.GREGARINA,
+        label: "Gregarina",
+        value: ParasitoParasitologia.GREGARINA
     },
     {
-        label: 'Nematodo',
-        value: ParasitoParasitologia.NEMATODO,
+        label: "Nematodo",
+        value: ParasitoParasitologia.NEMATODO
     },
     {
-        label: 'Epicomensal',
-        value: ParasitoParasitologia.EPICOMENSAL,
+        label: "Epicomensal",
+        value: ParasitoParasitologia.EPICOMENSAL
     },
     {
-        label: 'Protozoario',
-        value: ParasitoParasitologia.PROTOZOARIO,
+        label: "Protozoario",
+        value: ParasitoParasitologia.PROTOZOARIO
     },
     {
-        label: 'Otro',
-        value: ParasitoParasitologia.OTRO,
-    },
+        label: "Otro",
+        value: ParasitoParasitologia.OTRO
+    }
 ];
 
 /*
@@ -65,11 +65,10 @@ catalogo y calculo que utiliza el controller.
 export function isEmpty(valor) {
     /*
     Descripcion:
-    Verifica si un valor esta vacio, es null, undefined
-    o solo contiene espacios.
+    Verifica si un valor esta vacio.
 
     Parametros:
-    - valor: Valor a verificar.
+    - valor: Valor a revisar.
 
     Retorna:
     - true si esta vacio, false si tiene contenido.
@@ -82,31 +81,27 @@ export function isEmpty(valor) {
         return true;
     }
 
-    return String(valor).trim().length === 0;
+    if (typeof valor === "string") {
+        if (valor.trim().length === 0) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 export function isIdValido(id) {
     /*
     Descripcion:
-    Valida que un id sea numerico y mayor que cero.
+    Valida que un id sea numerico y mayor a cero.
 
     Parametros:
-    - id: ID recibido por parametro.
+    - id: Id recibido por parametro.
 
     Retorna:
-    - true si el id es valido, false si no.
+    - true si es valido, false si no.
     */
-    const numero = Number(id);
-
-    if (Number.isNaN(numero)) {
-        return false;
-    }
-
-    if (numero <= 0) {
-        return false;
-    }
-
-    return true;
+    return isNumeroMayorCero(id);
 }
 
 export function isNumeroMayorCero(valor) {
@@ -157,6 +152,25 @@ export function isNumeroMayorIgualCero(valor) {
     return true;
 }
 
+export function isNumeroOpcionalMayorCero(valor) {
+    /*
+    Descripcion:
+    Valida que un valor opcional sea numerico y mayor que cero.
+    Si viene vacio, se considera valido.
+
+    Parametros:
+    - valor: Valor a validar.
+
+    Retorna:
+    - true si es valido, false si no.
+    */
+    if (isEmpty(valor)) {
+        return true;
+    }
+
+    return isNumeroMayorCero(valor);
+}
+
 export function isFechaValida(fecha) {
     /*
     Descripcion:
@@ -191,7 +205,8 @@ export function isFechaValida(fecha) {
 export function isParasitoValido(parasito) {
     /*
     Descripcion:
-    Valida que el parasito exista dentro del enum permitido.
+    Valida que el parasito recibido exista dentro de los
+    parasitos permitidos del modulo.
 
     Parametros:
     - parasito: Valor del parasito.
@@ -203,7 +218,16 @@ export function isParasitoValido(parasito) {
         return false;
     }
 
-    return Object.values(ParasitoParasitologia).includes(String(parasito).trim());
+    const parasitos = Object.values(ParasitoParasitologia);
+    const parasitoTexto = String(parasito).trim();
+
+    for (let i = 0; i < parasitos.length; i++) {
+        if (parasitoTexto === parasitos[i]) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 export function isInfectadosValido(camaronesMuestreados, camaronesInfectados) {
@@ -252,6 +276,14 @@ export function calcularPorcentajeInfeccion(camaronesMuestreados, camaronesInfec
     const muestreados = Number(camaronesMuestreados);
     const infectados = Number(camaronesInfectados);
 
+    if (Number.isNaN(muestreados)) {
+        return 0;
+    }
+
+    if (Number.isNaN(infectados)) {
+        return 0;
+    }
+
     if (muestreados <= 0) {
         return 0;
     }
@@ -297,14 +329,14 @@ export function obtenerNombreGradoInfeccion(gradoInfeccion) {
     - Nombre visible del grado.
     */
     if (gradoInfeccion === GradoInfeccion.ALTO) {
-        return 'Alto';
+        return "Alto";
     }
 
     if (gradoInfeccion === GradoInfeccion.MEDIO) {
-        return 'Medio';
+        return "Medio";
     }
 
-    return 'Bajo';
+    return "Bajo";
 }
 
 export function obtenerNombreParasito(parasito) {
@@ -324,7 +356,7 @@ export function obtenerNombreParasito(parasito) {
         }
     }
 
-    return 'Otro';
+    return "Otro";
 }
 
 export function obtenerCatalogoParasitos() {
@@ -358,7 +390,7 @@ export function construirResumenParasitologias(registros) {
         totalCamaronesInfectados: 0,
         promedioInfeccion: 0,
         gradosFrecuentes: [],
-        parasitosFrecuentes: [],
+        parasitosFrecuentes: []
     };
 
     const contadorGrados = {};
@@ -369,13 +401,16 @@ export function construirResumenParasitologias(registros) {
         const registro = registros[i];
 
         resumen.totalCamaronesMuestreados =
-            resumen.totalCamaronesMuestreados + Number(registro.camaronesMuestreados);
+            resumen.totalCamaronesMuestreados +
+            Number(registro.camaronesMuestreados);
 
         resumen.totalCamaronesInfectados =
-            resumen.totalCamaronesInfectados + Number(registro.camaronesInfectados);
+            resumen.totalCamaronesInfectados +
+            Number(registro.camaronesInfectados);
 
         sumaPorcentajeInfeccion =
-            sumaPorcentajeInfeccion + Number(registro.porcentajeInfeccion);
+            sumaPorcentajeInfeccion +
+            Number(registro.porcentajeInfeccion);
 
         contarValor(contadorGrados, registro.gradoInfeccion);
         contarValor(contadorParasitos, registro.parasito);
@@ -442,7 +477,7 @@ function construirListaContador(contador) {
 
         lista.push({
             valor: clave,
-            cantidad: contador[clave],
+            cantidad: contador[clave]
         });
     }
 
