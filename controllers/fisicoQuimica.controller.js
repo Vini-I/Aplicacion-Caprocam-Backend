@@ -19,7 +19,7 @@ IMPORTS
 
 Librerias externas
 */
-import { fisicoQuimicaDto } from '../dtos/fisicoQuimica.dto.js';
+import { FisicoQuimicaDTO } from '../dtos/fisicoQuimica.dto.js';
 
 // Servicios
 import {
