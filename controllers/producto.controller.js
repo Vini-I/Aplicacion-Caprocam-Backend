@@ -4,18 +4,29 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.controller.js
 Autor: Jose Espinoza
-Fecha: 29/06/2026
+Fecha: 05/07/2026
 Modulo: Productos
 Descripcion:
 Recibe peticiones HTTP de productos, invoca las validaciones del servicio
-y responde usando el helper estandarizado de JSON.
+y responde consumiendo el modelo asíncrono de la base de datos.
 //////////////////////////////////////////////////////////
 */
 
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+*/
 import { ProductoDTO, CategoriasProducto } from '../dtos/producto.dto.js';
 import * as ProductoService from '../services/producto.service.js';
 import * as ProductoModel from '../models/producto.model.js';
 import { exito, error } from '../common/respuestaJson.js';
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+*/
 
 function validarCuerpo({ nombre, categoria, cantidad, stockMinimo, precioUnidad }, res) {
     if (ProductoService.isEmpty(nombre) || ProductoService.isEmpty(categoria))
@@ -36,39 +47,69 @@ function validarCuerpo({ nombre, categoria, cantidad, stockMinimo, precioUnidad 
     return null;
 }
 
-export function getProductos(req, res) {
-    const data = ProductoModel.findAll();
-    return exito(res, 'Productos obtenidos correctamente.', data);
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES PRINCIPALES
+//////////////////////////////////////////////////////////
+*/
+
+export async function getProductos(req, res) {
+    try {
+        const data = await ProductoModel.findAll();
+        return exito(res, 'Productos obtenidos correctamente.', data);
+    } catch (err) {
+        return error(res, 'Error al obtener los productos.', err.message, 500);
+    }
 }
 
-export function getProductoById(req, res) {
-    const producto = ProductoModel.findById(req.params.id);
-    if (!producto) return error(res, 'Producto no encontrado.', null, 404);
-    return exito(res, 'Producto obtenido correctamente.', producto);
+export async function getProductoById(req, res) {
+    try {
+        const producto = await ProductoModel.findById(req.params.id);
+        if (!producto) return error(res, 'Producto no encontrado.', null, 404);
+        return exito(res, 'Producto obtenido correctamente.', producto);
+    } catch (err) {
+        return error(res, 'Error al obtener el producto.', err.message, 500);
+    }
 }
 
-export function createProducto(req, res) {
-    const err = validarCuerpo(req.body, res);
-    if (err) return err;
+export async function createProducto(req, res) {
+    try {
+        const { nombre, categoria, cantidad, stockMinimo, precioUnidad } = req.body;
 
-    const dto = new ProductoDTO(req.body);
-    const nuevo = ProductoModel.create(dto);
-    return exito(res, 'Producto creado correctamente.', nuevo, 201);
+        const err = validarCuerpo({ nombre, categoria, cantidad, stockMinimo, precioUnidad }, res);
+        if (err) return err;
+
+        const dto = new ProductoDTO({ nombre, categoria, cantidad, stockMinimo, precioUnidad });
+        const nuevo = await ProductoModel.create(dto);
+        return exito(res, 'Producto creado correctamente.', nuevo, 201);
+    } catch (err) {
+        return error(res, 'Error al crear el producto.', err.message, 500);
+    }
 }
 
-export function updateProducto(req, res) {
-    const err = validarCuerpo(req.body, res);
-    if (err) return err;
+export async function updateProducto(req, res) {
+    try {
+        const { nombre, categoria, cantidad, stockMinimo, precioUnidad } = req.body;
 
-    const dto = new ProductoDTO(req.body);
-    const actualizado = ProductoModel.update(req.params.id, dto);
-    if (!actualizado) return error(res, 'Producto no encontrado.', null, 404);
+        const err = validarCuerpo({ nombre, categoria, cantidad, stockMinimo, precioUnidad }, res);
+        if (err) return err;
 
-    return exito(res, 'Producto actualizado correctamente.', actualizado);
+        const dto = new ProductoDTO({ nombre, categoria, cantidad, stockMinimo, precioUnidad });
+        const actualizado = await ProductoModel.update(req.params.id, dto);
+        if (!actualizado) return error(res, 'Producto no encontrado.', null, 404);
+
+        return exito(res, 'Producto actualizado correctamente.', actualizado);
+    } catch (err) {
+        return error(res, 'Error al actualizar el producto.', err.message, 500);
+    }
 }
 
-export function deleteProducto(req, res) {
-    const desactivado = ProductoModel.removeLogicamente(req.params.id);
-    if (!desactivado) return error(res, 'Producto no encontrado.', null, 404);
-    return exito(res, 'Producto desactivado correctamente.', desactivado);
+export async function deleteProducto(req, res) {
+    try {
+        const desactivado = await ProductoModel.removeLogicamente(req.params.id);
+        if (!desactivado) return error(res, 'Producto no encontrado.', null, 404);
+        return exito(res, 'Producto desactivado correctamente.', desactivado);
+    } catch (err) {
+        return error(res, 'Error al desactivar el producto.', err.message, 500);
+    }
 }

@@ -14,9 +14,10 @@ Validaciones de negocio especificas para el modulo de compradores.
 const phoneRegex = /^\d{8}$/;
 
 export function isPhone(phone) {
-    return phoneRegex.test(phone.trim());
+    if (phone === undefined || phone === null) return false;
+    return phoneRegex.test(String(phone).trim());
 }
 
 export function isEmpty(string) {
-    return !string || string.trim().length === 0;
+    return !string || String(string).trim().length === 0;
 }

@@ -2,12 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: producto.routes.js
-Autor: Jose Espinoza
-Fecha: 29/06/2026
-Modulo: Productos
+Archivo: equipo.routes.js
+Autor: Rodolfo Chaves
+Fecha: 04/07/2026
+Modulo: Equipo
 Descripcion:
-Define las rutas HTTP del modulo de productos bajo el nuevo estandar.
+Define las rutas HTTP del modulo de equipos.
 //////////////////////////////////////////////////////////
 */
 
@@ -15,22 +15,31 @@ Define las rutas HTTP del modulo de productos bajo el nuevo estandar.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
+
+Librerias externas
 */
-import { Router } from 'express';
-import { validarBodyProducto } from '../middlewares/producto.middleware.js';
+
+import { Router } from "express";
+
+// Middlewares
+import { verificarAuth }    from "../middlewares/auth.middleware.js";
+import { validarBodyEquipo } from "../middlewares/equipo.middleware.js";
+
+// Controladores
 import {
-    getProductos,
-    getProductoById,
-    createProducto,
-    updateProducto,
-    deleteProducto
-} from '../controllers/producto.controller.js';
+    getEquipos,
+    getEquipoById,
+    createEquipo,
+    updateEquipo,
+    deleteEquipo
+} from "../controllers/equipo.controller.js";
 
 /*
 //////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
 */
+
 const router = Router();
 
 /*
@@ -38,17 +47,17 @@ const router = Router();
 RUTAS
 //////////////////////////////////////////////////////////
 */
-router.get('/', getProductos);
-router.get('/:id', getProductoById);
-router.post('/', validarBodyProducto, createProducto);
 
-// Ruta especifica de borrado logico arriba de la generica de actualizacion
-router.put('/:id/activo', deleteProducto);
-router.put('/:id', validarBodyProducto, updateProducto);
+router.get("/",     verificarAuth, getEquipos);
+router.get("/:id",  verificarAuth, getEquipoById);
+router.post("/",    verificarAuth, validarBodyEquipo, createEquipo);
+router.put("/:id",  verificarAuth, validarBodyEquipo, updateEquipo);
+router.delete("/:id", verificarAuth, deleteEquipo);
 
 /*
 //////////////////////////////////////////////////////////
 EXPORT
 //////////////////////////////////////////////////////////
 */
+
 export default router;
