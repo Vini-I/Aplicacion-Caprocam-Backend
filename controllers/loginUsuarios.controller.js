@@ -20,11 +20,9 @@ IMPORTS
 
 DTOs
 */
-import { LoginAdminDTO }          from "../dtos/loginAdmin.dto.js";
-import { LoginOperarioDTO }       from "../dtos/loginOperario.dto.js";
+import { LoginAdminDTO } from "../dtos/loginAdmin.dto.js";
+import { LoginOperarioDTO } from "../dtos/loginOperario.dto.js";
 import { LoginSincronizacionDTO } from "../dtos/loginSincronizacion.dto.js";
-
-// Servicios
 import {
     isContrasenaValida,
     hashContrasena,
@@ -32,13 +30,10 @@ import {
     isPinValido,
     isPin,
     isContrasenaSegura,
+    obtenerPantallasPermitidas
 } from "../services/loginUsuarios.services.js";
-
-// Modelos
 import * as UsuariosModel from "../models/loginUsuarios.model.js";
-import * as RolesModel    from "../models/loginRoles.model.js";
-
-// Common
+import * as RolesModel from "../models/loginRoles.model.js";
 import { exito, error } from "../common/respuestaJson.js";
 
 /*
@@ -49,9 +44,29 @@ FUNCIONES PRINCIPALES
 Contiene las funciones exportables que manejan cada
 ruta del modulo de login.
 */
+async function cargarRolConPantallas(rolId) {
+    const rol = await RolesModel.findById(rolId);
+
+    if (!rol) {
+        return null;
+    }
+
+    return {
+        ...rol,
+        pantallasPermitidas: obtenerPantallasPermitidas(rol.nombre)
+    };
+}
+
+function normalizarEmail(valor) {
+    return String(valor ?? "").trim();
+}
+
+function normalizarNombreUsuario(valor) {
+    return String(valor ?? "").trim();
+}
 
 export async function login(req, res) {
-    /*
+     /*
     Descripcion:
     Autentica un administrador web por usuario o correo
     y contrasena.
@@ -64,24 +79,35 @@ export async function login(req, res) {
     - 404 si el usuario no existe
     - 401 si la contrasena es incorrecta
     */
-    const { usuario, correo, contrasena } = req.body;
-    const identificador = usuario || correo;
+    try {
+        const identificador = req.body.usuario ?? req.body.correo ?? req.body.email ?? req.body.nombreUsuario;
+        const contrasena = req.body.contrasena;
 
-    const usuarioEncontrado = UsuariosModel.findByUsuarioOCorreo(identificador);
+        const usuarioEncontrado = await UsuariosModel.findUsuarioByIdentificador(identificador);
 
-    if (!usuarioEncontrado || usuarioEncontrado.tipo !== "administrador")
-        return error(res, "Usuario no encontrado.", null, 404);
+        if (!usuarioEncontrado) {
+            return error(res, "Usuario no encontrado.", null, 404);
+        }
 
-    const contrasenaOk = await isContrasenaValida(
-        contrasena,
-        usuarioEncontrado.contrasenaHash
-    );
-    if (!contrasenaOk)
-        return error(res, "Credenciales incorrectas.", null, 401);
+        const contrasenaOk = await isContrasenaValida(
+            contrasena,
+            usuarioEncontrado.passwordHash
+        );
 
-    const rol = RolesModel.findById(usuarioEncontrado.rolId);
+        if (!contrasenaOk) {
+            return error(res, "Credenciales incorrectas.", null, 401);
+        }
 
-    return exito(res, "Login exitoso.", new LoginAdminDTO(usuarioEncontrado, rol.nombre));
+        const rol = await cargarRolConPantallas(usuarioEncontrado.rolId);
+
+        return exito(
+            res,
+            "Login exitoso.",
+            new LoginAdminDTO(usuarioEncontrado, rol)
+        );
+    } catch (err) {
+        return error(res, "Error al iniciar sesion.", null, 500);
+    }
 }
 
 export async function registrar(req, res) {
@@ -99,37 +125,61 @@ export async function registrar(req, res) {
     - 422 si la contrasena tiene menos de 8 caracteres
           o el rol no existe
     */
-    const { nombre, apellidos, correo, usuario, contrasena, rolId } = req.body;
+    try {
+        const nombre = req.body.nombre;
+        const apellidos = req.body.apellidos;
+        const email = normalizarEmail(req.body.email ?? req.body.correo);
+        const nombreUsuario = normalizarNombreUsuario(req.body.nombreUsuario ?? req.body.usuario);
+        const contrasena = req.body.contrasena;
+        const rolId = req.body.rolId;
+        const grupoDatos = req.body.grupoDatos;
+        const telefono = req.body.telefono;
 
-    if (!isContrasenaSegura(contrasena))
-        return error(res, "La contrasena debe tener minimo 8 caracteres.", null, 422);
+        if (!isContrasenaSegura(contrasena)) {
+            return error(res, "La contrasena debe tener minimo 8 caracteres.", null, 422);
+        }
 
-    if (UsuariosModel.findByCorreo(correo))
-        return error(res, "El correo ya esta registrado.", null, 409);
+        const correoExistente = await UsuariosModel.findUsuarioByCorreo(email);
+        if (correoExistente) {
+            return error(res, "El correo ya esta registrado.", null, 409);
+        }
 
-    if (UsuariosModel.findByUsuario(usuario))
-        return error(res, "El nombre de usuario ya existe.", null, 409);
+        const usuarioExistente = await UsuariosModel.findUsuarioByNombreUsuario(nombreUsuario);
+        if (usuarioExistente) {
+            return error(res, "El nombre de usuario ya existe.", null, 409);
+        }
 
-    const rol = RolesModel.findById(rolId);
-    if (!rol)
-        return error(res, "El rol indicado no existe.", null, 422);
+        const rol = await cargarRolConPantallas(rolId);
+        if (!rol) {
+            return error(res, "El rol indicado no existe.", null, 422);
+        }
 
-    const contrasenaHash = await hashContrasena(contrasena);
-    const nuevo = UsuariosModel.create({
-        nombre, apellidos, correo, usuario,
-        contrasenaHash, rolId, tipo: "administrador"
-    });
+        const passwordHash = await hashContrasena(contrasena);
 
-    return exito(
-        res,
-        "Administrador registrado correctamente.",
-        new LoginAdminDTO(nuevo, rol.nombre),
-        201
-    );
+        const nuevo = await UsuariosModel.createUsuario({
+            grupoDatos,
+            rolId,
+            nombre,
+            apellidos,
+            email,
+            nombreUsuario,
+            passwordHash,
+            telefono
+        });
+
+        return exito(
+            res,
+            "Administrador registrado correctamente.",
+            new LoginAdminDTO(nuevo, rol),
+            201
+        );
+    } catch (err) {
+        return error(res, "Error al registrar el administrador.", null, 500);
+    }
 }
 
 export async function registrarOperario(req, res) {
-    /*
+     /*
     Descripcion:
     Registra un nuevo operario de campo con PIN de
     4 digitos. Solo accesible por administradores.
@@ -141,33 +191,55 @@ export async function registrarOperario(req, res) {
     - 201 con los datos del operario creado (sin pinHash)
     - 422 si el PIN no tiene 4 digitos o el rol no existe
     */
-    const { nombre, rolId, pin } = req.body;
+    try {
+        const nombre = req.body.nombre;
+        const apellidos = req.body.apellidos;
+        const nombreUsuario = normalizarNombreUsuario(req.body.nombreUsuario ?? req.body.usuario);
+        const email = req.body.email ?? req.body.correo ?? null;
+        const telefono = req.body.telefono ?? null;
+        const grupoDatos = req.body.grupoDatos;
+        const fincaId = req.body.fincaId ?? null;
+        const rolId = req.body.rolId;
+        const pin = req.body.pin;
+        const tipoColaborador = req.body.tipoColaborador ?? "external_collab";
 
-    if (!isPin(pin))
-        return error(
-            res, "El PIN debe tener exactamente 4 digitos numericos.", null, 422
+        if (!isPin(pin)) {
+            return error(res, "El PIN debe tener exactamente 4 digitos numericos.", null, 422);
+        }
+
+        const rol = await cargarRolConPantallas(rolId);
+        if (!rol) {
+            return error(res, "El rol indicado no existe.", null, 422);
+        }
+
+        const pinHash = await hashPin(pin);
+
+        const operario = await UsuariosModel.createColaborador({
+            grupoDatos,
+            fincaId,
+            rolId,
+            nombre,
+            apellidos,
+            telefono,
+            email,
+            nombreUsuario,
+            pinHash,
+            tipoColaborador
+        });
+
+        return exito(
+            res,
+            "Operario registrado correctamente.",
+            new LoginOperarioDTO(operario, rol),
+            201
         );
-
-    const rol = RolesModel.findById(rolId);
-    if (!rol)
-        return error(res, "El rol indicado no existe.", null, 422);
-
-    const pinHash  = await hashPin(pin);
-    const operario = UsuariosModel.create({
-        nombre, apellidos: "", correo: null,
-        usuario: null, pinHash, rolId, tipo: "operario"
-    });
-
-    return exito(
-        res,
-        "Operario registrado correctamente.",
-        new LoginOperarioDTO(operario, rol),
-        201
-    );
+    } catch (err) {
+        return error(res, "Error al registrar el operario.", null, 500);
+    }
 }
 
 export async function verificarPin(req, res) {
-    /*
+     /*
     Descripcion:
     Verifica el PIN de un operario desde la app movil.
     Devuelve el rol y pantallasPermitidas para controlar
@@ -182,30 +254,39 @@ export async function verificarPin(req, res) {
     - 401 si el PIN es incorrecto
     - 422 si el PIN no tiene formato de 4 digitos
     */
-    const { operarioId, pin } = req.body;
+    try {
+        const { operarioId, pin } = req.body;
 
-    if (!isPin(pin))
-        return error(
-            res, "El PIN debe tener exactamente 4 digitos numericos.", null, 422
+        if (!isPin(pin)) {
+            return error(res, "El PIN debe tener exactamente 4 digitos numericos.", null, 422);
+        }
+
+        const operario = await UsuariosModel.findColaboradorById(operarioId);
+
+        if (!operario) {
+            return error(res, "Operario no encontrado.", null, 404);
+        }
+
+        const pinOk = await isPinValido(pin, operario.pinHash);
+
+        if (!pinOk) {
+            return error(res, "PIN incorrecto.", null, 401);
+        }
+
+        const rol = await cargarRolConPantallas(operario.rolId);
+
+        return exito(
+            res,
+            "PIN verificado correctamente.",
+            new LoginOperarioDTO(operario, rol)
         );
-
-    const operario = UsuariosModel.findById(operarioId);
-    if (!operario || operario.tipo !== "operario")
-        return error(res, "Operario no encontrado.", null, 404);
-
-    const pinOk = await isPinValido(pin, operario.pinHash);
-    if (!pinOk)
-        return error(res, "PIN incorrecto.", null, 401);
-
-    const rol = RolesModel.findById(operario.rolId);
-
-    return exito(
-        res, "PIN verificado correctamente.", new LoginOperarioDTO(operario, rol)
-    );
+    } catch (err) {
+        return error(res, "Error al verificar el PIN.", null, 500);
+    }
 }
 
-export function sincronizar(req, res) {
-    /*
+export async function sincronizar(req, res) {
+     /*
     Descripcion:
     Devuelve todos los operarios activos con su pinHash
     para que la app movil los guarde en SQLite y pueda
@@ -217,36 +298,48 @@ export function sincronizar(req, res) {
     Retorna:
     - 200 con el arreglo de operarios (incluye pinHash)
     */
-    const operarios = UsuariosModel.findAllOperarios();
+    try {
+        const operarios = await UsuariosModel.findAllColaboradores();
 
-    const data = operarios.map((operario) => {
-        const rol = RolesModel.findById(operario.rolId);
-        return new LoginSincronizacionDTO(operario, rol.nombre);
-    });
+        const data = await Promise.all(
+            operarios.map(async (operario) => {
+                const rol = await cargarRolConPantallas(operario.rolId);
+                return new LoginSincronizacionDTO(operario, rol);
+            })
+        );
 
-    return exito(res, "Lista de operarios obtenida correctamente.", data);
+        return exito(res, "Lista de operarios obtenida correctamente.", data);
+    } catch (err) {
+        return error(res, "Error al sincronizar los operarios.", null, 500);
+    }
 }
 
-export function obtenerPorId(req, res) {
-    /*
-    Descripcion:
-    Obtiene un usuario por su ID.
+export async function obtenerPorId(req, res) {
+    try {
+        const usuario = await UsuariosModel.findUsuarioById(req.params.id);
 
-    Parametros:
-    - req.params.id: ID numerico del usuario.
+        if (usuario) {
+            const rol = await cargarRolConPantallas(usuario.rolId);
+            return exito(
+                res,
+                "Usuario obtenido correctamente.",
+                new LoginAdminDTO(usuario, rol)
+            );
+        }
 
-    Retorna:
-    - 200 con los datos del usuario (sin campos sensibles)
-    - 404 si el usuario no existe
-    */
-    const usuario = UsuariosModel.findById(req.params.id);
+        const operario = await UsuariosModel.findColaboradorById(req.params.id);
 
-    if (!usuario)
+        if (operario) {
+            const rol = await cargarRolConPantallas(operario.rolId);
+            return exito(
+                res,
+                "Usuario obtenido correctamente.",
+                new LoginOperarioDTO(operario, rol)
+            );
+        }
+
         return error(res, "Usuario no encontrado.", null, 404);
-
-    const rol = RolesModel.findById(usuario.rolId);
-
-    return exito(
-        res, "Usuario obtenido correctamente.", new LoginAdminDTO(usuario, rol.nombre)
-    );
+    } catch (err) {
+        return error(res, "Error al obtener el usuario.", null, 500);
+    }
 }
