@@ -3,7 +3,7 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: raleo.model.js
-Autor: Marco Vásquez
+Autor: Sebastian Villegas Barquero
 Fecha: 03/07/2026
 Modulo: Raleo
 Descripcion:
@@ -20,45 +20,7 @@ IMPORTS
 
 DTOs
 */
-import { MetodoRaleo } from '../dtos/raleo.dto.js';
-
-/*
-//////////////////////////////////////////////////////////
-MOCK DATA
-//////////////////////////////////////////////////////////
-
-Datos de prueba que simulan la base de datos.
-Cuando se conecte una DB real, esta seccion desaparece.
-*/
-
-let raleos = [
-    {
-        id:              1,
-        idFinca:         1,
-        idEstanque:      1,
-        idResponsable:   2,
-        fecha:           '03/07/2026',
-        porcentaje:      30,
-        pesoEstimado:    0.3,
-        biomasaEstimado: 14,
-        objetivo:        'Resiembra en otro estanque',
-        metodo:          MetodoRaleo.ATARRAYA,
-        notas:           'Se debe verificar los componentes Fisico-Químicos del estanque'
-    },
-    {
-        id:              2,
-        idFinca:         2,
-        idEstanque:      3,
-        idResponsable:   1,
-        fecha:           '04/07/2026',
-        porcentaje:      40,
-        pesoEstimado:    0.45,
-        biomasaEstimado: 20,
-        objetivo:        'Comercialización',
-        metodo:          MetodoRaleo.RED_DE_ARRASTRE,
-        notas:           'listo para vender'
-    },
-];
+import  pool  from '../config/database.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -66,90 +28,249 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
 Contiene las funciones exportables que interactuan
-con la fuente de datos del modulo de colaboradores.
+directamente con la base de datos MySQL.
 */
 
-export function findAll(filtros) {
+export async function findAll(filtros) {
     /*
     Descripcion:
-    Obtiene todas las tablas de raleo.
-    Permite filtrar por idFinca.
+    Obtiene todos los raleos activos desde la base de datos.
+    Permite filtrar por finca.
 
     Parametros:
-    - filtros: Filtros opcionales
+    - filtros: Objeto con filtros opcionales.
+        - idFinca: Identificador de la finca.
 
     Retorna:
-    - Lista de raleos
+    - Lista de raleos encontrados.
     */
+    let sql = `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            estanque_id,
+            colaborador_id,
+            fecha,
+            porcentaje,
+            peso_estimado,
+            biomasa_estimada,
+            objetivo,
+            metodos,
+            observaciones,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM raleos
+        WHERE deleted_at IS NULL
+        AND activo = TRUE
+    `;
+
+    const params = [];
+
     if (filtros) {
         if (filtros.idFinca) {
-            return filtrarPorFinca(filtros.idFinca);
+            sql = sql + " AND finca_id = ?";
+            params.push(filtros.idFinca);
         }
     }
 
-    return raleos;
+    sql = sql + " ORDER BY id DESC";
+
+    const [rows] = await pool.execute(sql, params);
+
+    return mapearLista(rows);
 }
 
-export function findById(id) {
+export async function findById(id) {
     /*
     Descripcion:
-    Busca un raleo por su ID.
+    Busca un raleo activo por su identificador numerico.
 
     Parametros:
-    - id: ID del raleo a buscar.
+    - id: Identificador del raleo.
 
     Retorna:
-    - El raleo encontrado, o null si no existe.
+    - El raleo encontrado.
+    - null si no existe o si fue eliminado logicamente.
     */
-    id = Number(id);
-    for (let i = 0; i < raleos.length; i++) {
-        if (raleos[i].id === id) {
-            return raleos[i];
-        }
-    }
-    return null;
-}
 
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            estanque_id,
+            colaborador_id,
+            fecha,
+            porcentaje,
+            peso_estimado,
+            biomasa_estimada,
+            objetivo,
+            metodos,
+            observaciones,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM raleos
+        WHERE id = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        LIMIT 1
+        `,
+        [id]
+    );
 
-
-export function create(dto) {
-    /*
-    Descripcion:
-    Agrega un nuevo raleo a la lista.
-
-    Parametros:
-    - dto: Objeto RaleoDTO con los datos del nuevo raleo.
-
-    Retorna:
-    - nuevo: El raleo recien creado con su ID asignado.
-    */
-    const nuevo = { ...dto, id: raleos.length + 1 };
-    raleos.push(nuevo);
-    return nuevo;
-}
-
-export function remove(id) {
-    /*
-    Descripcion:
-    Elimina un raleo por su ID.
-
-    Parametros:
-    - id: ID del raleo a eliminar.
-
-    Retorna:
-    - El raleo eliminado, o null si no existe.
-    */
-    const index = buscarIndicePorId(id);
-
-    if (index === -1) {
+    if (rows.length === 0) {
         return null;
     }
 
-    const eliminado = raleos[index];
+    return mapearFila(rows[0]);
+}
 
-    raleos.splice(index, 1);
+export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
+    /*
+    Descripcion:
+    Busca un raleo activo por estanque y fecha.
 
-    return eliminado;
+    Parametros:
+    - idEstanque: Identificador del estanque.
+    - fecha: Fecha del raleo.
+
+    Retorna:
+    - El raleo encontrado.
+    - null si no existe.
+    */
+
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            estanque_id,
+            colaborador_id,
+            fecha,
+            porcentaje,
+            peso_estimado,
+            biomasa_estimada,
+            objetivo,
+            metodos,
+            observaciones,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM raleos
+        WHERE grupo_datos = ?
+        AND estanque_id = ?
+        AND fecha = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        LIMIT 1
+        `,
+        [grupoDatos, idEstanque, fecha]
+    );
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return mapearFila(rows[0]);
+}
+
+export async function create(dto) {
+    /*
+    Descripcion:
+    Inserta un nuevo raleo en la base de datos.
+
+    Parametros:
+    - dto: Objeto RaleoDTO con los datos normalizados del raleo.
+
+    Retorna:
+    - El raleo creado consultado nuevamente desde la base de datos.
+    */
+    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
+
+    const [result] = await pool.execute(
+        `
+        INSERT INTO raleos (
+            grupo_datos,
+            finca_id,
+            estanque_id,
+            colaborador_id,
+            fecha,
+            porcentaje,
+            peso_estimado,
+            biomasa_estimada,
+            objetivo,
+            metodos,
+            observaciones
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+            grupoDatos,
+            dto.idFinca,
+            dto.idEstanque,
+            dto.idColaborador,
+            dto.fecha,
+            dto.porcentaje,
+            dto.pesoEstimado,
+            dto.biomasaEstimado,
+            dto.objetivo,
+            dto.metodo,
+            dto.observaciones
+        ]
+    );
+
+    return await findById(result.insertId);
+}
+
+export async function remove(id) {
+    /*
+    Descripcion:
+    Elimina logicamente un raleo.
+    No borra fisicamente el registro de la base de datos.
+    Cambia activo a false, llena deleted_at e incrementa version.
+
+    Parametros:
+    - id: Identificador del raleo que se desea eliminar.
+
+    Retorna:
+    - El raleo eliminado logicamente.
+    - null si el estanque no existe o ya fue eliminado.
+    */
+    const actual = await findById(id);
+
+    if (!actual) {
+        return null;
+    }
+
+    await pool.execute(
+        `
+        UPDATE raleos
+        SET
+            activo = FALSE,
+            deleted_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE id = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        `,
+        [id]
+    );
+    
+    return await findById(id);
 }
 
 /*
@@ -159,27 +280,118 @@ FUNCIONES SECUNDARIAS
 
 Contiene funciones internas usadas por el modelo.
 */
+function mapearFila(row) {
+    /*
+    Descripcion:
+    Convierte una fila de MySQL en un objeto con formato camelCase.
+    Tambien convierte tipos de datos como numeros, fechas y booleanos.
 
-function filtrarPorFinca(idFinca) {
-    const numeroFinca = Number(idFinca);
+    Parametros:
+    - row: Fila obtenida desde MySQL.
+
+    Retorna:
+    - Objeto raleo en el formato esperado por el backend/frontend.
+    */
+
+    return {
+        id: row.id,
+        uuid: row.uuid,
+        grupoDatos: row.grupo_datos,
+        idFinca: row.finca_id,
+        idEstanque: row.estanque_id,
+        idColaborador: row.colaborador_id,
+        fecha: formatearFecha(row.fecha),
+        porcentaje: Number(row.porcentaje),
+        pesoEstimado: Number(row.peso_estimado),
+        biomasaEstimado: Number(row.biomasa_estimada),
+        objetivo: row.objetivo,
+        metodo: row.metodos,
+        observaciones: row.observaciones,
+        activo: Boolean(row.activo),
+        fechaCreacion: row.fecha_creacion,
+        fechaActualizacion: row.fecha_actualizacion,
+        deletedAt: row.deleted_at,
+        version: row.version
+    };
+}
+
+function formatearFecha(valor) {
+    /*
+    Descripcion:
+    Formatea una fecha recibida desde MySQL para devolverla en
+    formato simple YYYY-MM-DD.
+
+    Parametros:
+    - valor: Fecha recibida desde MySQL.
+
+    Retorna:
+    - Fecha formateada.
+    - null si no existe valor.
+    */
+
+    if (valor === undefined) {
+        return null;
+    }
+
+    if (valor === null) {
+        return null;
+    }
+
+    if (valor instanceof Date) {
+        return valor.toISOString().slice(0, 10);
+    }
+
+    return String(valor);
+}
+
+function obtenerGrupoDatos(valor) {
+    /*
+    Descripcion:
+    Obtiene el grupo de datos del registro.
+    Si no viene definido, utiliza el grupo 1 como valor temporal
+    para pruebas mientras se implementa la autenticacion.
+
+    Parametros:
+    - valor: Valor recibido como grupo de datos.
+
+    Retorna:
+    - Numero del grupo de datos.
+    */
+
+    if (valor === undefined) {
+        return 1;
+    }
+
+    if (valor === null) {
+        return 1;
+    }
+
+    if (String(valor).trim() === "") {
+        return 1;
+    }
+
+    return Number(valor);
+}
+
+function mapearLista(rows) {
+    /*
+    Descripcion:
+    Convierte una lista de filas de MySQL al formato usado por
+    el backend y el frontend.
+
+    Parametros:
+    - rows: Lista de filas obtenidas desde MySQL.
+
+    Retorna:
+    - Lista de estanques mapeados.
+    */
+
     const resultado = [];
 
-    for (let i = 0; i < raleos.length; i++) {
-        if (raleos[i].idFinca === numeroFinca) {
-            resultado.push(raleos[i]);
-        }
+    for (let i = 0; i < rows.length; i++) {
+        resultado.push(mapearFila(rows[i]));
     }
 
     return resultado;
 }
 
-function buscarIndicePorId(id) {
-    id = Number(id);
-    for (let i = 0; i < raleos.length; i++) {
-        if (raleos[i].id === id) {
-            return i;
-        }
-    }
-
-    return -1;
-}
