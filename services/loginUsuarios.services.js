@@ -31,6 +31,18 @@ Expresiones regulares para validacion de campos.
 
 const pinRegex = /^\d{4}$/;
 
+const pantallasPorRol = {
+    administrador: ["dashboard", "usuarios", "reportes"],
+    "operario de alimentacion": ["registro-alimentacion", "historial-estanques"],
+    "supervisor de estanques": [
+        "registro-alimentacion",
+        "historial-estanques",
+        "supervision",
+        "reportes-campo"
+    ],
+    "tecnico de calidad": ["muestras", "laboratorio", "reportes-campo"]
+};
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
@@ -124,5 +136,30 @@ export function isContrasenaSegura(contrasena) {
     Retorna:
     - true si cumple el minimo, false si no.
     */
-    return contrasena.length >= 8;
+    return String(contrasena ?? "").length >= 8;
+}
+
+export function obtenerPantallasPermitidas(nombreRol) {
+    /*
+    Descripcion:
+    Devuelve la lista de pantallas permitidas segun el
+    nombre del rol recibido desde la base de datos.
+
+    Parametros:
+    - nombreRol: Nombre del rol en texto plano.
+
+    Retorna:
+    - Arreglo con las pantallas permitidas para ese rol.
+    */
+    const clave = normalizarTexto(nombreRol);
+
+    return pantallasPorRol[clave] ? [...pantallasPorRol[clave]] : [];
+}
+
+function normalizarTexto(valor) {
+    return String(valor ?? "")
+        .trim()
+        .toLocaleLowerCase("es")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
 }
