@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
 Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas, Felipe Salas
-Fecha: 29/06/2026
+Fecha: 06/07/2026
 Modulo: Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
@@ -48,7 +48,7 @@ CONSTANTES
 
 const app = express();
 
-const PORT = process.env.PORT || 4000;
+const PORT = 4000;
 /*
 //////////////////////////////////////////////////////////
 MIDDLEWARES GLOBALES
@@ -96,8 +96,15 @@ app.get("/", (req, res) => {
     });
 });
 
+/*
+//////////////////////////////////////////////////////////
+INICIALIZACION DEL SERVIDOR
+//////////////////////////////////////////////////////////
+Levanta el servicio HTTP para comenzar a escuchar las
+peticiones entrantes.
+*/
 app.listen(PORT, () => {
-    console.log(`El server esta corriendo en http://localhost:${PORT}`);
+    console.log(`Servidor ejecutándose en puerto http://localhost:${PORT}`);
 });
 
 /*

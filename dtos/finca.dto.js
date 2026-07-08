@@ -21,7 +21,7 @@ Caparazon de datos para el modulo de finca.
 */
 
 export class FincaDTO {
-    /*
+  /*
     Descripcion:
     Caparazon de datos para el modulo de finca.
 
@@ -41,29 +41,29 @@ export class FincaDTO {
     Retorna:
     - Un objeto de tipo FincaDTO con los datos proporcionados.
     */
-    constructor(
-        id,
-        idCBO,
-        nombreFinca,
-        provincia,
-        canton,
-        distrito,
-        otrasSenas,
-        propietarioResponsable,
-        telefono,
-        areaTotal,
-        espejosAgua
-    ) {
-        this.id = id || null;
-        this.idCBO = idCBO;
-        this.nombreFinca = nombreFinca;
-        this.provincia = provincia;
-        this.canton = canton;
-        this.distrito = distrito;
-        this.otrasSenas = otrasSenas;
-        this.propietarioResponsable = propietarioResponsable;
-        this.telefono = telefono;
-        this.areaTotal = areaTotal;
-        this.espejosAgua = espejosAgua;
-    }
+  constructor(
+    grupoDatos,
+    idCBO,
+    nombreFinca,
+    provincia,
+    canton,
+    distrito,
+    otrasSenas,
+    propietarioResponsable,
+    telefono,
+    areaTotal,
+    espejosAgua,
+  ) {
+    this.grupoDatos = grupoDatos;
+    this.idCBO = idCBO;
+    this.nombreFinca = nombreFinca;
+    this.provincia = provincia;
+    this.canton = canton;
+    this.distrito = distrito;
+    this.otrasSenas = otrasSenas;
+    this.propietarioResponsable = propietarioResponsable;
+    this.telefono = telefono;
+    this.areaTotal = areaTotal;
+    this.espejosAgua = espejosAgua;
+  }
 }
