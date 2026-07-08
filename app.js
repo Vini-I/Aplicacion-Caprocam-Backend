@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
 Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas, Felipe Salas
-Fecha: 29/06/2026
+Fecha: 06/07/2026
 Modulo: Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
@@ -29,7 +29,7 @@ import estanquesRouter from "./routes/estanques.routes.js";
 import parasitologiasRouter from "./routes/parasitologias.routes.js";
 import enfermedadesRouter from "./routes/enfermedades.routes.js";
 import densidadPoblacionalRouter from "./routes/densidadPoblacional.routes.js";
-import alimentacionRouter from "./routes/alimentacion.routes.js";
+//import alimentacionRouter from "./routes/alimentacion.routes.js";
 import raleoRouter from "./routes/raleo.routes.js"
 import ventasRouter from "./routes/mantVentas.routes.js";
 import mantenimientoRouter from './routes/mantenimiento.routes.js';
@@ -48,6 +48,7 @@ CONSTANTES
 
 const app = express();
 
+const PORT = 4000;
 /*
 //////////////////////////////////////////////////////////
 MIDDLEWARES GLOBALES
@@ -68,7 +69,7 @@ app.use("/api/v0/crecimiento", crecimientoRouter);
 app.use("/api/v0/estanques", estanquesRouter);
 app.use("/api/v0/parasitologias", parasitologiasRouter);
 app.use("/api/v0/enfermedades", enfermedadesRouter);
-app.use("/api/v0/alimentaciones", alimentacionRouter);
+//app.use("/api/v0/alimentaciones", alimentacionRouter);
 app.use("/api/v0/densidad-poblacional", densidadPoblacionalRouter);
 app.use("/api/v0/raleo", raleoRouter);
 app.use("/api/v0/ventas", ventasRouter);
@@ -95,8 +96,15 @@ app.get("/", (req, res) => {
     });
 });
 
+/*
+//////////////////////////////////////////////////////////
+INICIALIZACION DEL SERVIDOR
+//////////////////////////////////////////////////////////
+Levanta el servicio HTTP para comenzar a escuchar las
+peticiones entrantes.
+*/
 app.listen(PORT, () => {
-    console.log(`El server esta corriendo en http://localhost:${PORT}`);
+    console.log(`Servidor ejecutándose en puerto http://localhost:${PORT}`);
 });
 
 /*
