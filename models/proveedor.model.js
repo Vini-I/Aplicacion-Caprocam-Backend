@@ -53,11 +53,12 @@ export async function findAll() {
         const sql = `
         SELECT *
         FROM   proveedores
-        WHERE  activo = TRUE
+        WHERE  grupo_datos = ?
+        AND    activo = TRUE
         AND    deleted_at IS NULL
         ORDER BY id ASC
     `;
-    const [rows] = await pool.execute(sql);
+    const [rows] = await pool.execute(sql, [GRUPO_DATOS]);
     return rows;
 }
 
@@ -76,10 +77,11 @@ export async function findById(id) {
         SELECT *
         FROM   proveedores
         WHERE  id = ?
+        AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
     `;
-    const [rows] = await pool.execute(sql, [Number(id)]);
+    const [rows] = await pool.execute(sql, [Number(id), GRUPO_DATOS]);
     return rows[0] || null;
 }
 
@@ -98,11 +100,12 @@ export async function findByName(nombre) {
         SELECT *
         FROM   proveedores
         WHERE  LOWER(TRIM(nombre_empresa)) = LOWER(TRIM(?))
+        AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
         LIMIT  1
     `;
-    const [rows] = await pool.execute(sql, [nombre]);
+    const [rows] = await pool.execute(sql, [nombre, GRUPO_DATOS]);
     return rows[0] || null;
 }
 
@@ -122,12 +125,13 @@ export async function findByNameIgnorandoId(nombre, idIgnorado) {
         SELECT *
         FROM   proveedores
         WHERE  LOWER(TRIM(nombre_empresa)) = LOWER(TRIM(?))
+        AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
         AND    id != ?
         LIMIT  1
     `;
-    const [rows] = await pool.execute(sql, [nombre, Number(idIgnorado)]);
+    const [rows] = await pool.execute(sql, [nombre, Number(idIgnorado), GRUPO_DATOS]);
     return rows[0] || null;
 }
 
@@ -157,7 +161,7 @@ export async function create(dto) {
         GRUPO_DATOS,
         dto.nombre_empresa,
         dto.tipo_producto,
-        dto.telefono,
+        dto.telefono           || null,
         dto.correo_electronico || null,
         dto.direccion          || null,
         dto.notas              || null,
@@ -187,17 +191,19 @@ export async function update(id, dto) {
                notas               = ?,
                version             = version + 1
         WHERE  id = ?
+        AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
     `;
     const [result] = await pool.execute(sql, [
         dto.nombre_empresa,
         dto.tipo_producto,
-        dto.telefono,
+        dto.telefono           || null,
         dto.correo_electronico || null,
         dto.direccion          || null,
         dto.notas              || null,
         Number(id),
+        GRUPO_DATOS,
     ]);
     if (result.affectedRows === 0) return null;
     return findById(id);
@@ -223,10 +229,11 @@ export async function remove(id) {
                deleted_at  = NOW(),
                version     = version + 1
         WHERE  id = ?
+        AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
     `;
-    const [result] = await pool.execute(sql, [Number(id)]);
+    const [result] = await pool.execute(sql, [Number(id), GRUPO_DATOS]);
     if (result.affectedRows === 0) return null;
 
     return { ...proveedor, activo: false };

@@ -109,35 +109,13 @@ function validarIdParametro(id, res) {
     }
     return null;
 }
-
-function generarIniciales(nombre) {
-    /*
-    Descripcion:
-    Genera iniciales basadas en el nombre del proveedor.
-
-    Parametros:
-    - nombre: Nombre completo del proveedor.
-
-    Retorna:
-    - String de iniciales de 3 letras en mayusculas.
-    */
-    if (!nombre) return "";
-    return nombre
-        .split(" ")
-        .filter(word => word.length > 0)
-        .map(word => word[0])
-        .join("")
-        .toUpperCase()
-        .substring(0, 3);
-}
-
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export function listarProveedores(req, res) {
+export async function listarProveedores(req, res) {
     /*
     Descripcion:
     Controlador para obtener todos los proveedores activos.
@@ -163,7 +141,7 @@ export function listarProveedores(req, res) {
     }
 }
 
-export function obtenerProveedor(req, res) {
+export async function obtenerProveedor(req, res) {
     /*
     Descripcion:
     Controlador para obtener un proveedor activo por su ID.
@@ -195,7 +173,7 @@ export function obtenerProveedor(req, res) {
     }
 }
 
-export function crearProveedor(req, res) {
+export async function crearProveedor(req, res) {
     /*
     Descripcion:
     Controlador para crear un nuevo proveedor.
@@ -229,13 +207,18 @@ export function crearProveedor(req, res) {
             201
         );
     } catch (err) {
+        if (err.code === "ER_DUP_ENTRY") {
+            return error(
+                res, "Ya existe un proveedor con ese nombre.", err, 409
+            );
+        }
         return error(
             res, "Error al crear el proveedor.", err, 500
         );
     }
 }
 
-export function actualizarProveedor(req, res) {
+export async function actualizarProveedor(req, res) {
     /*
     Descripcion:
     Controlador para actualizar un proveedor existente.
@@ -278,13 +261,18 @@ export function actualizarProveedor(req, res) {
             proveedorDTO(actualizado)
         );
     } catch (err) {
+        if (err.code === "ER_DUP_ENTRY") {
+            return error(
+                res, "Ya existe un proveedor con ese nombre.", err, 409
+            );
+        }
         return error(
             res, "Error al actualizar el proveedor.", err, 500
         );
     }
 }
 
-export function eliminarProveedor(req, res) {
+export async function eliminarProveedor(req, res) {
     /*
     Descripcion:
     Controlador para desactivar (borrado logico) un proveedor.

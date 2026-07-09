@@ -69,7 +69,8 @@ const SELECT_JOIN = `
         p.estado
     FROM  inventario i
     INNER JOIN productos p ON i.producto_id = p.id
-    WHERE i.activo = TRUE
+    WHERE i.grupo_datos = ?
+    AND   i.activo = TRUE
     AND   i.deleted_at IS NULL
     AND   p.activo = TRUE
     AND   p.deleted_at IS NULL
@@ -112,8 +113,8 @@ export async function findById(id) {
     - Objeto mapeado a camelCase o null si no existe.
     */
     const [rows] = await pool.execute(
-        SELECT_JOIN + ' AND i.id = ?',
-        [Number(id)]
+        SELECT_JOIN + ' AND i.id = ? AND i.grupo_datos = ?',
+        [Number(id), GRUPO_DATOS]
     );
     return rows[0] ? mapearInventario(rows[0]) : null;
 }
@@ -131,8 +132,8 @@ export async function findByNombre(nombre) {
     - Objeto mapeado a camelCase o null si no existe.
     */
     const [rows] = await pool.execute(
-        SELECT_JOIN + ' AND LOWER(TRIM(p.nombre)) = LOWER(TRIM(?)) LIMIT 1',
-        [nombre]
+        SELECT_JOIN + ' AND LOWER(TRIM(p.nombre)) = LOWER(TRIM(?)) AND i.grupo_datos = ? LIMIT 1',
+        [nombre, GRUPO_DATOS]
     );
     return rows[0] ? mapearInventario(rows[0]) : null;
 }
@@ -152,8 +153,8 @@ export async function findByNombreIgnorandoId(nombre, invId) {
     */
     const [rows] = await pool.execute(
         SELECT_JOIN +
-        ' AND LOWER(TRIM(p.nombre)) = LOWER(TRIM(?)) AND i.id != ? LIMIT 1',
-        [nombre, Number(invId)]
+        ' AND LOWER(TRIM(p.nombre)) = LOWER(TRIM(?)) AND i.id != ? AND i.grupo_datos = ? LIMIT 1',
+        [nombre, Number(invId), GRUPO_DATOS]
     );
     return rows[0] ? mapearInventario(rows[0]) : null;
 }
@@ -178,7 +179,8 @@ export async function verificarProveedorExiste(proveedorId) {
         WHERE  id = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
-    `, [Number(proveedorId)]);
+        AND    grupo_datos = ?
+    `, [Number(proveedorId), GRUPO_DATOS]);
 
     return rows.length > 0;
 }

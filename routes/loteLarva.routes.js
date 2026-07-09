@@ -2,12 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: siembra.route.js
+Archivo: loteLarva.route.js
 Autor: Joan
 Fecha: 04/07/2026
-Modulo: Siembra
+Modulo: LoteLarva
 Descripcion:
-Define las rutas HTTP para lotes de larva y pre-crias.
+Define las rutas HTTP para lotes de larva
 //////////////////////////////////////////////////////////
 */
 
@@ -19,22 +19,21 @@ IMPORTS
 
 import { Router } from "express";
 import { verificarAuth } from "../middlewares/auth.middleware.js";
-import { validarBodySiembra } from "../middlewares/siembra.middleware.js";
+import { validarBodyLote } from "../middlewares/loteLarva.middleware.js";
 import {
-    listarSiembra,
-    obtenerSiembra,
-    crearSiembra,
-    actualizarSiembra,
-    eliminarSiembra,
-    finalizarSiembra,
-} from "../controllers/siembra.controller.js";
+    listarLotes,
+    obtenerLote,
+    crearLote,
+    actualizarLote,
+    eliminarLote,
+} from "../controllers/loteLarva.controller.js";
 
 /*
 //////////////////////////////////////////////////////////
-CONSTANTES
+constantes
 //////////////////////////////////////////////////////////
 */
-
+ 
 const router = Router();
 
 /*
@@ -42,12 +41,11 @@ const router = Router();
 RUTAS
 //////////////////////////////////////////////////////////
 */
-
-router.get("/", verificarAuth, listarSiembras);
-router.get("/:id", verificarAuth, obtenerSiembra);
-router.post("/", verificarAuth, validarBodySiembra, crearSiembra);
-router.put("/:id", verificarAuth, validarBodySiembra, actualizarSiembra);
-router.post("/:id/finalizar", verificarAuth, finalizarSiembra);
-router.delete("/:id", verificarAuth, eliminarSiembra);
+ 
+router.get("/", verificarAuth, listarLotes);
+router.get("/:id", verificarAuth, obtenerLote);
+router.post("/", verificarAuth, validarBodyLote, crearLote);
+router.put("/:id", verificarAuth, validarBodyLote, actualizarLote);
+router.delete("/:id", verificarAuth, eliminarLote);
  
 export default router;
