@@ -3,12 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
-Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas, Felipe Salas, Jose Espinoza
-Fecha: 29/06/2026
-Modulo: Core / Configuracion
-Descripcion:
 Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas, Felipe Salas
-Fecha: 29/06/2026
+Fecha: 06/07/2026
 Modulo: Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
@@ -52,13 +48,18 @@ CONSTANTES
 
 const app = express();
 
+const PORT = 4000;
 /*
 //////////////////////////////////////////////////////////
 MIDDLEWARES GLOBALES
 //////////////////////////////////////////////////////////
 */
 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:8081', // direccion del frontend en desarrollo
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 /*
@@ -67,45 +68,6 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-// Colaboradores
-app.use("/api/v0/colaboradores", colaboradoresRouter);
-
-// Alimentación
-app.use("/api/v0/alimentaciones", alimentacionRouter);
-
-// Crecimiento
-app.use("/api/v0/crecimiento", crecimientoRouter);
-
-// Estanques
-app.use("/api/v0/estanques", estanquesRouter);
-
-// Densidad Poblacional
-app.use("/api/v0/densidades-poblacionales", densidadPoblacionalRouter);
-
-// Modulos Team 6
-app.use("/api/v0/productos", productoRouter);
-app.use("/api/v0/compradores", compradorRouter);
-
-/*
-//////////////////////////////////////////////////////////
-app.use("/api/v0/colaboradores", colaboradoresRouter);
-app.use("/api/v0/crecimiento", crecimientoRouter);
-app.use("/api/v0/estanques", estanquesRouter);
-app.use("/api/v0/parasitologias", parasitologiasRouter);
-app.use("/api/v0/enfermedades", enfermedadesRouter);
-app.use("/api/v0/alimentaciones", alimentacionRouter);
-app.use("/api/v0/densidad-poblacional", densidadPoblacionalRouter);
-app.use("/api/v0/raleo", raleoRouter);
-app.use("/api/v0/ventas", ventasRouter);
-app.use('/api/v0/mantenimientos', mantenimientoRouter);
-app.use('/api/v0/tareas', tareaRouter);
-app.use("/api/v0/login",  loginRouter);
-app.use("/api/v0/fincas", fincaRoutes);
-app.use('/api/v0/lecturasFisicoQuimicas', fisicoQuimicaRoutes);
-app.use('/api/v0/registrosTrazabilidad', trazabilidadRoutes);
-
-/*
-//////////////////////////////////////////////////////////
 app.use("/api/v0/colaboradores", colaboradoresRouter);
 app.use("/api/v0/crecimiento", crecimientoRouter);
 app.use("/api/v0/estanques", estanquesRouter);
@@ -140,19 +102,13 @@ app.get("/", (req, res) => {
 
 /*
 //////////////////////////////////////////////////////////
-MANEJO DE RUTAS NO ENCONTRADAS
+INICIALIZACION DEL SERVIDOR
 //////////////////////////////////////////////////////////
+Levanta el servicio HTTP para comenzar a escuchar las
+peticiones entrantes.
 */
-
-app.use((req, res) => {
-
-    res.status(404).json({
-
-        success: false,
-        message: "La ruta solicitada no existe."
-
-    });
-
+app.listen(PORT, () => {
+    console.log(`Servidor ejecutándose en puerto http://localhost:${PORT}`);
 });
 
 /*

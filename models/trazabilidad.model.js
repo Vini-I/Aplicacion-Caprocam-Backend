@@ -4,12 +4,14 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: trazabilidad.model.js
 Autor: Samuel
-Fecha: 29/06/2026
+Fecha: 05/07/2026
 Modulo: Trazabilidad
 Descripcion:
-Model encargado de las operaciones de datos del
-modulo de trazabilidad. Actualmente utiliza datos
-mock mientras se implementa la base de datos.
+Capa de datos del modulo de trazabilidad.
+Trabaja con la base de datos principal MySQL.
+Contiene las consultas necesarias para obtener,
+crear y eliminar logicamente registros de
+trazabilidad.
 //////////////////////////////////////////////////////////
 */
 
@@ -18,55 +20,20 @@ mock mientras se implementa la base de datos.
 IMPORTS
 //////////////////////////////////////////////////////////
 
-Descripcion de seccion
-
-Contiene los imports necesarios para el archivo.
-
+Configuracion de base de datos.
 */
 
-// Configuraciones
-// import pool from "../config/db.js";
+import pool from "../config/database.js";
 
 /*
 //////////////////////////////////////////////////////////
-VARIABLES DE ENTORNO
+CONSTANTES
 //////////////////////////////////////////////////////////
 
-Descripcion de seccion
-
-Este archivo actualmente no utiliza variables
-de entorno.
-
+Constantes utilizadas por el modelo.
 */
 
-/*
-//////////////////////////////////////////////////////////
-MOCK DATA
-//////////////////////////////////////////////////////////
-
-Descripcion de seccion
-
-Datos temporales mientras se implementa la
-base de datos.
-
-*/
-
-let registrosTrazabilidad = [
-    {
-        id: 1,
-        fincaId: 1,
-        estanqueOrigenId: "E-01",
-        estanqueDestinoId: "E-05",
-        fecha: "2026-06-28",
-        colaboradorId: 3,
-        tamano: 8.5,
-        dias: 45,
-        pl: 5000,
-        tipoMovimiento: "SIEMBRA",
-        activo: true,
-        creadoEn: "2026-06-28T00:00:00"
-    }
-];
+const TIPO_MOVIMIENTO = "SIEMBRA";
 
 /*
 //////////////////////////////////////////////////////////
@@ -74,126 +41,332 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
 Contiene las funciones exportables que interactuan
-con la fuente de datos del modulo de trazabilidad.
+directamente con la base de datos MySQL.
 */
 
 export async function findAll() {
 
     /*
     Descripcion:
-    Obtiene todos los registros de trazabilidad.
+    Obtiene todos los registros activos de
+    trazabilidad.
 
     Parametros:
     No posee.
 
     Retorna:
-    Lista con todos los registros.
+    Lista de registros.
     */
 
-    return registrosTrazabilidad;
+    const [rows] = await pool.execute(`
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            estanque_origen_id,
+            estanque_destino_id,
+            colaborador_id,
+            fecha,
+            tamano,
+            dias,
+            pl,
+            tipo_movimiento,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM trazabilidad
+        WHERE deleted_at IS NULL
+        AND activo = TRUE
+        ORDER BY id DESC
+    `);
 
+    return mapearLista(rows);
 }
 
 export async function findById(id) {
 
     /*
     Descripcion:
-    Busca un registro por su ID.
+    Busca un registro por su identificador.
 
     Parametros:
     - id: Identificador del registro.
 
     Retorna:
-    El registro encontrado o null si no existe.
+    Registro encontrado o null.
     */
 
-    return (
-        registrosTrazabilidad.find(
-            registro => registro.id === Number(id)
-        ) || null
-    );
+    const [rows] = await pool.execute(`
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            finca_id,
+            estanque_origen_id,
+            estanque_destino_id,
+            colaborador_id,
+            fecha,
+            tamano,
+            dias,
+            pl,
+            tipo_movimiento,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM trazabilidad
+        WHERE id = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        LIMIT 1
+    `, [id]);
 
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return mapearFila(rows[0]);
 }
 
 export async function create(dto) {
 
     /*
     Descripcion:
-    Agrega un nuevo registro de trazabilidad.
+    Inserta un nuevo registro de trazabilidad
+    en la base de datos.
 
     Parametros:
-    - dto: Objeto TrazabilidadDTO.
+    - dto: Objeto TrazabilidadDTO con la
+      informacion del registro.
 
     Retorna:
-    El nuevo registro creado.
+    - Registro creado consultado nuevamente
+      desde la base de datos.
     */
 
-    const nuevoRegistro = {
-        id: registrosTrazabilidad.length + 1,
-        ...dto,
-        tipoMovimiento: "SIEMBRA",
-        activo: true,
-        creadoEn: new Date().toISOString()
-    };
+    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
+    const fecha = normalizarFechaMysql(dto.fecha);
 
-    registrosTrazabilidad.push(nuevoRegistro);
-
-    return nuevoRegistro;
-
-}
-
-export async function update(id, dto) {
-
-    /*
-    Descripcion:
-    Actualiza un registro existente.
-
-    Parametros:
-    - id: Identificador del registro.
-    - dto: Datos actualizados.
-
-    Retorna:
-    El registro actualizado o null si no existe.
-    */
-
-    const indice = registrosTrazabilidad.findIndex(
-        registro => registro.id === Number(id)
+    const [result] = await pool.execute(
+        `
+        INSERT INTO trazabilidad (
+            grupo_datos,
+            finca_id,
+            estanque_origen_id,
+            estanque_destino_id,
+            colaborador_id,
+            fecha,
+            tamano,
+            dias,
+            pl,
+            tipo_movimiento
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+            grupoDatos,
+            dto.fincaId,
+            dto.estanqueOrigenId,
+            dto.estanqueDestinoId,
+            dto.colaboradorId,
+            fecha,
+            dto.tamano,
+            dto.dias,
+            dto.pl,
+            TIPO_MOVIMIENTO
+        ]
     );
 
-    if (indice === -1) {
-        return null;
-    }
-
-    registrosTrazabilidad[indice] = {
-        ...registrosTrazabilidad[indice],
-        ...dto
-    };
-
-    return registrosTrazabilidad[indice];
-
+    return await findById(result.insertId);
 }
 
 export async function remove(id) {
 
     /*
     Descripcion:
-    Realiza el borrado logico de un registro.
+    Realiza el borrado logico de un registro
+    de trazabilidad.
 
     Parametros:
     - id: Identificador del registro.
 
     Retorna:
-    El registro actualizado o null si no existe.
+    - Registro eliminado logicamente.
+    - null si no existe.
     */
 
-    const registro = await findById(id);
+    const actual = await findById(id);
 
-    if (!registro) {
+    if (!actual) {
         return null;
     }
 
-    registro.activo = !registro.activo;
+    await pool.execute(
+        `
+        UPDATE trazabilidad
+        SET
+        activo = FALSE,
+        deleted_at = CURRENT_TIMESTAMP,
+        version = version + 1
+        WHERE id = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        `,
+        [id]
+    );
 
-    return registro;
+    return actual;
+}
 
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+
+Contiene funciones internas utilizadas para
+mapear y normalizar la informacion obtenida
+desde la base de datos.
+*/
+
+function mapearLista(rows) {
+
+    /*
+    Descripcion:
+    Convierte una lista de filas obtenidas
+    desde MySQL al formato utilizado por el
+    backend.
+
+    Parametros:
+    - rows: Lista de filas obtenidas desde MySQL.
+
+    Retorna:
+    Lista de registros mapeados.
+    */
+
+    const resultado = [];
+
+    for (let i = 0; i < rows.length; i++) {
+        resultado.push(mapearFila(rows[i]));
+    }
+
+    return resultado;
+}
+
+function mapearFila(row) {
+
+    /*
+    Descripcion:
+    Convierte una fila de MySQL al formato
+    camelCase utilizado por el backend.
+
+    Parametros:
+    - row: Fila obtenida desde MySQL.
+
+    Retorna:
+    Objeto de trazabilidad.
+    */
+
+    return {
+        id: row.id,
+        uuid: row.uuid,
+        grupoDatos: row.grupo_datos,
+        fincaId: row.finca_id,
+        estanqueOrigenId: row.estanque_origen_id,
+        estanqueDestinoId: row.estanque_destino_id,
+        colaboradorId: row.colaborador_id,
+        fecha: formatearFecha(row.fecha),
+        tamano: Number(row.tamano),
+        dias: Number(row.dias),
+        pl: Number(row.pl),
+        tipoMovimiento: row.tipo_movimiento,
+        activo: Boolean(row.activo),
+        fechaCreacion: row.fecha_creacion,
+        fechaActualizacion: row.fecha_actualizacion,
+        deletedAt: row.deleted_at,
+        version: row.version
+    };
+}
+
+function obtenerGrupoDatos(valor) {
+
+    /*
+    Descripcion:
+    Obtiene el grupo de datos que utilizara
+    el registro.
+
+    Si no se recibe ningun valor se utiliza
+    el grupo 1 mientras se implementa la
+    autenticacion.
+
+    Parametros:
+    - valor: Grupo de datos.
+
+    Retorna:
+    Numero del grupo de datos.
+    */
+
+    if (valor === undefined) {
+        return 1;
+    }
+
+    if (valor === null) {
+        return 1;
+    }
+
+    if (String(valor).trim() === "") {
+        return 1;
+    }
+
+    return Number(valor);
+}
+
+function normalizarFechaMysql(valor) {
+
+    /*
+    Descripcion:
+    Convierte una fecha al formato
+    YYYY-MM-DD compatible con MySQL.
+
+    Parametros:
+    - valor: Fecha recibida.
+
+    Retorna:
+    Fecha normalizada.
+    */
+
+    if (valor instanceof Date) {
+        return valor.toISOString().slice(0, 10);
+    }
+
+    return String(valor);
+}
+
+function formatearFecha(valor) {
+
+    /*
+    Descripcion:
+    Convierte una fecha obtenida desde MySQL
+    al formato YYYY-MM-DD.
+
+    Parametros:
+    - valor: Fecha recibida desde MySQL.
+
+    Retorna:
+    Fecha formateada.
+    */
+
+    if (!valor) {
+        return null;
+    }
+
+    if (valor instanceof Date) {
+        return valor.toISOString().slice(0, 10);
+    }
+
+    return String(valor);
 }

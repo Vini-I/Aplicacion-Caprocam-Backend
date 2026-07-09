@@ -2,59 +2,17 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo:     loginRoles.model.js
-Autor:       Rodolfo Chaves
-Fecha:       28/06/2026
-Modulo:      Login
+Archivo: loginRoles.model.js
+Autor: Rodolfo Chaves
+Fecha: 28/06/2026
+Modulo: Login
 Descripcion:
 Capa de datos del modulo de login para roles.
-Por ahora trabaja con datos mock. Cuando haya DB,
-solo este archivo cambia.
+Trabaja con la tabla roles de MySQL.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-MOCK DATA
-//////////////////////////////////////////////////////////
-
-Datos de prueba que simulan la tabla roles.
-Cuando se conecte una DB real, esta seccion desaparece.
-pantallasPermitidas controla que vistas muestra la app
-movil segun el rol del operario que valido su PIN.
-*/
-
-const roles = [
-    {
-        id: 1,
-        nombre: 'Administrador',
-        pantallasPermitidas: ['dashboard', 'usuarios', 'reportes']
-    },
-    {
-        id: 2,
-        nombre: 'Operario de alimentacion',
-        pantallasPermitidas: [
-            'registro-alimentacion',
-            'historial-estanques'
-        ]
-    },
-    {
-        id: 3,
-        nombre: 'Supervisor de estanques',
-        pantallasPermitidas: [
-            'registro-alimentacion',
-            'historial-estanques',
-            'supervision',
-            'reportes-campo'
-        ]
-    },
-    {
-        id: 4,
-        nombre: 'Tecnico de calidad',
-        pantallasPermitidas: ['muestras', 'laboratorio', 'reportes-campo']
-    }
-];
-
+import pool from "../config/database.js";
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
@@ -64,8 +22,8 @@ Contiene las funciones exportables que interactuan
 con la fuente de datos del modulo de login para roles.
 */
 
-export function findById(id) {
-    /*
+export async function findById(id) {
+      /*
     Descripcion:
     Busca un rol por su ID numerico.
 
@@ -75,10 +33,35 @@ export function findById(id) {
     Retorna:
     - El objeto rol si existe, o null si no se encuentra.
     */
-    return roles.find((r) => r.id === Number(id)) ?? null;
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            nombre,
+            descripcion,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM roles
+        WHERE id = ?
+          AND deleted_at IS NULL
+          AND activo = TRUE
+        LIMIT 1
+        `,
+        [id]
+    );
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return mapearRol(rows[0]);
 }
 
-export function findAll() {
+export async function findAll() {
     /*
     Descripcion:
     Devuelve todos los roles disponibles en el sistema.
@@ -87,7 +70,48 @@ export function findAll() {
     No posee.
 
     Retorna:
-    - Copia del arreglo completo de roles.
+    - Arreglo con todos los roles disponibles.
     */
-    return [...roles];
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            nombre,
+            descripcion,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM roles
+        WHERE deleted_at IS NULL
+          AND activo = TRUE
+        ORDER BY nombre ASC
+        `
+    );
+
+    return rows.map(mapearRol);
+}
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+ 
+Contiene funciones internas de mapeo de roles.
+*/
+
+function mapearRol(row) {
+    return {
+        id: row.id,
+        uuid: row.uuid,
+        nombre: row.nombre,
+        descripcion: row.descripcion,
+        activo: Boolean(row.activo),
+        fechaCreacion: row.fecha_creacion,
+        fechaActualizacion: row.fecha_actualizacion,
+        deletedAt: row.deleted_at,
+        version: row.version
+    };
 }

@@ -19,40 +19,7 @@ IMPORTS
 */
 import { mantVentaDTO } from '../dtos/mantVentas.dto.js';
 
-/*
-//////////////////////////////////////////////////////////
-MOCK DATA
-//////////////////////////////////////////////////////////
-*/
-
-let ventas = [
-    {
-        id: '1',
-        finca: 'Finca La Perla',
-        estanque: 'EST-01',
-        pesoPromedio: 15.5,
-        tamanoPromedio: 12.0,
-        cantVendida: 1000,
-        precioKilo: 4500,
-        fecha: '2026-06-20',
-        total: 4500000,
-        colaborador: 'Marco Vásquez',
-        comprador: 'Mariscos del Rey'
-    },
-    {
-        id: '2',
-        finca: 'Finca El Oasis',
-        estanque: 'EST-02',
-        pesoPromedio: 14.2,
-        tamanoPromedio: 11.4,
-        cantVendida: 850,
-        precioKilo: 4700,
-        fecha: '2026-06-22',
-        total: 3995000,
-        colaborador: 'Ana Rojas',
-        comprador: 'Peces del Pacífico'
-    }
-];
+import pool from "../config/database.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -60,7 +27,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export function findAll() {
+export async function findAll() {
     /*
     Descripcion:
     Obtiene todos los registros de ventas.
@@ -71,10 +38,28 @@ export function findAll() {
     Retorna:
     - Un arreglo con todos los registros de ventas.
     */
-    return ventas;
+
+    const [rows] = await pool.execute(
+        `SELECT
+            id,
+            finca_id,
+            estanque_id,
+            colaborador_id,
+            comprador_id,
+            peso_promedio,
+            tamano_promedio,
+            cantidad_vendida,
+            precio_kilo,
+            total,
+            fecha
+        FROM ventas
+        WHERE deleted_at IS NULL`
+    );
+
+    return rows;
 }
 
-export function findById(id) {
+export async function findById(id) {
     /*
     Descripcion:
     Obtiene un registro de ventas por su ID.
@@ -85,10 +70,30 @@ export function findById(id) {
     Retorna:
     - El registro de ventas si se encuentra, o null si no existe.
     */
-    return ventas.find(v => v.id === id) || null;
+    const [rows] = await pool.execute(
+        `SELECT
+            id,
+            finca_id,
+            estanque_id,
+            colaborador_id,
+            comprador_id,
+            peso_promedio,
+            tamano_promedio,
+            cantidad_vendida,
+            precio_kilo,
+            total,
+            fecha
+        FROM ventas
+        WHERE id=? 
+        AND deleted_at IS NULL`,
+        [id]
+
+    );
+
+    return rows[0] || null;
 }
 
-export function create(dto) {
+export async function create(dto) {
     /*
     Descripcion:
     Crea un nuevo registro de ventas.
@@ -99,24 +104,40 @@ export function create(dto) {
     Retorna:
     - El registro de ventas creado
     */
-    const nuevaVenta = {
-        id: dto.id,
-        finca: dto.finca,
-        estanque: dto.estanque,
-        pesoPromedio: dto.pesoPromedio,
-        tamanoPromedio: dto.tamanoPromedio,
-        cantVendida: dto.cantVendida,
-        precioKilo: dto.precioKilo,
-        fecha: dto.fecha,
-        total: dto.total,
-        colaborador: dto.colaborador,
-        comprador: dto.comprador
-    };
-    ventas.push(nuevaVenta);
-    return nuevaVenta;
+
+    const [result] = await pool.execute(
+        `INSERT INTO ventas (
+            grupo_datos,
+            finca_id,
+            estanque_id,
+            colaborador_id,
+            comprador_id,
+            peso_promedio,
+            tamano_promedio,
+            cantidad_vendida,
+            precio_kilo,
+            total,
+            fecha 
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`, 
+        [
+            dto.grupoDatos,
+            dto.finca,
+            dto.estanque,
+            dto.colaborador,
+            dto.comprador,
+            dto.pesoPromedio,
+            dto.tamanoPromedio,
+            dto.cantVendida,
+            dto.precioKilo,
+            dto.total,
+            dto.fecha
+        ]
+    ); 
+
+    return await findById(result.insertId);
 }
 
-export function update(id, dto) {
+export async function update(id, dto) {
     /*
     Descripcion:
     Actualiza un registro de ventas por su ID.
@@ -128,27 +149,41 @@ export function update(id, dto) {
     Retorna:
     - El registro de ventas actualizado si se encuentra, o null si no existe.
     */
-    const index = ventas.findIndex(v => v.id === id);
-    if (index === -1) return null;
-
-    ventas[index] = {
-        ...ventas[index],
-        finca: dto.finca || ventas[index].finca,
-        estanque: dto.estanque || ventas[index].estanque,
-        pesoPromedio: dto.pesoPromedio !== undefined ? dto.pesoPromedio : ventas[index].pesoPromedio,
-        tamanoPromedio: dto.tamanoPromedio !== undefined ? dto.tamanoPromedio : ventas[index].tamanoPromedio,
-        cantVendida: dto.cantVendida !== undefined ? dto.cantVendida : ventas[index].cantVendida,
-        precioKilo: dto.precioKilo !== undefined ? dto.precioKilo : ventas[index].precioKilo,
-        fecha: dto.fecha || ventas[index].fecha,
-        total: dto.total !== undefined ? dto.total : ventas[index].total,
-        colaborador: dto.colaborador || ventas[index].colaborador,
-        comprador: dto.comprador || ventas[index].comprador
-    };
-
-    return ventas[index];
+   const [result] = await pool.execute(
+        `UPDATE ventas
+        SET
+            grupo_datos=?,
+            finca_id=?,
+            estanque_id=?,
+            colaborador_id=?,
+            comprador_id=?,
+            peso_promedio=?,
+            tamano_promedio=?,
+            cantidad_vendida=?,
+            precio_kilo=?,
+            total=?,
+            fecha=?
+        WHERE id=?`,
+        [
+            dto.grupoDatos,
+            dto.finca,
+            dto.estanque,
+            dto.colaborador,
+            dto.comprador,
+            dto.pesoPromedio,
+            dto.tamanoPromedio,
+            dto.cantVendida,
+            dto.precioKilo,
+            dto.total,
+            dto.fecha,
+            id
+        ]
+   );
+   
+   return await findById(id);
 }
 
-export function remove(id) {
+export async function remove(id) {
     /*
     Descripcion:
     Elimina un registro de ventas por su ID.
@@ -159,9 +194,16 @@ export function remove(id) {
     Retorna:
     - El registro de ventas eliminado si se encuentra, o null si no existe.
     */
-    const index = ventas.findIndex(v => v.id === id);
-    if (index === -1) return null;
+   const venta = await findById(id);
 
-    const eliminado = ventas.splice(index, 1);
-    return eliminado[0];
+   if(!venta){
+    return null;
+   }
+
+   await pool.execute(
+        `DELETE FROM ventas
+        WHERE id=?`,
+        [id]
+   )
+   return venta; 
 }
