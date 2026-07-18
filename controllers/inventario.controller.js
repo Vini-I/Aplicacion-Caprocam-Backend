@@ -4,14 +4,11 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: inventario.controller.js
 Autor: Brayan / Joan
-Fecha: 30/06/2026 adaptado a MySQL: 06/07/2026
+Fecha: 30/06/2026
 Modulo: Inventario
 Descripcion:
 Recibe las peticiones HTTP, delega al modelo directamente
-y valida usando el servicio. adaptada para DB:
-- Se elimina validacion de codigo (no existe en schema).
-- 'proveedor' (string) -> 'proveedorId' (int, opcional).
-- Todos los handlers son async/await con try/catch.  
+y valida usando el servicio.
 //////////////////////////////////////////////////////////
 */
 
@@ -25,6 +22,7 @@ import { InventarioDTO, UnidadInventario } from '../dtos/inventario.dto.js';
 
 // Servicios (Validaciones)
 import {
+    isCodigo,
     isNumeroValido,
     isEmpty,
     conStockBajo,
@@ -47,9 +45,6 @@ function validarCuerpo(body, res) {
     /*
     Descripcion:
     Valida los campos obligatorios y formatos del body de inventario.
-    es sincrona (sin DB).
-    - 'codigo' eliminado: no existe en el schema DB.
-    - 'proveedorId' es opcional (FK nullable).
 
     Parametros:
     - body: Objeto body del request.
@@ -81,22 +76,6 @@ function validarCuerpo(body, res) {
 
     if (!isNumeroValido(body.precioUnidad)) {
         return error(res, 'El precio por unidad debe ser mayor o igual a 0.', null, 422);
-    }
-
-    if (!isEmpty(body.proveedorId)) {
-            const proveedorId = Number(body.proveedorId);
-            if (
-                Number.isNaN(proveedorId) ||
-                !Number.isInteger(proveedorId) ||
-                proveedorId <= 0
-            ) {
-                return error(
-                    res,
-                    'El proveedorId debe ser un entero positivo.',
-                    null,
-                    422
-                );
-            }
     }
 
     return null;
@@ -135,7 +114,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export  function getInventarios(req, res) {
+export function getInventarios(req, res) {
     /*
     Descripcion:
     Obtiene todos los productos activos del inventario con stockBajo.
@@ -147,16 +126,8 @@ export  function getInventarios(req, res) {
     Retorna:
     - 200 con la lista de productos
     */
-    try {
-        const data = listaConStockBajo(await InventarioModel.findAll());
-        return exito(
-            res, 'Productos de inventario obtenidos correctamente.', data
-        );
-    } catch (err) {
-        return error(
-            res, 'Error al obtener el inventario.', err, 500
-        );
-    }
+    const data = listaConStockBajo(InventarioModel.findAll());
+    return exito(res, 'Productos de inventario obtenidos correctamente.', data);
 }
 
 export function getInventarioById(req, res) {
@@ -170,29 +141,19 @@ export function getInventarioById(req, res) {
 
     Retorna:
     - 200 con el producto o 404 si no existe
-    - 400 si el ID es invalido
-    - 500 si ocurre un error en la DB
-    - 404 si el producto no existe
     */
     const errId = validarIdParametro(req.params.id, res);
     if (errId) return errId;
 
-    try {
-        const producto = await InventarioModel.findById(req.params.id);
-        if (!producto) {
-            return error(res, 'Producto no encontrado.', null, 404);
-        }
-        return exito(
-            res, 'Producto obtenido correctamente.', conStockBajo(producto)
-        );
-    } catch (err) {
-        return error(
-            res, 'Error al obtener el producto.', err, 500
-        );
+    const producto = InventarioModel.findById(req.params.id);
+    if (!producto) {
+        return error(res, 'Producto no encontrado.', null, 404);
     }
+
+    return exito(res, 'Producto obtenido correctamente.', conStockBajo(producto));
 }
 
-export  function createInventario(req, res) {
+export function createInventario(req, res) {
     /*
     Descripcion:
     Crea un nuevo producto de inventario validando codigo unico.
@@ -207,39 +168,20 @@ export  function createInventario(req, res) {
     const err = validarCuerpo(req.body, res);
     if (err) return err;
 
-try {
-        const existente = await InventarioModel.findByNombre(req.body.nombre);
+    if (req.body.codigo) {
+        const existente = InventarioModel.findByCodigo(req.body.codigo);
         if (existente) {
-            return error(
-                res, 'Ya existe un producto con ese nombre.', null, 409
-            );
+            return error(res, 'Ya existe un producto con ese código.', null, 409);
         }
-
-        if (!isEmpty(req.body.proveedorId)) {
-            const provExiste = await InventarioModel.verificarProveedorExiste(
-                req.body.proveedorId
-            );
-            if (!provExiste) {
-                return error(
-                    res, 'El proveedor indicado no existe.', null, 400
-                );
-            }
-        }
-
-        const dto   = new InventarioDTO(req.body);
-        const nuevo = await InventarioModel.create(dto);
-
-        return exito(
-            res, 'Producto creado correctamente.', conStockBajo(nuevo), 201
-        );
-    } catch (err) {
-        return error(
-            res, 'Error al crear el producto.', err, 500
-        );
     }
+
+    const dto = new InventarioDTO(req.body);
+    const nuevo = InventarioModel.create(dto);
+
+    return exito(res, 'Producto creado correctamente.', conStockBajo(nuevo), 201);
 }
 
-export  function updateInventario(req, res) {
+export function updateInventario(req, res) {
     /*
     Descripcion:
     Actualiza un producto existente validando codigo unico.
@@ -254,50 +196,35 @@ export  function updateInventario(req, res) {
     const errId = validarIdParametro(req.params.id, res);
     if (errId) return errId;
 
-    const errBody = validarCuerpo(req.body, res);
-    if (errBody) return errBody;
+    const err = validarCuerpo(req.body, res);
+    if (err) return err;
 
-    try {
-        const productoActual = await InventarioModel.findById(req.params.id);
-        if (!productoActual) {
-            return error(res, 'Producto no encontrado.', null, 404);
-        }
+    const productoActual = InventarioModel.findById(req.params.id);
+    if (!productoActual) {
+        return error(res, 'Producto no encontrado.', null, 404);
+    }
 
-        const existente = await InventarioModel.findByNombreIgnorandoId(
-            req.body.nombre,
+    if (req.body.codigo) {
+        const existente = InventarioModel.findByCodigoIgnorandoId(
+            req.body.codigo,
             req.params.id
         );
         if (existente) {
-            return error(
-                res, 'Ya existe otro producto con ese nombre.', null, 409
-            );
+            return error(res, 'Ya existe otro producto con ese código.', null, 409);
         }
-
-        if (!isEmpty(req.body.proveedorId)) {
-            const provExiste = await InventarioModel.verificarProveedorExiste(
-                req.body.proveedorId
-            );
-            if (!provExiste) {
-                return error(
-                    res, 'El proveedor indicado no existe.', null, 400
-                );
-            }
-        }
-
-        const dto        = new InventarioDTO(req.body);
-        const actualizado = await InventarioModel.update(req.params.id, dto);
-
-        return exito(
-            res, 'Producto actualizado correctamente.', conStockBajo(actualizado)
-        );
-    } catch (err) {
-        return error(
-            res, 'Error al actualizar el producto.', err, 500
-        );
     }
+
+    const dto = new InventarioDTO(req.body);
+    const actualizado = InventarioModel.update(req.params.id, dto);
+
+    return exito(
+        res, 
+        'Producto actualizado correctamente.', 
+        conStockBajo(actualizado)
+    );
 }
 
-export  function deleteInventario(req, res) {
+export function deleteInventario(req, res) {
     /*
     Descripcion:
     Desactiva (borrado logico) un producto por su ID.
@@ -312,15 +239,10 @@ export  function deleteInventario(req, res) {
     const errId = validarIdParametro(req.params.id, res);
     if (errId) return errId;
 
-    try {
-        const eliminado = await InventarioModel.remove(req.params.id);
-        if (!eliminado) {
-            return error(res, 'Producto no encontrado.', null, 404);
-        }
-        return exito(res, 'Producto eliminado correctamente.', eliminado);
-    } catch (err) {
-        return error(
-            res, 'Error al eliminar el producto.', err, 500
-        );
+    const eliminado = InventarioModel.remove(req.params.id);
+    if (!eliminado) {
+        return error(res, 'Producto no encontrado.', null, 404);
     }
+
+    return exito(res, 'Producto eliminado correctamente.', eliminado);
 }

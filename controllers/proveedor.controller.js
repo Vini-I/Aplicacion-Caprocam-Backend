@@ -68,9 +68,6 @@ function validarCuerpo(body, res) {
     - Objeto error de Express si falla, o null si es correcto.
     */
     const errores = [];
-    const nombre = body.nombre_empresa ?? body.nombre;
-    const tipoProducto = body.tipo_producto ?? body.tipoProducto;
-    const correo = body.correo_electronico ?? body.correo;
 
     if (isEmpty(body.nombre)) {
         errores.push("El campo nombre es requerido.");
@@ -117,13 +114,35 @@ function validarIdParametro(id, res) {
     }
     return null;
 }
+
+function generarIniciales(nombre) {
+    /*
+    Descripcion:
+    Genera iniciales basadas en el nombre del proveedor.
+
+    Parametros:
+    - nombre: Nombre completo del proveedor.
+
+    Retorna:
+    - String de iniciales de 3 letras en mayusculas.
+    */
+    if (!nombre) return "";
+    return nombre
+        .split(" ")
+        .filter(word => word.length > 0)
+        .map(word => word[0])
+        .join("")
+        .toUpperCase()
+        .substring(0, 3);
+}
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export async function listarProveedores(req, res) {
+export function listarProveedores(req, res) {
     /*
     Descripcion:
     Controlador para obtener todos los proveedores activos.
@@ -135,21 +154,15 @@ export async function listarProveedores(req, res) {
     Retorna:
     - 200 con la lista de proveedores DTO
     */
-    try {
-        const proveedores = await proveedorModel.findAll();
-        return exito(
-            res,
-            "Proveedores obtenidos correctamente.",
-            proveedoresDTO(proveedores)
-        );
-    } catch (err) {
-        return error(
-            res, "Error al obtener los proveedores.", err, 500
-        );
-    }
+    const proveedores = proveedorModel.findAll();
+    return exito(
+        res,
+        "Proveedores obtenidos correctamente.",
+        proveedoresDTO(proveedores)
+    );
 }
 
-export async function obtenerProveedor(req, res) {
+export function obtenerProveedor(req, res) {
     /*
     Descripcion:
     Controlador para obtener un proveedor activo por su ID.
@@ -164,24 +177,19 @@ export async function obtenerProveedor(req, res) {
     const errId = validarIdParametro(req.params.id, res);
     if (errId) return errId;
 
-    try {
-        const proveedor = await proveedorModel.findById(req.params.id);
-        if (!proveedor) {
-            return error(res, "Proveedor no encontrado.", null, 404);
-        }
-        return exito(
-            res,
-            "Proveedor obtenido correctamente.",
-            proveedorDTO(proveedor)
-        );
-    } catch (err) {
-        return error(
-            res, "Error al obtener el proveedor.", err, 500
-        );
+    const proveedor = proveedorModel.findById(req.params.id);
+    if (!proveedor) {
+        return error(res, "Proveedor no encontrado.", null, 404);
     }
+
+    return exito(
+        res,
+        "Proveedor obtenido correctamente.",
+        proveedorDTO(proveedor)
+    );
 }
 
-export async function crearProveedor(req, res) {
+export function crearProveedor(req, res) {
     /*
     Descripcion:
     Controlador para crear un nuevo proveedor.
@@ -196,37 +204,31 @@ export async function crearProveedor(req, res) {
     const err = validarCuerpo(req.body, res);
     if (err) return err;
 
-    try {
-        const nombre = req.body.nombre_empresa ?? req.body.nombre;
-        const existente = await proveedorModel.findByName(nombre);
-        if (existente) {
-            return error(
-                res, "Ya existe un proveedor con ese nombre.", null, 409
-            );
-        }
-
-        const dto    = new proveedorDto(req.body);
-        const nuevo  = await proveedorModel.create(dto);
-
-        return exito(
-            res,
-            "Proveedor creado correctamente.",
-            proveedorDTO(nuevo),
-            201
-        );
-    } catch (err) {
-        if (err.code === "ER_DUP_ENTRY") {
-            return error(
-                res, "Ya existe un proveedor con ese nombre.", err, 409
-            );
-        }
+    const existente = proveedorModel.findByName(req.body.nombre);
+    if (existente) {
         return error(
-            res, "Error al crear el proveedor.", err, 500
+            res,
+            "Ya existe un proveedor con ese nombre.",
+            null,
+            409
         );
     }
+
+    const iniciales = generarIniciales(req.body.nombre);
+    const bodyConIniciales = { ...req.body, iniciales };
+
+    const dto = new proveedorDto(bodyConIniciales);
+    const nuevo = proveedorModel.create(dto);
+
+    return exito(
+        res,
+        "Proveedor creado correctamente.",
+        proveedorDTO(nuevo),
+        201
+    );
 }
 
-export async function actualizarProveedor(req, res) {
+export function actualizarProveedor(req, res) {
     /*
     Descripcion:
     Controlador para actualizar un proveedor existente.
@@ -241,46 +243,41 @@ export async function actualizarProveedor(req, res) {
     const errId = validarIdParametro(req.params.id, res);
     if (errId) return errId;
 
-    const errBody = validarCuerpo(req.body, res);
-    if (errBody) return errBody;
+    const err = validarCuerpo(req.body, res);
+    if (err) return err;
 
-    try {
-        const proveedorActual = await proveedorModel.findById(req.params.id);
-        if (!proveedorActual) {
-            return error(res, "Proveedor no encontrado.", null, 404);
-        }
+    const proveedorActual = proveedorModel.findById(req.params.id);
+    if (!proveedorActual) {
+        return error(res, "Proveedor no encontrado.", null, 404);
+    }
 
-        const existente = await proveedorModel.findByNameIgnorandoId(
-            req.body.nombre_empresa ?? req.body.nombre,
-            req.params.id
-        );
-        if (existente) {
-            return error(
-                res, "Ya existe otro proveedor con ese nombre.", null, 409
-            );
-        }
-
-        const dto        = new proveedorDto(req.body);
-        const actualizado = await proveedorModel.update(req.params.id, dto);
-
-        return exito(
-            res,
-            "Proveedor actualizado correctamente.",
-            proveedorDTO(actualizado)
-        );
-    } catch (err) {
-        if (err.code === "ER_DUP_ENTRY") {
-            return error(
-                res, "Ya existe un proveedor con ese nombre.", err, 409
-            );
-        }
+    const existente = proveedorModel.findByNameIgnorandoId(
+        req.body.nombre,
+        req.params.id
+    );
+    if (existente) {
         return error(
-            res, "Error al actualizar el proveedor.", err, 500
+            res,
+            "Ya existe otro proveedor con ese nombre.",
+            null,
+            409
         );
     }
+
+    const iniciales = generarIniciales(req.body.nombre);
+    const bodyConIniciales = { ...req.body, iniciales };
+
+    const dto = new proveedorDto(bodyConIniciales);
+    const actualizado = proveedorModel.update(req.params.id, dto);
+
+    return exito(
+        res,
+        "Proveedor actualizado correctamente.",
+        proveedorDTO(actualizado)
+    );
 }
 
-export async function eliminarProveedor(req, res) {
+export function eliminarProveedor(req, res) {
     /*
     Descripcion:
     Controlador para desactivar (borrado logico) un proveedor.
@@ -295,19 +292,14 @@ export async function eliminarProveedor(req, res) {
     const errId = validarIdParametro(req.params.id, res);
     if (errId) return errId;
 
-    try {
-        const eliminado = await proveedorModel.remove(req.params.id);
-        if (!eliminado) {
-            return error(res, "Proveedor no encontrado.", null, 404);
-        }
-        return exito(
-            res,
-            "Proveedor eliminado correctamente.",
-            proveedorDTO(eliminado)
-        );
-    } catch (err) {
-        return error(
-            res, "Error al eliminar el proveedor.", err, 500
-        );
+    const eliminado = proveedorModel.remove(req.params.id);
+    if (!eliminado) {
+        return error(res, "Proveedor no encontrado.", null, 404);
     }
+
+    return exito(
+        res,
+        "Proveedor eliminado correctamente.",
+        proveedorDTO(eliminado)
+    );
 }

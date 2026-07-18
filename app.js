@@ -39,11 +39,7 @@ import fincaRoutes from "./routes/finca.routes.js";
 import equipoRouter    from "./routes/equipo.routes.js";
 import fisicoQuimicaRoutes from './routes/fisicoQuimica.routes.js';
 import trazabilidadRoutes from './routes/trazabilidad.routes.js';
-import proveedoresRoute from './routes/proveedor.route.js';
-import inventarioRoute  from './routes/inventario.routes.js';
-import siembraRoute     from './routes/siembra.route.js';
-import loteLarvaRoute   from './routes/loteLarva.routes.js';
-import precriaRoute     from './routes/preCria.routes.js';
+
 /*
 //////////////////////////////////////////////////////////
 CONSTANTES
@@ -88,11 +84,6 @@ app.use("/api/v0/fincas", fincaRoutes);
 app.use("/api/v0/equipos", equipoRouter);
 app.use('/api/v0/lecturasFisicoQuimicas', fisicoQuimicaRoutes);
 app.use('/api/v0/registrosTrazabilidad', trazabilidadRoutes);
-app.use('/api/v0/proveedores', proveedoresRoute);
-app.use('/api/v0/inventario',  inventarioRoute);
-app.use('/api/v0/siembras',     siembraRoute);
-app.use('/api/v0/lotes-larva',  loteLarvaRoute);
-app.use('/api/v0/precrias',     precriaRoute);
 
 /*
 //////////////////////////////////////////////////////////

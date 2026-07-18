@@ -25,7 +25,22 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export function validarBodySiembra(req, res, next) {
+export function validarBodyLote(req, res, next) {
+    /*
+    Descripcion:
+    Valida la presencia del body y campos basicos para crear/editar Lotes.
+    */
+    if (!req.body || Object.keys(req.body).length === 0) {
+        return error(res, "El body no puede estar vacio.", null, 400);
+    }
+    next();
+}
+
+export function validarBodyPrecria(req, res, next) {
+    /*
+    Descripcion:
+    Valida la presencia del body y campos basicos para crear/editar Pre-crias.
+    */
     if (!req.body || Object.keys(req.body).length === 0) {
         return error(res, "El body no puede estar vacio.", null, 400);
     }
