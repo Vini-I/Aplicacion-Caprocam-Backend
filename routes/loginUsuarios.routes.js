@@ -3,11 +3,12 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loginUsuarios.routes.js
-Autor: Rodolfo Chaves
+Autor: Rodolfo Chaves / Marco Vásquez
 Fecha: 28/06/2026
 Modulo: Login
 Descripcion:
 Define las rutas HTTP del modulo de login de usuarios.
+Incluye rutas de JWT (refresh y logout).
 //////////////////////////////////////////////////////////
 */
 
@@ -18,16 +19,17 @@ IMPORTS
 
 Librerias externas
 */
-import { Router } from "express";
+
+import { Router } from 'express';
 
 // Middlewares
-import { verificarAuth } from "../middlewares/auth.middleware.js";
+import { verificarAuth } from '../middlewares/auth.middleware.js';
 import {
     validarBodyLogin,
     validarBodyRegistro,
     validarBodyRegistroOperario,
     validarBodyVerificarPin,
-} from "../middlewares/loginCampos.middleware.js";
+} from '../middlewares/loginCampos.middleware.js';
 
 // Controladores
 import {
@@ -37,7 +39,9 @@ import {
     verificarPin,
     sincronizar,
     obtenerPorId,
-} from "../controllers/loginUsuarios.controller.js";
+    refresh,
+    logout,
+} from '../controllers/loginUsuarios.controller.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -53,19 +57,21 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
+// --- JWT ---
+router.post('/refresh', refresh);
+router.post('/logout',  logout);
+
 // --- Web (administradores) ---
-router.post("/",        validarBodyLogin,    login);
-router.post("/registro", verificarAuth, validarBodyRegistro, registrar);
+router.post('/',         validarBodyLogin,                             login);
+router.post('/registro', verificarAuth, validarBodyRegistro,           registrar);
 
 // --- Movil (operarios de campo) ---
-router.post("/registro-operario",
-    verificarAuth, validarBodyRegistroOperario, registrarOperario
-);
-router.post("/verificar-pin", validarBodyVerificarPin, verificarPin);
-router.get("/sincronizar", verificarAuth, sincronizar);
+router.post('/registro-operario', verificarAuth, validarBodyRegistroOperario, registrarOperario);
+router.post('/verificar-pin',     validarBodyVerificarPin,             verificarPin);
+router.get('/sincronizar',        verificarAuth,                       sincronizar);
 
 // --- Genericas ---
-router.get("/:id", verificarAuth, obtenerPorId);
+router.get('/:id', verificarAuth, obtenerPorId);
 
 /*
 //////////////////////////////////////////////////////////

@@ -7,56 +7,62 @@ Autor: Samuel
 Fecha: 29/06/2026
 Modulo: Fisico Quimica
 Descripcion:
-DTO encargado de recibir la informacion enviada
-desde el cliente y devolver solamente los campos
-que necesita el modelo.
+Archivo de transferencia de datos para el
+modulo de fisico quimica.
+Contiene el caparazon de datos requerido
+por el backend.
 //////////////////////////////////////////////////////////
 */
 
 /*
 //////////////////////////////////////////////////////////
-FUNCIONES DTO
+DTO
 //////////////////////////////////////////////////////////
 
-Descripcion de seccion
-
-Funciones encargadas de transformar la
-informacion recibida desde el cliente.
-
+Caparazon de datos para el modulo de
+fisico quimica.
 */
 
-export class fisicoQuimicaDto {
+export class FisicoQuimicaDTO {
+
     constructor({
+        id,
+        grupoDatos,
         fincaId,
         estanqueId,
         fecha,
         ph,
         salinidad,
         temperatura,
-        oxigeno
+        oxigenoDisuelto
     }) {
-         /*
+
+        /*
         Descripcion:
         Construye un objeto FisicoQuimicaDTO
-        con la informacion enviada desde el
-        cliente.
+        con la informacion recibida.
 
         Parametros:
+        - id: Identificador de la lectura.
+        - grupoDatos: Grupo de datos.
         - fincaId: Identificador de la finca.
         - estanqueId: Identificador del estanque.
-        - fecha: Fecha de la medicion.
-        - ph: Valor del potencial de hidrogeno.
-        - salinidad: Valor de la salinidad.
-        - temperatura: Valor de la temperatura.
-        - oxigenoDisuelto: Valor del oxigeno disuelto.
+        - fecha: Fecha de la lectura.
+        - ph: Valor de pH.
+        - salinidad: Valor de salinidad.
+        - temperatura: Valor de temperatura.
+        - oxigenoDisuelto: Valor de oxigeno disuelto.
         */
 
+        this.id = id;
+        this.grupoDatos = grupoDatos;
         this.fincaId = fincaId;
         this.estanqueId = estanqueId;
         this.fecha = fecha;
         this.ph = ph;
         this.salinidad = salinidad;
         this.temperatura = temperatura;
-        this.oxigeno = oxigeno;
+        this.oxigenoDisuelto = oxigenoDisuelto;
     }
+
 }

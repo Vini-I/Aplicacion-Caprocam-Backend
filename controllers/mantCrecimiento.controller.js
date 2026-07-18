@@ -34,6 +34,14 @@ import { exito, error } from '../common/respuestaJson.js';
 
 /*
 //////////////////////////////////////////////////////////
+CONSTANTES
+//////////////////////////////////////////////////////////
+*/
+
+//const grupoDatos = req.user.grupoDatos;
+
+/*
+//////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 La funcion createCrecimiento() y updateCrecimiento()
@@ -66,7 +74,7 @@ FUNCIONES PRINCIPALES
 Contiene las funciones exportables que manejan cada
 ruta del modulo de crecimiento.
 */
-export function getCrecimientos(req, res) {
+export async function getCrecimientos(req, res) {
     /*
     Descripcion:
     Obtiene todos los registros de crecimiento.
@@ -76,11 +84,11 @@ export function getCrecimientos(req, res) {
     Retorna:
     - 200 con lista de registros de crecimiento
     */
-    const data = MantCrecimientoModel.findAll();
+    const data = await MantCrecimientoModel.findAll();
     return exito(res, 'Registros de crecimiento obtenidos correctamente.', data);
 }
 
-export function getCrecimientoById(req, res) {
+export async function getCrecimientoById(req, res) {
     /*
     Descripcion:
     Obtiene un registro de crecimiento por su ID.
@@ -91,14 +99,14 @@ export function getCrecimientoById(req, res) {
     - 200 con el registro encontrado
     - 404 si no existe
     */
-    const registro = MantCrecimientoModel.findById(req.params.id);
+    const registro = await MantCrecimientoModel.findById(req.params.id);
     if (!registro) {
         return error(res, 'Registro no encontrado.', null, 404);
     }
     return exito(res, 'Registro obtenido correctamente.', registro);
 }
 
-export function updateCrecimiento(req, res) {
+export async function updateCrecimiento(req, res) {
     /*
     Descripcion:
     Actualiza un registro de crecimiento existente.
@@ -116,16 +124,16 @@ export function updateCrecimiento(req, res) {
     */
     const validacionErr = validarCuerpo(req.body, res);
     if (validacionErr) return validacionErr;
-    const { id, finca, estanque, pesoActual } = req.body;
-    const dto = new MantCrecimientoDto(id, finca, estanque, pesoActual);
-    const actualizado = MantCrecimientoModel.update(req.params.id, dto);
+    const { grupoDatos, finca, estanque, colaborador, fechaRegistro, pesoActual } = req.body;
+    const dto = new MantCrecimientoDto(grupoDatos, finca, estanque, colaborador, fechaRegistro, pesoActual);
+    const actualizado = await MantCrecimientoModel.update(req.params.id, dto);
     if (!actualizado) {
         return error(res, "Registro no encontrado", null, 404);
     }
     return exito(res, "Registro de crecimiento actualizado correctamente.", actualizado);
 }
 
-export function createCrecimiento(req, res) {
+export async function createCrecimiento(req, res) {
     /*
     Descripcion:
     Crea un nuevo registro de crecimiento.
@@ -138,13 +146,13 @@ export function createCrecimiento(req, res) {
     */
     const validacionErr = validarCuerpo(req.body, res);
     if (validacionErr) return validacionErr;
-    const { id, finca, estanque, pesoActual } = req.body;
-    const dto = new MantCrecimientoDto(id, finca, estanque, pesoActual);
-    const nuevoRegistro = MantCrecimientoModel.create(dto);
+    const { grupoDatos, finca, estanque, colaborador, fechaRegistro, pesoActual } = req.body;
+    const dto = new MantCrecimientoDto(grupoDatos, finca, estanque, colaborador, fechaRegistro, pesoActual);
+    const nuevoRegistro = await MantCrecimientoModel.create(dto);
     return exito(res, "Registro de crecimiento creado correctamente.", nuevoRegistro, 201);
 }
 
-export function deleteCrecimiento(req, res) {
+export async function deleteCrecimiento(req, res) {
     /*
     Descripcion:
     Elimina un registro de crecimiento por su ID.
@@ -155,7 +163,7 @@ export function deleteCrecimiento(req, res) {
     - 200 con el registro eliminado
     - 404 si no existe
     */
-    const eliminado = MantCrecimientoModel.remove(req.params.id);
+    const eliminado = await MantCrecimientoModel.remove(req.params.id);
     if (!eliminado) {
         return error(res, "Registro no encontrado", null, 404);
     }

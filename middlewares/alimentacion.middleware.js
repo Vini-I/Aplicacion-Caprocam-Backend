@@ -2,86 +2,114 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo:     alimentacion.middleware.js
-Autor:       Felipe Salas
-Fecha:       29/06/2026
-Modulo:      Alimentacion
+Archivo: alimentacion.middleware.js
+Autor: Felipe Salas
+Fecha: 06/07/2026
+Modulo: Alimentacion
 Descripcion:
-Middleware de estructura del modulo de alimentacion.
-Su unica responsabilidad es verificar que el body
-exista y contenga los campos minimos requeridos.
-No valida el contenido de los campos — eso lo hace
-el servicio.
+Middleware de validacion de body para alimentacion.
 //////////////////////////////////////////////////////////
 */
- 
+
 /*
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
- 
+
 Common
 */
- 
-import { error } from '../../../common/respuestaJson.js';
- 
+
+import { error } from "../common/respuestaJson.js";
+
 /*
 //////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
- 
-Campos que deben estar presentes en el body.
-Los campos opcionales (presentacion, proveedor,
-tipoAlimento, observaciones) no se listan aqui.
+
+Campos minimos requeridos en el body para alimentacion.
+Coinciden con las columnas NOT NULL de la tabla alimentaciones,
+mas hora y metodo que el negocio exige aunque la BD los permita NULL.
 */
- 
-const CAMPOS_REQUERIDOS = [
-    'finca',
-    'estanque',
-    'fecha',
-    'hora',
-    'metodo',
-    'cantidadKg',
+
+const camposRequeridos = [
+    "fecha",
+    "hora",
+    "metodo",
+    "cantidadKg"
 ];
- 
+
+/*
+Grupos de alias aceptados para los campos que el frontend
+puede enviar con distintos nombres (idFinca/fincaId/finca
+y idEstanque/estanqueId/estanque).
+*/
+
+const gruposAlias = [
+    { nombre: "idFinca", alias: ["idFinca", "fincaId", "finca"] },
+    { nombre: "idEstanque", alias: ["idEstanque", "estanqueId", "estanque"] }
+];
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
+
+Contiene los middlewares de validacion de body
+para el modulo de alimentacion.
 */
- 
+
 export function validarBodyAlimentacion(req, res, next) {
     /*
     Descripcion:
-    Verifica que el body no este vacio y que contenga
-    todos los campos minimos requeridos para un registro
-    de alimentacion. No valida el valor de los campos,
-    solo su presencia.
- 
+    Verifica que el body no este vacio y contenga
+    los campos minimos requeridos.
+
     Parametros:
-    - req:  Objeto request de Express.
-    - res:  Objeto response de Express.
-    - next: Funcion para continuar al siguiente middleware.
- 
+    - req: Objeto request de Express
+    - res: Objeto response de Express
+    - next: Funcion para pasar al siguiente middleware
+
     Retorna:
-    - next() si el body tiene la estructura correcta.
-    - 400 si el body esta vacio o faltan campos.
+    - next() si el body es valido
+    - 400 si el body esta vacio o faltan campos
     */
-    if (!req.body || Object.keys(req.body).length === 0)
-        return error(res, 'El body no puede estar vacio.', null, 400);
- 
-    const faltantes = CAMPOS_REQUERIDOS.filter(
-        campo => req.body[campo] === undefined
-              || req.body[campo] === null
-    );
- 
-    if (faltantes.length > 0)
+    if (!req.body || Object.keys(req.body).length === 0) {
+        return error(res, "El body no puede estar vacio.", null, 400);
+    }
+
+    const faltantes = [];
+
+    for (let i = 0; i < camposRequeridos.length; i++) {
+        const campo = camposRequeridos[i];
+
+        if (!req.body[campo]) {
+            faltantes.push(campo);
+        }
+    }
+
+    for (let i = 0; i < gruposAlias.length; i++) {
+        const grupo = gruposAlias[i];
+        let tieneAlguno = false;
+
+        for (let j = 0; j < grupo.alias.length; j++) {
+            if (req.body[grupo.alias[j]]) {
+                tieneAlguno = true;
+            }
+        }
+
+        if (!tieneAlguno) {
+            faltantes.push(grupo.nombre);
+        }
+    }
+
+    if (faltantes.length > 0) {
         return error(
             res,
-            `Faltan campos requeridos: ${faltantes.join(', ')}.`,
+            "Faltan campos requeridos: " + faltantes.join(", ") + ".",
             null,
             400
         );
- 
+    }
+
     next();
 }

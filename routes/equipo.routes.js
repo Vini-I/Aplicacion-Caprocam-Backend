@@ -1,0 +1,63 @@
+/*
+//////////////////////////////////////////////////////////
+CABEZA DE ARCHIVO
+//////////////////////////////////////////////////////////
+Archivo: equipo.routes.js
+Autor: Rodolfo Chaves
+Fecha: 04/07/2026
+Modulo: Equipo
+Descripcion:
+Define las rutas HTTP del modulo de equipos.
+//////////////////////////////////////////////////////////
+*/
+
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+
+Librerias externas
+*/
+
+import { Router } from "express";
+
+// Middlewares
+import { verificarAuth }    from "../middlewares/auth.middleware.js";
+import { validarBodyEquipo } from "../middlewares/equipo.middleware.js";
+
+// Controladores
+import {
+    getEquipos,
+    getEquipoById,
+    createEquipo,
+    updateEquipo,
+    deleteEquipo
+} from "../controllers/equipo.controller.js";
+
+/*
+//////////////////////////////////////////////////////////
+CONSTANTES
+//////////////////////////////////////////////////////////
+*/
+
+const router = Router();
+
+/*
+//////////////////////////////////////////////////////////
+RUTAS
+//////////////////////////////////////////////////////////
+*/
+
+router.get("/",     verificarAuth, getEquipos);
+router.get("/:id",  verificarAuth, getEquipoById);
+router.post("/",    verificarAuth, validarBodyEquipo, createEquipo);
+router.put("/:id",  verificarAuth, validarBodyEquipo, updateEquipo);
+router.delete("/:id", verificarAuth, deleteEquipo);
+
+/*
+//////////////////////////////////////////////////////////
+EXPORT
+//////////////////////////////////////////////////////////
+*/
+
+export default router;
