@@ -137,7 +137,7 @@ export async function create(dto) {
         ]
     ); 
 
-    return await findById(result.insertId);
+    return await findById(result.insertId, dto.grupoDatos);
 }
 
 export async function update(id, grupoDatos, dto) {
@@ -206,7 +206,7 @@ export async function remove(id, grupoDatos) {
    await pool.query(
         `UPDATE ventas
         SET deleted_at=NOW()
-        WHERE id = ?,
+        WHERE id = ?
         AND grupo_datos = ?`,
         [id, grupoDatos]
    );
