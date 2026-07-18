@@ -59,7 +59,7 @@ SELECT
     'Demo',
     'usuario.demo@caprocam.test',
     'usuario_demo',
-    '$2b$10$hashdemonoesrealcambiarendbackend',
+    '$2a$12$oCh/xs1bgT70Xq9O0ftcyuyUHbir74i0Hai0xiT8403EC3Ua0Y4ZS',
     '88888888'
 FROM roles r
 WHERE r.nombre = 'dueno_finca';
