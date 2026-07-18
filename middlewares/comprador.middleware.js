@@ -13,7 +13,7 @@ Middleware de validacion inicial de presencia del body para compradores.
 
 import { error } from '../common/respuestaJson.js';
 
-const camposRequeridos = ['nombre', 'contacto', 'telefono'];
+const camposRequeridos = ['nombre', 'contacto'];
 
 export function validarBodyComprador(req, res, next) {
     if (!req.body || Object.keys(req.body).length === 0)

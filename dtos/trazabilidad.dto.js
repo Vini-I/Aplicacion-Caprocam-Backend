@@ -1,70 +1,74 @@
 /*
 //////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
-//////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
 Archivo: trazabilidad.dto.js
 Autor: Samuel
 Fecha: 29/06/2026
 Modulo: Trazabilidad
 Descripcion:
-DTO encargado de recibir la informacion enviada
-desde el cliente y devolver solamente los campos
-que necesita el modelo.
+Archivo de transferencia de datos para el
+modulo de trazabilidad.
+Contiene el caparazon de datos requerido
+por el backend.
 //////////////////////////////////////////////////////////
 */
 
 /*
 //////////////////////////////////////////////////////////
-FUNCIONES DTO
+DTO
 //////////////////////////////////////////////////////////
 
-Descripcion de seccion
-
-Funciones encargadas de transformar la
-informacion recibida desde el cliente.
-
+Caparazon de datos para el modulo de
+trazabilidad.
 */
 
 export class TrazabilidadDTO {
+
     constructor({
+        id,
+        grupoDatos,
         fincaId,
         estanqueOrigenId,
         estanqueDestinoId,
-        fecha,
         colaboradorId,
+        fecha,
         tamano,
         dias,
         pl,
         tipoMovimiento
     }) {
+
         /*
         Descripcion:
         Construye un objeto TrazabilidadDTO
-        con la informacion enviada desde el
-        cliente.
+        con la informacion recibida.
 
         Parametros:
+        - id: Identificador del registro.
+        - grupoDatos: Grupo de datos.
         - fincaId: Identificador de la finca.
-        - estanqueOrigenId: Identificador del estanque de origen.
-        - estanqueDestinoId: Identificador del estanque de destino.
+        - estanqueOrigenId: Estanque origen.
+        - estanqueDestinoId: Estanque destino.
+        - colaboradorId: Colaborador responsable.
         - fecha: Fecha del movimiento.
-        - colaboradorId: Identificador del colaborador.
-        - tamano: Tamaño promedio del camarón.
-        - dias: Días de cultivo.
-        - pl: Cantidad de postlarvas.
+        - tamano: Tamaño promedio.
+        - dias: Dias de cultivo.
+        - pl: Cantidad de post larvas.
         - tipoMovimiento: Tipo de movimiento realizado.
         */
 
+        this.id = id;
+        this.grupoDatos = grupoDatos;
         this.fincaId = fincaId;
-        this.estanqueOrigenId = estanqueOrigenId
+        this.estanqueOrigenId = estanqueOrigenId;
         this.estanqueDestinoId = estanqueDestinoId;
-        this.fecha = fecha;
         this.colaboradorId = colaboradorId;
+        this.fecha = fecha;
         this.tamano = tamano;
         this.dias = dias;
         this.pl = pl;
-        this.tipoMovimiento = tipoMovimiento
+        this.tipoMovimiento = tipoMovimiento;
     }
-}  
+
+}

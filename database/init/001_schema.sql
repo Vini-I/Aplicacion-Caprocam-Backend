@@ -744,7 +744,28 @@ CREATE TABLE IF NOT EXISTS trazabilidad (
     FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
 );
 
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    usuario_id INT NULL,
+    colaborador_id INT NULL,
+    token VARCHAR(512) NOT NULL UNIQUE,
+    expira_en DATETIME NOT NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    version INT NOT NULL DEFAULT 1,
+
+    CONSTRAINT fk_refresh_tokens_usuarios
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_refresh_tokens_colaboradores
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+);
+
 CREATE INDEX idx_usuarios_grupo ON usuarios(grupo_datos);
+CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_colaboradores_grupo ON colaboradores(grupo_datos);
 CREATE INDEX idx_fincas_grupo ON fincas(grupo_datos);
 CREATE INDEX idx_estanques_grupo ON estanques(grupo_datos);

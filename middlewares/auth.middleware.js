@@ -4,27 +4,41 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: auth.middleware.js
 Autor: Marco Vásquez
-Fecha: 28/06/2026
+Fecha: 15/07/2026
 Modulo: Middleware
 Descripcion:
-Verifica que la peticion viene de un usuario autenticado.
-Por ahora es un placeholder para cuando se implemente JWT.
+Verifica que la peticion viene de un usuario autenticado
+mediante JWT. Adjunta req.user con los datos del token.
 //////////////////////////////////////////////////////////
 */
 
 /*
 //////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
+IMPORTS
 //////////////////////////////////////////////////////////
 
-Contiene los middlewares de autenticacion del proyecto.
+Librerias externas
+*/
+
+import jwt from 'jsonwebtoken';
+
+// Config
+import { JWT_SECRET } from '../config/jwt.js';
+
+// Common
+import { error } from '../common/respuestaJson.js';
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES PRINCIPALES
+//////////////////////////////////////////////////////////
 */
 
 export function verificarAuth(req, res, next) {
     /*
     Descripcion:
-    Verifica que el request tenga un token valido.
-    Por ahora deja pasar todo (placeholder para JWT).
+    Extrae y verifica el Access Token del header Authorization.
+    Si es valido, adjunta req.user con id, grupoDatos y rol.
 
     Parametros:
     - req:  Objeto request de Express
@@ -32,13 +46,24 @@ export function verificarAuth(req, res, next) {
     - next: Funcion para pasar al siguiente middleware
 
     Retorna:
-    - next() si la autenticacion es valida
-    - 401 si no hay token (cuando se implemente)
+    - next() si el token es valido
+    - 401 si no hay token o es invalido
+    - 403 si el token expiro
     */
+    const authHeader = req.headers['authorization'];
+    const token      = authHeader && authHeader.split(' ')[1]; // "Bearer <token>"
 
-    // TO-DO: validar JWT aqui cuando haya sistema de auth
-    // const token = req.headers['authorization'];
-    // if (!token) return error(res, 'No autorizado.', null, 401);
+    if (!token)
+        return error(res, 'No autorizado. Token requerido.', null, 401);
 
-    next();
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded; // { id, grupoDatos, rol, nombre }
+        next();
+    } catch (err) {
+        if (err.name === 'TokenExpiredError')
+            return error(res, 'Token expirado.', null, 403);
+
+        return error(res, 'Token invalido.', null, 401);
+    }
 }
