@@ -7,109 +7,118 @@ Autor: Rodolfo Chaves
 Fecha: 04/07/2026
 Modulo: Equipo
 Descripcion:
-Archivo de transferencia de datos para el modulo de
-equipos. Transforma y normaliza los datos recibidos
-antes de enviarlos al modelo o devolverlos al cliente.
+DTO y constantes de dominio para el modulo de equipos.
 //////////////////////////////////////////////////////////
 */
-
+ 
 /*
 //////////////////////////////////////////////////////////
 ENUM
 //////////////////////////////////////////////////////////
-
+ 
 Define los valores permitidos para tipo y estado del
 equipo. Estos valores coinciden con los catalogos
 del frontend (registrarEquipoService.js).
 */
 
-export const TipoEquipo = Object.freeze({
-    AIREACION:     "aireacion",
-    BOMBEO:        "bombeo",
-    ALIMENTACION:  "alimentacion",
-    MONITOREO:     "monitoreo",
-    MANTENIMIENTO: "mantenimiento",
-    OTRO:          "otro"
-});
 
-export const EstadoEquipo = Object.freeze({
-    ACTIVO:        "activo",
-    MANTENIMIENTO: "mantenimiento",
-    INACTIVO:      "inactivo"
-});
+export const TipoEquipo = {
+    AIREACION: "Aireación",
+    BOMBEO: "Bombeo",
+    ALIMENTACION: "Alimentación",
+    MONITOREO: "Monitoreo"
+};
+
+export const EstadoEquipo = {
+    ACTIVO: "Activo",
+    MANTENIMIENTO: "Mantenimiento",
+    INACTIVO: "Inactivo"
+};
 
 /*
 //////////////////////////////////////////////////////////
 DTO
 //////////////////////////////////////////////////////////
-
+ 
 Caparazon de datos para el modulo de equipos.
 Normaliza los campos recibidos desde el body antes de
 que sean procesados por el controller y el model.
+ 
+Mapeo frontend → columna MySQL:
+  grupoDatos      → grupo_datos
+  nombre          → nombre o identificador
+  descripcion     → descripcion
+  fechaInstalacion → fecha_instalacion (DATE)
+  tipo            → tipo
+  estado          → estado
+  funcionEquipo   → funcion
 */
 
 export class EquipoDTO {
-    constructor({
-        id,
-        codigoInterno,
-        descripcion,
-        fechaInstalacion,
-        tipo,
-        estado,
-        funcionEquipo
-    }) {
-        /*
+            /*
         Descripcion:
         Construye un objeto EquipoDTO con los datos
         recibidos desde el body del request.
-
+ 
         Parametros:
-        - id:               ID numerico del equipo (opcional en create).
-        - codigoInterno:    Identificador interno del equipo. Ej: EQ-001.
+        - nombre:           Nombre del equipo. Ej: Aireador principal.
         - descripcion:      Descripcion breve del equipo.
         - fechaInstalacion: Fecha de instalacion en formato dd/mm/aaaa.
         - tipo:             Tipo de equipo segun TipoEquipo.
         - estado:           Estado actual segun EstadoEquipo.
         - funcionEquipo:    Descripcion de la funcion del equipo.
-
+        - grupoDatos:       Grupo de datos al que pertenece el equipo.
+ 
         Retorna:
         - Objeto EquipoDTO con campos normalizados.
         */
-        this.id              = id;
-        this.codigoInterno   = normalizarTexto(codigoInterno);
-        this.descripcion     = normalizarTexto(descripcion);
-        this.fechaInstalacion = normalizarTexto(fechaInstalacion);
-        this.tipo            = normalizarTexto(tipo);
-        this.estado          = normalizarTexto(estado);
-        this.funcionEquipo   = normalizarTexto(funcionEquipo);
+
+    constructor(equipo = {}) {
+        this.grupoDatos = normalizarGrupoDatos(equipo.grupoDatos);
+        this.identificador = normalizarTexto(equipo.identificador ?? equipo.nombre);
+        this.descripcion = normalizarTexto(equipo.descripcion);
+        this.fechaInstalacion = normalizarTexto(equipo.fechaInstalacion);
+        this.tipo = normalizarTexto(equipo.tipo);
+        this.estado = normalizarTexto(equipo.estado);
+        this.funcionEquipo = normalizarTexto(equipo.funcionEquipo);
     }
 }
-
+ 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
-
+ 
 Funciones internas de normalizacion.
-La funcion createEquipo() del controller depende
-de estas funciones para trabajar.
+La clase EquipoDTO depende de estas funciones para trabajar.
 */
 
 function normalizarTexto(valor) {
-    /*
+        /*
     Descripcion:
-    Convierte un valor obligatorio a texto y elimina
-    espacios al inicio y al final.
-
+    Convierte un valor a texto y elimina espacios al inicio
+    y al final. Retorna null si el valor no existe.
+ 
     Parametros:
     - valor: Valor recibido.
-
+ 
     Retorna:
-    - Texto normalizado.
+    - Texto normalizado o null.
     */
+
     if (valor === undefined || valor === null) {
         return null;
     }
 
-    return String(valor).trim();
+    const texto = String(valor).trim();
+
+    return texto.length === 0 ? null : texto;
+}
+
+function normalizarGrupoDatos(valor) {
+    if (valor === undefined || valor === null || String(valor).trim() === "") {
+        return 1;
+    }
+
+    return Number(valor);
 }

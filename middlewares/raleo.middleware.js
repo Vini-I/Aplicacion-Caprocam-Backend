@@ -2,7 +2,7 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: colaborador.middleware.js
+Archivo: raleo.middleware.js
 Autor: Sebastian Villegas Barquero
 Fecha: 02/07/2026
 Modulo: Raleo
@@ -26,7 +26,7 @@ Campos minimos requeridos en el body para raleo.
 const camposRequeridos = [
     "idFinca",
     "idEstanque",
-    "idResponsable",
+    "idColaborador",
     "fecha",
     "porcentaje",
     "pesoEstimado",

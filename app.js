@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
 Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas, Felipe Salas
-Fecha: 29/06/2026
+Fecha: 06/07/2026
 Modulo: Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
@@ -48,13 +48,18 @@ CONSTANTES
 
 const app = express();
 
+const PORT = 4000;
 /*
 //////////////////////////////////////////////////////////
 MIDDLEWARES GLOBALES
 //////////////////////////////////////////////////////////
 */
 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:8081', // direccion del frontend en desarrollo
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 /*
@@ -93,6 +98,17 @@ app.get("/", (req, res) => {
         success: true,
         message: "API CAPROCAM funcionando correctamente."
     });
+});
+
+/*
+//////////////////////////////////////////////////////////
+INICIALIZACION DEL SERVIDOR
+//////////////////////////////////////////////////////////
+Levanta el servicio HTTP para comenzar a escuchar las
+peticiones entrantes.
+*/
+app.listen(PORT, () => {
+    console.log(`Servidor ejecutándose en puerto http://localhost:${PORT}`);
 });
 
 /*

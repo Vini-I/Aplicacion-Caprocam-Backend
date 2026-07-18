@@ -4,58 +4,99 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.model.js
 Autor: Jose Espinoza
-Fecha: 29/06/2026
+Fecha: 05/07/2026
 Modulo: Productos
 Descripcion:
-Capa de datos en memoria para el modulo de productos.
+Maneja las consultas SQL directas a la base de datos para la entidad de Productos.
 //////////////////////////////////////////////////////////
 */
 
-let productos = [
-    {
-        id: 1,
-        nombre: 'Fertilizante Foliar H2',
-        categoria: 'Fertilizante',
-        cantidad: 50,
-        stockMinimo: 10,
-        precioUnidad: 3500,
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+*/
+import pool from '../config/db.js';
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES PRINCIPALES
+//////////////////////////////////////////////////////////
+*/
+
+/**
+ * Obtiene todos los productos que estén activos en la base de datos.
+ */
+export async function findAll() {
+    const [rows] = await pool.query(
+        'SELECT id, nombre, categoria, cantidad, stock_minimo AS stockMinimo, precio_unidad AS precioUnidad, estado FROM productos WHERE estado = "ACTIVO"'
+    );
+    return rows;
+}
+
+/**
+ * Busca un producto activo específico por su ID.
+ */
+export async function findById(id) {
+    const [rows] = await pool.query(
+        'SELECT id, nombre, categoria, cantidad, stock_minimo AS stockMinimo, precio_unidad AS precioUnidad, estado FROM productos WHERE id = ? AND estado = "ACTIVO"',
+        [id]
+    );
+    return rows.length > 0 ? rows[0] : null;
+}
+
+/**
+ * Inserta un nuevo producto utilizando un objeto DTO.
+ */
+export async function create(dto) {
+    const { nombre, categoria, cantidad, stockMinimo, precioUnidad } = dto;
+    
+    const [result] = await pool.query(
+        'INSERT INTO productos (nombre, categoria, cantidad, stock_minimo, precio_unidad, estado) VALUES (?, ?, ?, ?, ?, "ACTIVO")',
+        [nombre, categoria, cantidad, stockMinimo, precioUnidad]
+    );
+
+    return {
+        id: result.insertId,
+        ...dto,
         estado: 'ACTIVO'
-    },
-    {
-        id: 2,
-        nombre: 'Herbicida Total Max',
-        categoria: 'Herbicida',
-        cantidad: 20,
-        stockMinimo: 5,
-        precioUnidad: 7800,
+    };
+}
+
+/**
+ * Actualiza los datos de un producto existente por su ID.
+ */
+export async function update(id, dto) {
+    const { nombre, categoria, cantidad, stockMinimo, precioUnidad } = dto;
+
+    const [result] = await pool.query(
+        'UPDATE productos SET nombre = ?, categoria = ?, cantidad = ?, stock_minimo = ?, precio_unidad = ? WHERE id = ? AND estado = "ACTIVO"',
+        [nombre, categoria, cantidad, stockMinimo, precioUnidad, id]
+    );
+
+    if (result.affectedRows === 0) return null;
+
+    return {
+        id: Number(id),
+        ...dto,
         estado: 'ACTIVO'
-    }
-];
-
-export function findAll() {
-    return productos.filter(p => p.estado === 'ACTIVO');
+    };
 }
 
-export function findById(id) {
-    return productos.find(p => p.id === Number(id) && p.estado === 'ACTIVO') || null;
-}
+/**
+ * Realiza un borrado lógico cambiando el estado del producto a INACTIVO.
+ */
+export async function removeLogicamente(id) {
+    const producto = await findById(id);
+    if (!producto) return null;
 
-export function create(dto) {
-    const nuevo = { ...dto, id: productos.length + 1, estado: 'ACTIVO' };
-    productos.push(nuevo);
-    return nuevo;
-}
+    const [result] = await pool.query(
+        'UPDATE productos SET estado = "INACTIVO" WHERE id = ?',
+        [id]
+    );
 
-export function update(id, dto) {
-    const index = productos.findIndex(p => p.id === Number(id) && p.estado === 'ACTIVO');
-    if (index === -1) return null;
-    productos[index] = { ...productos[index], ...dto };
-    return productos[index];
-}
+    if (result.affectedRows === 0) return null;
 
-export function removeLogicamente(id) {
-    const index = productos.findIndex(p => p.id === Number(id) && p.estado === 'ACTIVO');
-    if (index === -1) return null;
-    productos[index].estado = 'INACTIVO';
-    return productos[index];
+    producto.estado = 'INACTIVO';
+    return producto;
 }

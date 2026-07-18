@@ -37,6 +37,20 @@ import * as RaleoModel from "../models/raleo.model.js";
 // Common
 import { exito, error } from "../common/respuestaJson.js";
 
+/*
+//////////////////////////////////////////////////////////
+CONSTANTES
+//////////////////////////////////////////////////////////
+*/
+
+//const grupoDatos = req.user.grupoDatos;
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+*/
+
 function validarCuerpo(body, res) {
     /*
     Descripcion:
@@ -51,6 +65,12 @@ function validarCuerpo(body, res) {
     */
     const errores = [];
 
+    if (!isEmpty(body.grupoDatos)) {
+            if (!isNumeroMayorCero(body.grupoDatos)) {
+                errores.push("El campo grupoDatos debe ser numerico y mayor que cero.");
+            }
+        }
+
     if (isEmpty(body.idFinca)) {
         errores.push("El campo idFinca es requerido.");
     }
@@ -59,8 +79,8 @@ function validarCuerpo(body, res) {
         errores.push("El campo idEstanque es requerido.");
     }
 
-    if (isEmpty(body.idResponsable)) {
-        errores.push("El campo idResponsable es requerido.");
+    if (isEmpty(body.idColaborador)) {
+        errores.push("El campo idColaborador es requerido.");
     }
 
     if (isEmpty(body.fecha)) {
@@ -95,8 +115,8 @@ function validarCuerpo(body, res) {
         errores.push("El campo idEstanque debe ser numerico y mayor que cero.");
     }
 
-    if (!isNumeroMayorCero(body.idResponsable)) {
-        errores.push("El campo idResponsable debe ser numerico y mayor que cero.");
+    if (!isNumeroMayorCero(body.idColaborador)) {
+        errores.push("El campo idColaborador debe ser numerico y mayor que cero.");
     }
 
     if (!isNumeroMayorCero(body.porcentaje)) {
@@ -149,10 +169,10 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
 Contiene las funciones exportables que manejan cada
-ruta del modulo de estanque.
+ruta del modulo de raleo.
 */
 
-export function getRaleo(req, res) {
+export async function getRaleo(req, res) {
     /*
     Descripcion:
     Obtiene todos los raleos.
@@ -165,19 +185,23 @@ export function getRaleo(req, res) {
     Retorna:
     - 200 con lista de raleos
     */
+   try {
     const filtros = {
         idFinca: req.query.idFinca
     };
 
-    const data = RaleoModel.findAll(filtros);
+    const data = await RaleoModel.findAll(filtros);
 
     return exito(res, "Raleos obtenidos correctamente.", data);
+    } catch (err) {
+        return error(res, "Error al obtener los raleos.", err, 500);
+    }
 }
 
-export function getRaleoById(req, res) {
+export async function getRaleoById(req, res) {
     /*
     Descripcion:
-    Obtiene un raleo por su ID.
+    Obtiene un raleo por su ID desde MySQL.
 
     Parametros:
     - req: Objeto request de Express
@@ -187,25 +211,29 @@ export function getRaleoById(req, res) {
     - 200 con el raleo encontrado
     - 404 si no existe
     */
+   try {
     const errId = validarIdParametro(req.params.id, res);
 
     if (errId) {
         return errId;
     }
 
-    const raleo = RaleoModel.findById(req.params.id);
+    const raleo = await RaleoModel.findById(req.params.id);
 
     if (!raleo) {
         return error(res, "Raleo no encontrado.", null, 404);
     }
 
     return exito(res, "Raleo obtenido correctamente.", raleo);
+    } catch (err) {
+        return error(res, "Error al obtener el raleo.", err, 500);
+    }
 }
 
-export function createRaleo(req, res) {
+export async function createRaleo(req, res) {
     /*
     Descripcion:
-    Crea un nuevo raleo.
+    Crea un nuevo raleo en la base de datos.
 
     Parametros:
     - req: Objeto request de Express
@@ -215,56 +243,71 @@ export function createRaleo(req, res) {
     - 201 con el raleo creado
     - 400/422 si hay errores de validacion
     */
+   try {
     const err = validarCuerpo(req.body, res);
 
     if (err) {
         return err;
     }
+    const dto = new RaleoDTO(req.body);
 
-    const existente = RaleoModel.findById(
-        req.body.idFinca,
-        null
+    const existente = await RaleoModel.findByEstanqueYFecha(
+        dto.grupoDatos,
+        dto.idEstanque,
+        dto.fecha
     );
 
     if (existente) {
         return error(
             res,
-            "Ya existe un raleo con ese id en la finca.",
+            "Ya existe un raleo de ese estanque con esa fecha.",
             null,
             409
         );
     }
-
-    const dto = new RaleoDTO(req.body);
-    const nuevo = RaleoModel.create(dto);
+    
+    const nuevo = await RaleoModel.create(dto);
 
     return exito(res, "Raleo creado correctamente.", nuevo, 201);
+    } catch (err) {
+        console.error("=== ERROR CREATE RALEO ===");
+    console.error(err);
+    console.error("==========================");
+
+    return error(res, "Error al crear el raleo.", err, 500);
+    }
 }
 
-export function deleteRaleo(req, res) {
+export async function deleteRaleo(req, res) {
     /*
     Descripcion:
-    Elimina un raleo por su ID.
+    Elimina logicamente un raleo por su ID.
+    No elimina fisicamente el registro de la base de datos.
+    El model se encarga de actualizar activo, deleted_at y version.
 
     Parametros:
     - req: Objeto request de Express
     - res: Objeto response de Express
 
     Retorna:
-    - 200 con el estanque eliminado
+    - 200 con el raleo eliminado
     - 404 si no existe
     */
+   try {
     const errId = validarIdParametro(req.params.id, res);
 
     if (errId) {
         return errId;
     }
 
-    const eliminado = RaleoModel.remove(req.params.id);
+    const eliminado = await RaleoModel.remove(req.params.id);
 
     if (!eliminado) {
         return error(res, "Raleo no encontrado.", null, 404);
     }
 
     return exito(res, "Raleo eliminado correctamente.", eliminado);
+    } catch (err) {
+        return error(res, "Error al eliminar el raleo.", err, 500);
+    }
 }

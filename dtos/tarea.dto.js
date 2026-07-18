@@ -8,50 +8,71 @@ Fecha: 04/07/2026
 Modulo: Tareas
 Descripcion:
 Archivo de transferencia de datos para tareas.
-Es un caparazon para almacenar los datos requeridos.
+Adaptado a la estructura de la tabla tareas en DB.
 //////////////////////////////////////////////////////////
 */
 
 /*
 //////////////////////////////////////////////////////////
-ENUM
+ENUMS
 //////////////////////////////////////////////////////////
-
-Define los valores permitidos para el campo categoria.
 */
 
 export const CategoriasTarea = Object.freeze({
-    PREVENTIVO: 'preventivo',
-    CORRECTIVO: 'correctivo',
-    PREDICTIVO: 'predictivo',
-    EMERGENCIA: 'emergencia',
+    PREVENTIVO:  'preventivo',
+    CORRECTIVO:  'correctivo',
+    PREDICTIVO:  'predictivo',
+    EMERGENCIA:  'emergencia',
+});
+
+export const EstadoTarea = Object.freeze({
+    PENDIENTE:   'Pendiente',
+    EN_PROCESO:  'En proceso',
+    FINALIZADA:  'Finalizada',
+    CANCELADA:   'Cancelada',
 });
 
 /*
 //////////////////////////////////////////////////////////
 DTO
 //////////////////////////////////////////////////////////
-
-Caparazon de datos para el modulo de tareas.
 */
 
 export class TareaDTO {
-    constructor({ id, nombre, descripcion, categoria, duracionEstimada }) {
+    constructor({
+        id,
+        grupoDatos,
+        colaboradorId,
+        equipoId,
+        nombre,
+        descripcion,
+        categoria,
+        horas,
+        estado,
+    }) {
         /*
         Descripcion:
         Construye un objeto TareaDTO con los datos recibidos.
 
         Parametros:
-        - id:               Identificador unico (opcional en creacion)
-        - nombre:           Nombre de la tarea (requerido)
-        - descripcion:      Descripcion de la tarea (requerido)
-        - categoria:        Categoria de la tarea (requerido, usar CategoriasTarea)
-        - duracionEstimada: Duracion estimada en horas, solo numerico (requerido)
+        - id:            Identificador unico (opcional en creacion)
+        - grupoDatos:    Grupo de datos al que pertenece (requerido)
+        - colaboradorId: FK a colaboradores (opcional)
+        - equipoId:      FK a equipos (opcional)
+        - nombre:        Nombre de la tarea (requerido)
+        - descripcion:   Descripcion de la tarea (requerido)
+        - categoria:     Categoria (usar CategoriasTarea)
+        - horas:         Duracion estimada en horas (requerido, numerico)
+        - estado:        Estado de la tarea (usar EstadoTarea, default Pendiente)
         */
-        this.id = id;
-        this.nombre = nombre;
-        this.descripcion = descripcion;
-        this.categoria = categoria;
-        this.duracionEstimada = Number(duracionEstimada);
+        this.id            = id;
+        this.grupoDatos    = grupoDatos;
+        this.colaboradorId = colaboradorId ?? null;
+        this.equipoId      = equipoId      ?? null;
+        this.nombre        = nombre;
+        this.descripcion   = descripcion;
+        this.categoria     = categoria;
+        this.horas         = Number(horas);
+        this.estado        = estado ?? EstadoTarea.PENDIENTE;
     }
 }
