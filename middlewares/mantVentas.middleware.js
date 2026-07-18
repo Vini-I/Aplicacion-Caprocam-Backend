@@ -39,6 +39,11 @@ export function validarMantVentas(req, res, next) {
     - next() si los datos son validos
     - 400 si los datos son invalidos
     */
+
+    if (req.user && req.user.grupoDatos) {
+        req.body.grupoDatos = req.user.grupoDatos;
+    }
+
     const { finca, estanque, pesoPromedio, tamanoPromedio, cantVendida, precioKilo, fecha, total, colaborador, comprador } = req.body;
 
     // Validación de campos obligatorios básicos

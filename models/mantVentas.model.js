@@ -27,7 +27,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export async function findAll() {
+export async function findAll(grupoDatos) {
     /*
     Descripcion:
     Obtiene todos los registros de ventas.
@@ -53,13 +53,15 @@ export async function findAll() {
             total,
             fecha
         FROM ventas
-        WHERE deleted_at IS NULL`
+        WHERE grupo_datos = ?
+        AND deleted_at IS NULL`,
+        [grupoDatos]
     );
 
     return rows;
 }
 
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
     Obtiene un registro de ventas por su ID.
@@ -85,8 +87,9 @@ export async function findById(id) {
             fecha
         FROM ventas
         WHERE id=? 
+        AND grupo_datos = ?
         AND deleted_at IS NULL`,
-        [id]
+        [id, grupoDatos]
 
     );
 
@@ -137,7 +140,7 @@ export async function create(dto) {
     return await findById(result.insertId);
 }
 
-export async function update(id, dto) {
+export async function update(id, grupoDatos, dto) {
     /*
     Descripcion:
     Actualiza un registro de ventas por su ID.
@@ -180,10 +183,10 @@ export async function update(id, dto) {
         ]
    );
    
-   return await findById(id);
+   return await findById(id, grupoDatos);
 }
 
-export async function remove(id) {
+export async function remove(id, grupoDatos) {
     /*
     Descripcion:
     Elimina un registro de ventas por su ID.
@@ -194,16 +197,18 @@ export async function remove(id) {
     Retorna:
     - El registro de ventas eliminado si se encuentra, o null si no existe.
     */
-   const venta = await findById(id);
+   const venta = await findById(id, grupoDatos);
 
    if(!venta){
     return null;
    }
 
-   await pool.execute(
-        `DELETE FROM ventas
-        WHERE id=?`,
-        [id]
-   )
+   await pool.query(
+        `UPDATE ventas
+        SET deleted_at=NOW()
+        WHERE id = ?,
+        AND grupo_datos = ?`,
+        [id, grupoDatos]
+   );
    return venta; 
 }
