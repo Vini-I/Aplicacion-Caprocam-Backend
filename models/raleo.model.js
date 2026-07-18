@@ -31,108 +31,45 @@ Contiene las funciones exportables que interactuan
 directamente con la base de datos MySQL.
 */
 
-export async function findAll(filtros) {
+export async function findAll(grupoDatos) {
     /*
     Descripcion:
-    Obtiene todos los raleos activos desde la base de datos.
-    Permite filtrar por finca.
+    Obtiene todos los raleos activos del grupo.
 
     Parametros:
-    - filtros: Objeto con filtros opcionales.
-        - idFinca: Identificador de la finca.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
-    - Lista de raleos encontrados.
+    - Lista de raleos mapeados a camelCase.
     */
-    let sql = `
-        SELECT
-            id,
-            uuid,
-            grupo_datos,
-            finca_id,
-            estanque_id,
-            colaborador_id,
-            fecha,
-            porcentaje,
-            peso_estimado,
-            biomasa_estimada,
-            objetivo,
-            metodos,
-            observaciones,
-            activo,
-            fecha_creacion,
-            fecha_actualizacion,
-            deleted_at,
-            version
-        FROM raleos
-        WHERE deleted_at IS NULL
-        AND activo = TRUE
-    `;
-
-    const params = [];
-
-    if (filtros) {
-        if (filtros.idFinca) {
-            sql = sql + " AND finca_id = ?";
-            params.push(filtros.idFinca);
-        }
-    }
-
-    sql = sql + " ORDER BY id DESC";
-
-    const [rows] = await pool.execute(sql, params);
-
-    return mapearLista(rows);
+    const [filas] = await pool.query(
+        `SELECT * FROM raleos
+         WHERE grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
+        [grupoDatos]
+    );
+    return filas.map(mapearFila);
 }
 
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
-    Busca un raleo activo por su identificador numerico.
+    Busca un raleo activo por su ID dentro del grupo.
 
     Parametros:
     - id: Identificador del raleo.
+    - grupoDatos:  Grupo de datos del usuario en sesion.
 
     Retorna:
     - El raleo encontrado.
     - null si no existe o si fue eliminado logicamente.
     */
 
-    const [rows] = await pool.execute(
-        `
-        SELECT
-            id,
-            uuid,
-            grupo_datos,
-            finca_id,
-            estanque_id,
-            colaborador_id,
-            fecha,
-            porcentaje,
-            peso_estimado,
-            biomasa_estimada,
-            objetivo,
-            metodos,
-            observaciones,
-            activo,
-            fecha_creacion,
-            fecha_actualizacion,
-            deleted_at,
-            version
-        FROM raleos
-        WHERE id = ?
-        AND deleted_at IS NULL
-        AND activo = TRUE
-        LIMIT 1
-        `,
-        [id]
+    const [filas] = await pool.query(
+        `SELECT * FROM raleos
+         WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
+        [id, grupoDatos]
     );
-
-    if (rows.length === 0) {
-        return null;
-    }
-
-    return mapearFila(rows[0]);
+    return filas.length > 0 ? mapearFila(filas[0]) : null;
 }
 
 export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
@@ -188,19 +125,18 @@ export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
     return mapearFila(rows[0]);
 }
 
-export async function create(dto) {
+export async function create(dto, grupoDatos) {
     /*
     Descripcion:
     Inserta un nuevo raleo en la base de datos.
 
     Parametros:
     - dto: Objeto RaleoDTO con los datos normalizados del raleo.
+    - grupoDatos:  Grupo de datos del usuario en sesion.
 
     Retorna:
     - El raleo creado consultado nuevamente desde la base de datos.
     */
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
-
     const [result] = await pool.execute(
         `
         INSERT INTO raleos (
@@ -232,11 +168,10 @@ export async function create(dto) {
             dto.observaciones
         ]
     );
-
-    return await findById(result.insertId);
+    return await findById(result.insertId, grupoDatos);
 }
 
-export async function remove(id) {
+export async function remove(id, grupoDatos) {
     /*
     Descripcion:
     Elimina logicamente un raleo.
@@ -245,32 +180,22 @@ export async function remove(id) {
 
     Parametros:
     - id: Identificador del raleo que se desea eliminar.
+    
 
     Retorna:
     - El raleo eliminado logicamente.
     - null si el estanque no existe o ya fue eliminado.
     */
-    const actual = await findById(id);
+    const raleo = await findById(id, grupoDatos);
+    if (!raleo) return null;
 
-    if (!actual) {
-        return null;
-    }
-
-    await pool.execute(
-        `
-        UPDATE raleos
-        SET
-            activo = FALSE,
-            deleted_at = CURRENT_TIMESTAMP,
-            version = version + 1
-        WHERE id = ?
-        AND deleted_at IS NULL
-        AND activo = TRUE
-        `,
-        [id]
+    await pool.query(
+        `UPDATE raleos
+         SET activo = FALSE, deleted_at = CURRENT_TIMESTAMP, version = version + 1
+         WHERE id = ? AND grupo_datos = ?`,
+        [id, grupoDatos]
     );
-    
-    return await findById(id);
+    return raleo;
 }
 
 /*
