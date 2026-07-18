@@ -19,35 +19,36 @@ IMPORTS
 
 import { Router } from "express";
 import { verificarAuth } from "../middlewares/auth.middleware.js";
-import { validarBodySiembra } from "../middlewares/siembra.middleware.js";
+import { validarBodyPrecria } from "../middlewares/preCria.middleware.js";
 import {
-    listarSiembra,
-    obtenerSiembra,
-    crearSiembra,
-    actualizarSiembra,
-    eliminarSiembra,
-    finalizarSiembra,
-} from "../controllers/siembra.controller.js";
+    listarPrecrias,
+    obtenerPrecria,
+    crearPrecria,
+    actualizarPrecria,
+    finalizarPrecria,
+    eliminarPrecria,
+} from "../controllers/preCria.controller.js";
 
 /*
 //////////////////////////////////////////////////////////
-CONSTANTES
+constantes
 //////////////////////////////////////////////////////////
 */
 
 const router = Router();
+
 
 /*
 //////////////////////////////////////////////////////////
 RUTAS
 //////////////////////////////////////////////////////////
 */
-
-router.get("/", verificarAuth, listarSiembras);
-router.get("/:id", verificarAuth, obtenerSiembra);
-router.post("/", verificarAuth, validarBodySiembra, crearSiembra);
-router.put("/:id", verificarAuth, validarBodySiembra, actualizarSiembra);
-router.post("/:id/finalizar", verificarAuth, finalizarSiembra);
-router.delete("/:id", verificarAuth, eliminarSiembra);
+ 
+router.get("/", verificarAuth, listarPrecrias);
+router.get("/:id", verificarAuth, obtenerPrecria);
+router.post("/", verificarAuth, validarBodyPrecria, crearPrecria);
+router.put("/:id", verificarAuth, validarBodyPrecria, actualizarPrecria);
+router.post("/:id/finalizar", verificarAuth, finalizarPrecria);
+router.delete("/:id", verificarAuth, eliminarPrecria);
  
 export default router;
