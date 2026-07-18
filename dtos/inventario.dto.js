@@ -40,17 +40,13 @@ export class InventarioDTO {
     constructor({
         id,
         codigo,
-        grupo_datos,
-        producto_id,
-        proveedor_id,
+        nombre,
+        categoria,
         cantidad,
         unidad,
         stockMinimo,
         proveedor,
         precioUnidad,
-        activo,
-        fecha_creacion,
-        fecha_actualizacion
     }) {
         /*
         Descripcion:
@@ -69,16 +65,12 @@ export class InventarioDTO {
         */
         this.id           = id;
         this.codigo       = codigo ? String(codigo).trim() : null;
-        this.grupo_datos  = grupo_datos ? String(grupo_datos).trim() : null;
-        this.producto_id  = producto_id;
-        this.proveedor_id = proveedor_id;
+        this.nombre       = String(nombre).trim();
+        this.categoria    = String(categoria).trim();
         this.cantidad     = Number(cantidad);
         this.unidad       = String(unidad).trim();
         this.stockMinimo  = Number(stockMinimo);
         this.proveedor    = String(proveedor).trim();
         this.precioUnidad = Number(precioUnidad);
-        this.activo = Boolean(activo);
-        this.fecha_creacion = fecha_creacion;
-        this.fecha_actualizacion = fecha_actualizacion;
     }
 }

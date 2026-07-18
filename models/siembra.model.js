@@ -7,7 +7,7 @@ Autor: Joan
 Fecha: 04/07/2026
 Modulo: Siembra
 Descripcion:
-Capa de datos para siembra.
+Capa de datos para lotes de larva y pre-crias.
 //////////////////////////////////////////////////////////
 */
 
@@ -17,179 +17,202 @@ IMPORTS
 //////////////////////////////////////////////////////////
 */
 
-import { EstadoLote }from "../dtos/loteLarva.dto.js";
-
-import pool from '../config/database.js';
+import * as proveedorModel from "./proveedor.model.js";
 
 /*
 //////////////////////////////////////////////////////////
-CONSTANTES
+MOCK DATA
 //////////////////////////////////////////////////////////
 */
 
-const GRUPO_DATOS = 1;
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
-*/
-
-export async function findAll() {
-    const [rows] = await pool.execute(`
-        SELECT *
-        FROM   siembras
-        WHERE  grupo_datos = ?
-        AND    activo = TRUE
-        AND    deleted_at IS NULL
-        ORDER BY id ASC
-    `, [GRUPO_DATOS]);
-    return rows;
-}
- 
-export async function findById(id) {
-    const [rows] = await pool.execute(`
-        SELECT *
-        FROM   siembras
-        WHERE  id = ?
-        AND    grupo_datos = ?
-        AND    activo = TRUE
-        AND    deleted_at IS NULL
-    `, [Number(id), GRUPO_DATOS]);
-    return rows[0] || null;
-}
- 
-export async function create(dto) {
-    /*
-    Descripcion:
-    Crea una siembra y transiciona el lote asociado a 'Sembrado',
-    en una sola transaccion.
-    */
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
- 
-        const [result] = await connection.execute(`
-            INSERT INTO siembras (
-                grupo_datos, lote_larva_id, precria_id, finca_id, estanque_id,
-                fecha_siembra, tecnica_cultivo, densidad_poblacional,
-                cantidad_sembrada, pl_siembra, estado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-            GRUPO_DATOS,
-            dto.lote_larva_id,
-            dto.precria_id,
-            dto.finca_id,
-            dto.estanque_id,
-            dto.fecha_siembra,
-            dto.tecnica_cultivo,
-            dto.densidad_poblacional,
-            dto.cantidad_sembrada,
-            dto.pl_siembra,
-            dto.estado || 'Activa',
-        ]);
- 
-        await connection.execute(`
-            UPDATE lotes_larva
-            SET    estado_lote = ?,
-                   version     = version + 1
-            WHERE  id = ?
-            AND    grupo_datos = ?
-            AND    activo = TRUE
-            AND    deleted_at IS NULL
-        `, [EstadoLote.SEMBRADO, dto.lote_larva_id, GRUPO_DATOS]);
- 
-        await connection.commit();
-        return findById(result.insertId);
-    } catch (err) {
-        await connection.rollback();
-        throw err;
-    } finally {
-        connection.release();
+let lotes = [
+    {
+        id: 1,
+        codigo_lote: "LOT-2026-01",
+        proveedor: "Alimentos del Pacífico",
+        laboratorio: "LabMar",
+        procedencia: "Nacional",
+        certificado_larva: "CERT-092",
+        pl_inicial: 10,
+        cantidad_inicial: 100000,
+        fecha_ingreso: "2026-06-25",
+        activo: true
     }
-}
- 
-export async function update(id, datos) {
+];
+
+let precrias = [
+    {
+        id: 1,
+        id_lote_larva: 1,
+        id_finca: 1,
+        unidad_precria: "Precria A",
+        fecha_inicio: "2026-06-26",
+        cantidad_inicial: 100000,
+        pl_inicial: 10,
+        estado: "ACTIVA",
+        fecha_fin: null,
+        cantidad_final: null,
+        pl_final: null,
+        activo: true
+    }
+];
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES PRINCIPALES - LOTES DE LARVA
+//////////////////////////////////////////////////////////
+*/
+
+export function findLotesAll() {
     /*
     Descripcion:
-    Actualiza una siembra activa. Solo actualiza los campos
-    presentes en "datos" (actualizacion parcial).
+    Obtiene todos los lotes de larva activos.
     */
-    const mapaCampos = {
-        lote_larva_id:         'lote_larva_id',
-        precria_id:            'precria_id',
-        finca_id:              'finca_id',
-        estanque_id:           'estanque_id',
-        fecha_siembra:         'fecha_siembra',
-        tecnica_cultivo:       'tecnica_cultivo',
-        densidad_poblacional:  'densidad_poblacional',
-        cantidad_sembrada:     'cantidad_sembrada',
-        pl_siembra:            'pl_siembra',
-        estado:                'estado',
+    return lotes.filter(l => l.activo === true);
+}
+
+export function findLoteById(id) {
+    /*
+    Descripcion:
+    Busca un lote de larva activo por su ID.
+    */
+    const lote = lotes.find(l => l.id === Number(id));
+    if (!lote || lote.activo === false) return null;
+    return lote;
+}
+
+export function findLoteByCodigo(codigo) {
+    /*
+    Descripcion:
+    Busca un lote activo por su codigo (case-insensitive).
+    */
+    const cod = String(codigo).trim().toLowerCase();
+    return lotes.find(l => 
+        l.codigo_lote.trim().toLowerCase() === cod && l.activo === true
+    ) || null;
+}
+
+export function findLoteByCodigoIgnorandoId(codigo, id) {
+    /*
+    Descripcion:
+    Busca un lote por codigo ignorando un ID especifico.
+    */
+    const cod = String(codigo).trim().toLowerCase();
+    const numeroId = Number(id);
+    return lotes.find(l => 
+        l.codigo_lote.trim().toLowerCase() === cod && 
+        l.activo === true && 
+        l.id !== numeroId
+    ) || null;
+}
+
+export function createLote(dto) {
+    /*
+    Descripcion:
+    Crea un nuevo lote de larva.
+    */
+    const nuevo = {
+        ...dto,
+        id: lotes.length + 1,
+        activo: true
     };
- 
-    const setParts = [];
-    const valores  = [];
- 
-    for (const [clave, columna] of Object.entries(mapaCampos)) {
-        if (datos[clave] !== undefined) {
-            setParts.push(`${columna} = ?`);
-            valores.push(datos[clave]);
-        }
-    }
-    if (setParts.length === 0) return findById(id);
- 
-    setParts.push('version = version + 1');
-    valores.push(Number(id), GRUPO_DATOS);
- 
-    const [result] = await pool.execute(`
-        UPDATE siembras
-        SET    ${setParts.join(', ')}
-        WHERE  id = ?
-        AND    grupo_datos = ?
-        AND    activo = TRUE
-        AND    deleted_at IS NULL
-    `, valores);
- 
-    if (result.affectedRows === 0) return null;
-    return findById(id);
+    lotes.push(nuevo);
+    return nuevo;
 }
- 
-export async function remove(id) {
-    const siembra = await findById(id);
-    if (!siembra) return null;
- 
-    const [result] = await pool.execute(`
-        UPDATE siembras
-        SET    activo     = FALSE,
-               deleted_at = NOW(),
-               version    = version + 1
-        WHERE  id = ?
-        AND    grupo_datos = ?
-        AND    activo = TRUE
-        AND    deleted_at IS NULL
-    `, [Number(id), GRUPO_DATOS]);
- 
-    if (result.affectedRows === 0) return null;
-    return { ...siembra, activo: false };
+
+export function updateLote(id, dto) {
+    /*
+    Descripcion:
+    Actualiza un lote de larva activo.
+    */
+    const index = lotes.findIndex(l => l.id === Number(id));
+    if (index === -1 || lotes[index].activo === false) return null;
+    lotes[index] = {
+        ...lotes[index],
+        ...dto
+    };
+    return lotes[index];
 }
- 
- 
-export async function verificarFincaExiste(fincaId) {
-    if (!fincaId) return false;
-    const [rows] = await pool.execute(`
-        SELECT id FROM fincas
-        WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
-    `, [Number(fincaId), GRUPO_DATOS]);
-    return rows.length > 0;
+
+export function removeLote(id) {
+    /*
+    Descripcion:
+    Borrado logico de un lote de larva.
+    */
+    const index = lotes.findIndex(l => l.id === Number(id));
+    if (index === -1 || lotes[index].activo === false) return null;
+    lotes[index].activo = false;
+    return lotes[index];
 }
- 
-export async function verificarEstanqueExiste(estanqueId, fincaId) {
-    if (!estanqueId || !fincaId) return false;
-    const [rows] = await pool.execute(`
-        SELECT id FROM estanques
-        WHERE id = ? AND finca_id = ? AND grupo_datos = ?
-        AND activo = TRUE AND deleted_at IS NULL
-    `, [Number(estanqueId), Number(fincaId), GRUPO_DATOS]);
-    return rows.length > 0;
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES PRINCIPALES - PRE-CRIAS
+//////////////////////////////////////////////////////////
+*/
+
+export function findPrecriasAll() {
+    /*
+    Descripcion:
+    Obtiene todas las pre-crias activas.
+    */
+    return precrias.filter(p => p.activo === true);
+}
+
+export function findPrecriaById(id) {
+    /*
+    Descripcion:
+    Busca una pre-cria activa por su ID.
+    */
+    const pc = precrias.find(p => p.id === Number(id));
+    if (!pc || pc.activo === false) return null;
+    return pc;
+}
+
+export function createPrecria(dto) {
+    /*
+    Descripcion:
+    Crea una nueva pre-cria.
+    */
+    const nuevo = {
+        ...dto,
+        id: precrias.length + 1,
+        activo: true
+    };
+    precrias.push(nuevo);
+    return nuevo;
+}
+
+export function updatePrecria(id, dto) {
+    /*
+    Descripcion:
+    Actualiza una pre-cria activa.
+    */
+    const index = precrias.findIndex(p => p.id === Number(id));
+    if (index === -1 || precrias[index].activo === false) return null;
+    precrias[index] = {
+        ...precrias[index],
+        ...dto
+    };
+    return precrias[index];
+}
+
+export function removePrecria(id) {
+    /*
+    Descripcion:
+    Borrado logico de una pre-cria.
+    */
+    const index = precrias.findIndex(p => p.id === Number(id));
+    if (index === -1 || precrias[index].activo === false) return null;
+    precrias[index].activo = false;
+    return precrias[index];
+}
+
+export function verificarProveedorExiste(nombre) {
+    /*
+    Descripcion:
+    Verifica que el nombre del proveedor exista en el modulo de proveedores.
+    */
+    const p = proveedorModel.findByName(nombre);
+    return p !== null;
 }
