@@ -20,14 +20,6 @@ import { EstadoLote } from "../dtos/loteLarva.dto.js";
 
 import pool from '../config/database.js';
 
-/*
-//////////////////////////////////////////////////////////
-constantes
-//////////////////////////////////////////////////////////
-*/
-
-const GRUPO_DATOS = 1;
-
 
 /*
 //////////////////////////////////////////////////////////
@@ -35,7 +27,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export async function findAll() {
+export async function findAll(grupoDatos) {
     const [rows] = await pool.execute(`
         SELECT *
         FROM   precrias
@@ -43,11 +35,11 @@ export async function findAll() {
         AND    activo = TRUE
         AND    deleted_at IS NULL
         ORDER BY id ASC
-    `, [GRUPO_DATOS]);
+    `, [grupoDatos]);
     return rows;
 }
  
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
     const [rows] = await pool.execute(`
         SELECT *
         FROM   precrias
@@ -55,11 +47,11 @@ export async function findById(id) {
         AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
-    `, [Number(id), GRUPO_DATOS]);
+    `, [Number(id), grupoDatos]);
     return rows[0] || null;
 }
  
-export async function create(dto) {
+export async function create(dto, grupoDatos) {
     /*
     Descripcion:
     Crea una pre-cria y transiciona el lote asociado a
@@ -77,7 +69,7 @@ export async function create(dto) {
                 cantidad_inicial, cantidad_final, pl_inicial, pl_final, estado
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-            GRUPO_DATOS,
+            grupoDatos,
             dto.lote_larva_id,
             dto.finca_id,
             dto.estanque_id,
@@ -103,12 +95,12 @@ export async function create(dto) {
         `, [
             EstadoLote.EN_PRECRIA,
             dto.lote_larva_id,
-            GRUPO_DATOS,
+            grupoDatos,
             EstadoLote.DISPONIBLE,
         ]);
  
         await connection.commit();
-        return findById(result.insertId);
+        return findById(result.insertId, grupoDatos);
     } catch (err) {
         await connection.rollback();
         throw err;
@@ -117,7 +109,7 @@ export async function create(dto) {
     }
 }
  
-export async function update(id, datos) {
+export async function update(id, grupoDatos, datos) {
     /*
     Descripcion:
     Actualiza una pre-cria activa. Solo actualiza los campos
@@ -150,7 +142,7 @@ export async function update(id, datos) {
     if (setParts.length === 0) return findById(id);
  
     setParts.push('version = version + 1');
-    valores.push(Number(id), GRUPO_DATOS);
+    valores.push(Number(id), grupoDatos);
  
     const [result] = await pool.execute(`
         UPDATE precrias
@@ -162,11 +154,11 @@ export async function update(id, datos) {
     `, valores);
  
     if (result.affectedRows === 0) return null;
-    return findById(id);
+    return findById(id, grupoDatos);
 }
  
-export async function remove(id) {
-    const pc = await findById(id);
+export async function remove(id, grupoDatos) {
+    const pc = await findById(id, grupoDatos);
     if (!pc) return null;
  
     const [result] = await pool.execute(`
@@ -178,29 +170,29 @@ export async function remove(id) {
         AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
-    `, [Number(id), GRUPO_DATOS]);
+    `, [Number(id), grupoDatos]);
  
     if (result.affectedRows === 0) return null;
     return { ...pc, activo: false };
 }
  
  
-export async function verificarFincaExiste(fincaId) {
+export async function verificarFincaExiste(fincaId, grupoDatos) {
     if (!fincaId) return false;
     const [rows] = await pool.execute(`
         SELECT id FROM fincas
         WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
-    `, [Number(fincaId), GRUPO_DATOS]);
+    `, [Number(fincaId), grupoDatos]);
     return rows.length > 0;
 }
  
-export async function verificarEstanqueExiste(estanqueId, fincaId) {
+export async function verificarEstanqueExiste(estanqueId, fincaId, grupoDatos) {
     if (!estanqueId || !fincaId) return false;
     const [rows] = await pool.execute(`
         SELECT id FROM estanques
         WHERE id = ? AND finca_id = ? AND grupo_datos = ?
         AND activo = TRUE AND deleted_at IS NULL
-    `, [Number(estanqueId), Number(fincaId), GRUPO_DATOS]);
+    `, [Number(estanqueId), Number(fincaId), grupoDatos]);
     return rows.length > 0;
 }
  

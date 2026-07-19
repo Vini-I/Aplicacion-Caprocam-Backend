@@ -43,7 +43,7 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get("/", verificarAuth, listarSiembras);
+router.get("/", verificarAuth, listarSiembra);
 router.get("/:id", verificarAuth, obtenerSiembra);
 router.post("/", verificarAuth, validarBodySiembra, crearSiembra);
 router.put("/:id", verificarAuth, validarBodySiembra, actualizarSiembra);

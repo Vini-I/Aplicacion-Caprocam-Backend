@@ -20,14 +20,6 @@ IMPORTS
 
 import pool from '../config/database.js';
 
-/*
-//////////////////////////////////////////////////////////
-cosntantes 
-//////////////////////////////////////////////////////////
-*/
-
-const GRUPO_DATOS = 1;
-
 
 /*
 //////////////////////////////////////////////////////////
@@ -35,7 +27,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export async function findAll() {
+export async function findAll(grupoDatos) {
     /*
     Descripcion:
     Obtiene todos los lotes de larva activos.
@@ -47,11 +39,11 @@ export async function findAll() {
         AND    activo = TRUE
         AND    deleted_at IS NULL
         ORDER BY id ASC
-    `, [GRUPO_DATOS]);
+    `, [grupoDatos]);
     return rows;
 }
 
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
     Busca un lote de larva activo por su ID.
@@ -63,11 +55,11 @@ export async function findById(id) {
         AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
-    `, [Number(id), GRUPO_DATOS]);
+    `, [Number(id), grupoDatos]);
     return rows[0] || null;
 }
 
-export async function findByCodigo(codigo) {
+export async function findByCodigo(codigo, grupoDatos) {
     /*
     Descripcion:
     Busca un lote activo por su codigo (case-insensitive).
@@ -80,11 +72,11 @@ export async function findByCodigo(codigo) {
         AND    activo = TRUE
         AND    deleted_at IS NULL
         LIMIT  1
-    `, [codigo, GRUPO_DATOS]);
+    `, [codigo, grupoDatos]);
      return rows[0] || null;
 }
 
-export async function findByCodigoIgnorandoId(codigo, id) {
+export async function findByCodigoIgnorandoId(codigo, id, grupoDatos) {
     /*
     Descripcion:
     Busca un lote por codigo ignorando un ID especifico.
@@ -98,11 +90,11 @@ export async function findByCodigoIgnorandoId(codigo, id) {
         AND    deleted_at IS NULL
         AND    id != ?
         LIMIT  1
-    `, [codigo, GRUPO_DATOS, Number(id)]);
+    `, [codigo, grupoDatos, Number(id)]);
     return rows[0] || null;
 }
 
-export async function createLote(dto) {
+export async function createLote(dto, grupoDatos) {
     /*
     Descripcion:
     Crea un nuevo lote de larva.
@@ -122,7 +114,7 @@ export async function createLote(dto) {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const [result] = await pool.execute(sql, [
-        GRUPO_DATOS,
+        grupoDatos,
         dto.codigo_lote,
         dto.proveedor_id  || null,
         dto.laboratorio,
@@ -133,10 +125,10 @@ export async function createLote(dto) {
         dto.fecha_ingreso,
         dto.estado_lote || 'Disponible',
     ]);
-    return findById(result.insertId);
+    return findById(result.insertId, grupoDatos);
 }
 
-export async function update(id, dto) {
+export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
     Actualiza un lote de larva activo.
@@ -169,13 +161,13 @@ export async function update(id, dto) {
         dto.fecha_ingreso,
         dto.estado_lote || 'Disponible',
         Number(id),
-        GRUPO_DATOS
+        grupoDatos
     ]);
     if (result.affectedRows === 0) return null;
     return findById(id);
 }
 
-export async function remove(id) {
+export async function remove(id, grupoDatos) {
     /*
     Descripcion:
     Borrado logico de un lote de larva.
@@ -192,13 +184,13 @@ export async function remove(id) {
         AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
-    `, [Number(id), GRUPO_DATOS]);
+    `, [Number(id), grupoDatos]);
 
     if (result.affectedRows === 0) return null;
     return { ...lote, activo: false };
 }
 
-export async function actualizarEstado(id, estado) {
+export async function actualizarEstado(id, estado, grupoDatos) {
     /*
     Descripcion:
     Actualiza unicamente el estado_lote. Pensada para ser llamada
@@ -220,11 +212,11 @@ export async function actualizarEstado(id, estado) {
         AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
-    `, [estado, Number(id), GRUPO_DATOS]);
+    `, [estado, Number(id), grupoDatos]);
     return result.affectedRows > 0;
 }
 
-export async function verificarProveedorExiste(proveedorId) {
+export async function verificarProveedorExiste(proveedorId, grupoDatos) {
     if (!proveedorId) return false;
     const [rows] = await pool.execute(`
         SELECT id
@@ -233,6 +225,6 @@ export async function verificarProveedorExiste(proveedorId) {
         AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
-    `, [Number(proveedorId), GRUPO_DATOS]);
+    `, [Number(proveedorId), grupoDatos]);
     return rows.length > 0;
 }

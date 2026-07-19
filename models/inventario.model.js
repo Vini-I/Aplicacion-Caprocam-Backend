@@ -7,14 +7,10 @@ Autor: Brayan / Joan
 Fecha: 30/06/2026 — Adaptado a MySQL: 06/07/2026
 Modulo: Inventario
 Descripcion:
-Capa de datos del modulo de inventario.
-Sustituye datos mock por consultas reales a MySQL.
-La DB separa productos e inventario:
-- productos: catalogo de productos (nombre, categoria, etc.)
-- inventario: cantidades disponibles por producto.
-Los SELECTs usan JOIN para retornar datos completos.
-Los INSERT/UPDATE usan transacciones para mantener
-consistencia entre ambas tablas.
+Capa de datos SOLO de la tabla inventario. Ya no crea ni
+actualiza productos (eso vive en producto.model.js). Los
+SELECT hacen JOIN con productos unicamente para enriquecer
+la respuesta con nombre/categoria/etc.
 //////////////////////////////////////////////////////////
 */
 
@@ -29,23 +25,13 @@ import { mapearInventario } from '../dtos/inventario.dto.js';
 
 /*
 //////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-
-grupo_datos provisional = 1 (Grupo Demo Finca del seed).
-Se reemplazara por el valor del JWT cuando exista auth.
-*/
-
-const GRUPO_DATOS = 1;
-
-/*
-//////////////////////////////////////////////////////////
 QUERY BASE — JOIN productos + inventario
 //////////////////////////////////////////////////////////
 
-Se reutiliza en findAll y findById para evitar duplicacion.
-Los alias (inv_id, prod_id, inv_uuid, inv_activo) permiten
-distinguir campos con el mismo nombre en ambas tablas.
+Tiene UN SOLO placeholder (grupo_datos). Cualquier funcion
+que agregue condiciones extra debe mandar GRUPO_DATOS como
+el PRIMER parametro, seguido de los parametros de sus propias
+condiciones, en el mismo orden en que aparecen en el SQL.
 */
 
 const SELECT_JOIN = `
@@ -82,310 +68,194 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export async function findAll() {
+export async function findAll(grupoDatos) {
     /*
     Descripcion:
-    Obtiene todos los registros activos de inventario
-    con sus datos de producto asociados (JOIN).
-
+    Obtiene todos los registros de inventario activos del
+    grupo_datos actual, enriquecidos con datos del producto.
+ 
     Parametros:
     No posee.
-
+ 
     Retorna:
-    - Array de objetos mapeados a camelCase.
+    - Lista de registros de inventario (formato camelCase).
     */
     const [rows] = await pool.execute(
-        SELECT_JOIN + ' ORDER BY i.id ASC'
+        SELECT_JOIN + ' ORDER BY i.id ASC', 
+        [grupoDatos]
     );
     return rows.map(mapearInventario);
 }
 
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
-    Busca un registro activo de inventario por su ID
-    (ID de la tabla inventario, no de productos).
-
+    Busca un registro de inventario activo por su ID, dentro
+    del grupo_datos actual.
+ 
     Parametros:
     - id: ID del registro de inventario.
-
+ 
     Retorna:
-    - Objeto mapeado a camelCase o null si no existe.
+    - Registro de inventario (formato camelCase) o null.
     */
     const [rows] = await pool.execute(
-        SELECT_JOIN + ' AND i.id = ? AND i.grupo_datos = ?',
-        [Number(id), GRUPO_DATOS]
+        SELECT_JOIN + ' AND i.id = ?',
+        [grupoDatos, Number(id)]
     );
     return rows[0] ? mapearInventario(rows[0]) : null;
 }
 
-export async function findByNombre(nombre) {
+export async function findByProductoId(productoId, grupoDatos) {
     /*
     Descripcion:
-    Busca un producto activo en el catalogo por nombre
-    exacto (case-insensitive). Usado para validar duplicados.
-
+    Busca el registro de inventario de un producto especifico
+    (relacion 1 a 1, ver UNIQUE(grupo_datos, producto_id) en
+    la DB). Usado para bloquear duplicados al crear.
+ 
     Parametros:
-    - nombre: Nombre del producto a buscar.
-
+    - productoId: ID del producto.
+ 
     Retorna:
-    - Objeto mapeado a camelCase o null si no existe.
+    - Registro de inventario (formato camelCase) o null.
     */
     const [rows] = await pool.execute(
-        SELECT_JOIN + ' AND LOWER(TRIM(p.nombre)) = LOWER(TRIM(?)) AND i.grupo_datos = ? LIMIT 1',
-        [nombre, GRUPO_DATOS]
+        SELECT_JOIN + ' AND i.producto_id = ? LIMIT 1',
+        [grupoDatos, Number(productoId)]
     );
     return rows[0] ? mapearInventario(rows[0]) : null;
 }
-
-export async function findByNombreIgnorandoId(nombre, invId) {
+ 
+export async function verificarProveedorExiste(proveedorId, grupoDatos) {
     /*
     Descripcion:
-    Busca producto por nombre ignorando un ID de inventario.
-    Usado para validar duplicados al hacer UPDATE.
-
+    Verifica que el proveedor exista y este activo, dentro
+    del grupo_datos actual.
+ 
     Parametros:
-    - nombre: Nombre del producto.
-    - invId:  ID del inventario que se esta editando.
-
+    - proveedorId: ID del proveedor a verificar.
+ 
     Retorna:
-    - Objeto mapeado a camelCase o null.
-    */
-    const [rows] = await pool.execute(
-        SELECT_JOIN +
-        ' AND LOWER(TRIM(p.nombre)) = LOWER(TRIM(?)) AND i.id != ? AND i.grupo_datos = ? LIMIT 1',
-        [nombre, Number(invId), GRUPO_DATOS]
-    );
-    return rows[0] ? mapearInventario(rows[0]) : null;
-}
-
-export async function verificarProveedorExiste(proveedorId) {
-    /*
-    Descripcion:
-    Verifica que un proveedor exista y este activo antes de
-    usarlo como FK en productos/inventario.
-
-    Parametros:
-    - proveedorId: ID numerico del proveedor.
-
-    Retorna:
-    - true si existe, false si no.
+    - true si existe y esta activo, false en caso contrario.
     */
     if (!proveedorId) return false;
-
     const [rows] = await pool.execute(`
-        SELECT id
-        FROM   proveedores
-        WHERE  id = ?
-        AND    activo = TRUE
-        AND    deleted_at IS NULL
-        AND    grupo_datos = ?
-    `, [Number(proveedorId), GRUPO_DATOS]);
-
+        SELECT id FROM proveedores
+        WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
+    `, [Number(proveedorId), grupoDatos]);
     return rows.length > 0;
 }
-
-export async function create(dto) {
+ 
+export async function verificarProductoExiste(productoId,grupoDatos) {
     /*
     Descripcion:
-    Crea un producto en la tabla productos y su registro
-    correspondiente en inventario. Usa transaccion para
-    garantizar consistencia entre ambas tablas.
-
+    Verifica que el producto exista y este activo, dentro del
+    grupo_datos actual.
+ 
+    NOTA: se asume que "productos" sigue la misma convencion del
+    resto del proyecto (columnas grupo_datos, activo, deleted_at).
+    Si tienes producto.model.js ya armado, avisame para reusar su
+    findById() en vez de esta consulta directa.
+ 
     Parametros:
-    - dto: Objeto InventarioDTO con los datos del producto.
-
+    - productoId: ID del producto a verificar.
+ 
     Retorna:
-    - Objeto mapeado a camelCase del registro creado.
+    - true si existe y esta activo, false en caso contrario.
     */
-    const conn = await pool.getConnection();
-    try {
-        await conn.beginTransaction();
-
-        // 1. Insertar en catalogo de productos
-        const sqlProducto = `
-            INSERT INTO productos (
-                grupo_datos,
-                proveedor_id,
-                nombre,
-                categoria,
-                unidad,
-                precio_unidad,
-                fecha_ingreso,
-                fecha_caducidad,
-                estado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        const [prodResult] = await conn.execute(sqlProducto, [
-            GRUPO_DATOS,
-            dto.proveedor_id || null,
-            dto.nombre,
-            dto.categoria,
-            dto.unidad,
-            dto.precio_unidad,
-            dto.fecha_ingreso,
-            dto.fecha_caducidad,
-            dto.estado || 'ACTIVO',
-        ]);
-
-        const productoId = prodResult.insertId;
-
-        // 2. Insertar registro de inventario (cantidad + stock_minimo)
-        const sqlInventario = `
-            INSERT INTO inventario (
-                grupo_datos,
-                producto_id,
-                proveedor_id,
-                cantidad,
-                stock_minimo
-            ) VALUES (?, ?, ?, ?, ?)
-        `;
-        const [invResult] = await conn.execute(sqlInventario, [
-            GRUPO_DATOS,
-            productoId,
-            dto.proveedor_id || null,
-            dto.cantidad,
-            dto.stock_minimo,
-        ]);
-
-        await conn.commit();
-        return findById(invResult.insertId);
-
-    } catch (err) {
-        await conn.rollback();
-        throw err;
-    } finally {
-        conn.release();
-    }
+    if (!productoId) return false;
+    const [rows] = await pool.execute(`
+        SELECT id FROM productos
+        WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
+    `, [Number(productoId), grupoDatos]);
+    return rows.length > 0;
 }
-
-export async function update(id, dto) {
+ 
+ 
+export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Actualiza el producto (catalogo) y el inventario
-    (cantidades) de forma atomica usando transaccion.
-    Incrementa version en ambas tablas.
-
+    Crea el registro de inventario para un producto existente,
+    asociado al grupo_datos actual. cantidad siempre inicia en
+    0 (ver InventarioCreateDTO); la carga inicial de stock se
+    hace con un primer movimiento tipo 'Entrada'.
+ 
     Parametros:
-    - id:  ID del registro de inventario a actualizar.
-    - dto: Objeto InventarioDTO con los nuevos datos.
-
+    - dto: InventarioCreateDTO con producto_id, proveedor_id y
+      stock_minimo.
+ 
     Retorna:
-    - Objeto mapeado a camelCase actualizado o null.
+    - Registro de inventario recien creado (formato camelCase).
     */
-    const actual = await findById(id);
-    if (!actual) return null;
-
-    const conn = await pool.getConnection();
-    try {
-        await conn.beginTransaction();
-
-        // 1. Actualizar catalogo de productos
-        const sqlProducto = `
-            UPDATE productos
-            SET    nombre       = ?,
-                   categoria    = ?,
-                   unidad       = ?,
-                   precio_unidad= ?,
-                   proveedor_id = ?,
-                   fecha_ingreso= ?,
-                   fecha_caducidad = ?,
-                   estado       = ?,
-                   version      = version + 1
-            WHERE  id = ?
-            AND    activo = TRUE
-            AND    deleted_at IS NULL
-        `;
-        await conn.execute(sqlProducto, [
-            dto.nombre,
-            dto.categoria,
-            dto.unidad,
-            dto.precio_unidad,
-            dto.proveedor_id || null,
-            dto.fecha_ingreso,
-            dto.fecha_caducidad,
-            dto.estado || 'ACTIVO',
-            actual.productoId,
-        ]);
-
-        // 2. Actualizar registro de inventario
-        const sqlInventario = `
-            UPDATE inventario
-            SET    cantidad    = ?,
-                   stock_minimo= ?,
-                   proveedor_id= ?,
-                   version     = version + 1
-            WHERE  id = ?
-            AND    activo = TRUE
-            AND    deleted_at IS NULL
-        `;
-        await conn.execute(sqlInventario, [
-            dto.cantidad,
-            dto.stock_minimo,
-            dto.proveedor_id || null,
-            Number(id),
-        ]);
-
-        await conn.commit();
-        return findById(id);
-
-    } catch (err) {
-        await conn.rollback();
-        throw err;
-    } finally {
-        conn.release();
-    }
+    const [result] = await pool.execute(`
+        INSERT INTO inventario (
+            grupo_datos, producto_id, proveedor_id, cantidad, stock_minimo
+        ) VALUES (?, ?, ?, 0, ?)
+    `, [
+        grupoDatos,
+        dto.producto_id,
+        dto.proveedor_id,
+        dto.stock_minimo,
+    ]);
+    return findById(result.insertId);
 }
-
-export async function remove(id) {
+ 
+export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
-    Borrado logico en inventario y en productos.
-    Ambas tablas se desactivan de forma atomica.
-    No elimina filas fisicamente.
-
+    Actualiza SOLO proveedor_id y stock_minimo de un registro
+    de inventario activo, dentro del grupo_datos actual.
+    cantidad no se toca aqui, ver movimientoInventario.model.js.
+ 
     Parametros:
-    - id: ID del registro de inventario a desactivar.
-
+    - id:  ID del registro de inventario.
+    - dto: InventarioUpdateDTO con proveedor_id y stock_minimo.
+ 
     Retorna:
-    - Objeto mapeado del registro desactivado o null.
+    - Registro de inventario actualizado (formato camelCase) o null.
     */
-    const actual = await findById(id);
+    const [result] = await pool.execute(`
+        UPDATE inventario
+        SET    proveedor_id = ?,
+               stock_minimo = ?,
+               version      = version + 1
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [dto.proveedor_id, dto.stock_minimo, Number(id), grupoDatos]);
+ 
+    if (result.affectedRows === 0) return null;
+    return findById(id, grupoDatos);
+}
+ 
+export async function remove(id, grupoDatos) {
+    /*
+    Descripcion:
+    Realiza un borrado logico del registro de inventario
+    (activo = false, deleted_at = NOW()), dentro del
+    grupo_datos actual.
+ 
+    Parametros:
+    - id: ID del registro de inventario a eliminar.
+ 
+    Retorna:
+    - Registro de inventario desactivado (formato camelCase) o null.
+    */
+    const actual = await findById(id, grupoDatos);
     if (!actual) return null;
-
-    const conn = await pool.getConnection();
-    try {
-        await conn.beginTransaction();
-
-        // 1. Borrado logico en inventario
-        await conn.execute(`
-            UPDATE inventario
-            SET    activo     = FALSE,
-                   deleted_at = NOW(),
-                   version    = version + 1
-            WHERE  id = ?
-            AND    activo = TRUE
-            AND    deleted_at IS NULL
-        `, [Number(id)]);
-
-        // 2. Borrado logico en productos
-        await conn.execute(`
-            UPDATE productos
-            SET    activo     = FALSE,
-                   deleted_at = NOW(),
-                   version    = version + 1
-            WHERE  id = ?
-            AND    activo = TRUE
-            AND    deleted_at IS NULL
-        `, [actual.productoId]);
-
-        await conn.commit();
-        return { ...actual, activo: false };
-
-    } catch (err) {
-        await conn.rollback();
-        throw err;
-    } finally {
-        conn.release();
-    }
+ 
+    const [result] = await pool.execute(`
+        UPDATE inventario
+        SET    activo     = FALSE,
+               deleted_at = NOW(),
+               version    = version + 1
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(id), grupoDatos]);
+ 
+    if (result.affectedRows === 0) return null;
+    return { ...actual, activo: false };
 }
