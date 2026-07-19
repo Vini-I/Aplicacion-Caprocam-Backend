@@ -34,14 +34,6 @@ import { exito, error } from '../common/respuestaJson.js';
 
 /*
 //////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
-
-/*
-//////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 La funcion createCrecimiento() y updateCrecimiento()
@@ -84,7 +76,8 @@ export async function getCrecimientos(req, res) {
     Retorna:
     - 200 con lista de registros de crecimiento
     */
-    const data = await MantCrecimientoModel.findAll();
+    const grupoDatos = req.user.grupoDatos;
+    const data = await MantCrecimientoModel.findAll(grupoDatos);
     return exito(res, 'Registros de crecimiento obtenidos correctamente.', data);
 }
 
@@ -99,7 +92,8 @@ export async function getCrecimientoById(req, res) {
     - 200 con el registro encontrado
     - 404 si no existe
     */
-    const registro = await MantCrecimientoModel.findById(req.params.id);
+    const grupoDatos = req.user.grupoDatos;
+    const registro = await MantCrecimientoModel.findById(req.params.id, grupoDatos);
     if (!registro) {
         return error(res, 'Registro no encontrado.', null, 404);
     }
@@ -122,11 +116,27 @@ export async function updateCrecimiento(req, res) {
     - 404 si no existe
     - 400/422 si falla la validacion
     */
+    const grupoDatos = req.user.grupoDatos;
+
     const validacionErr = validarCuerpo(req.body, res);
     if (validacionErr) return validacionErr;
-    const { grupoDatos, finca, estanque, colaborador, fechaRegistro, pesoActual } = req.body;
-    const dto = new MantCrecimientoDto(grupoDatos, finca, estanque, colaborador, fechaRegistro, pesoActual);
-    const actualizado = await MantCrecimientoModel.update(req.params.id, dto);
+
+    const { finca, estanque, colaborador, fechaRegistro, pesoActual } = req.body;
+    const dto = new MantCrecimientoDto(
+        grupoDatos, 
+        finca, 
+        estanque, 
+        colaborador, 
+        fechaRegistro, 
+        pesoActual
+    );
+
+    const actualizado = await MantCrecimientoModel.update(
+        req.params.id,
+        grupoDatos,
+        dto
+    );
+
     if (!actualizado) {
         return error(res, "Registro no encontrado", null, 404);
     }
@@ -144,10 +154,21 @@ export async function createCrecimiento(req, res) {
     - 201 con el registro creado
     - 400/422 si falla la validacion
     */
+    const grupoDatos = req.user.grupoDatos;
+
     const validacionErr = validarCuerpo(req.body, res);
     if (validacionErr) return validacionErr;
-    const { grupoDatos, finca, estanque, colaborador, fechaRegistro, pesoActual } = req.body;
-    const dto = new MantCrecimientoDto(grupoDatos, finca, estanque, colaborador, fechaRegistro, pesoActual);
+
+    const { finca, estanque, colaborador, fechaRegistro, pesoActual } = req.body;
+    const dto = new MantCrecimientoDto(
+        grupoDatos, 
+        finca, 
+        estanque, 
+        colaborador, 
+        fechaRegistro, 
+        pesoActual
+    );
+
     const nuevoRegistro = await MantCrecimientoModel.create(dto);
     return exito(res, "Registro de crecimiento creado correctamente.", nuevoRegistro, 201);
 }
@@ -163,7 +184,12 @@ export async function deleteCrecimiento(req, res) {
     - 200 con el registro eliminado
     - 404 si no existe
     */
-    const eliminado = await MantCrecimientoModel.remove(req.params.id);
+    const grupoDatos = req.user.grupoDatos;
+    const eliminado = await MantCrecimientoModel.remove(
+        req.params.id,
+        grupoDatos
+    );
+
     if (!eliminado) {
         return error(res, "Registro no encontrado", null, 404);
     }

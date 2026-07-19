@@ -42,16 +42,16 @@ Crea una nueva finca.
 
 Body (JSON):
 {
-    "idCBO":                   1,
-    "nombreFinca":             "Finca La Reina",
-    "provincia":               "Guanacaste",
-    "canton":                  "Nandayure",
-    "distrito":                "Bongo",
-    "otrasSenas":              "Frente a la carretera principal",
-    "propietarioResponsable":  "Juan Pérez",
-    "telefono":                "88776655",
-    "areaTotal":               50,
-    "espejosAgua":             15
+  "idCBO": "CBO-999",
+  "nombreFinca": "Finca Linda Vista",
+  "provincia": "Guanacaste",
+  "canton": "Cañas",
+  "distrito": "Cañas",
+  "otrasSenas": "50 metros norte del cruce principal",
+  "propietarioResponsable": "Roberto Gomez",
+  "telefono": "88889999",
+  "areaTotal": 45.5,
+  "espejosAgua": 12.2
 }
 
 Campos requeridos: idCBO, nombreFinca, provincia, canton, distrito, propietarioResponsable, telefono, areaTotal, espejosAgua
@@ -83,16 +83,16 @@ Parametros URL:
 
 Body (JSON):
 {
-    "idCBO":                   1,
-    "nombreFinca":             "Finca La Reina Actualizada",
-    "provincia":               "Guanacaste",
-    "canton":                  "Nandayure",
-    "distrito":                "Bongo",
-    "otrasSenas":              "Frente a la carretera principal, sector este",
-    "propietarioResponsable":  "Juan Pérez García",
-    "telefono":                "88776655",
-    "areaTotal":               55,
-    "espejosAgua":             18
+  "idCBO": "CBO-999",
+  "nombreFinca": "Finca Linda Vista",
+  "provincia": "Guanacaste",
+  "canton": "Cañas",
+  "distrito": "Cañas",
+  "otrasSenas": "50 metros norte del cruce principal",
+  "propietarioResponsable": "Roberto Gomez",
+  "telefono": "87292564",
+  "areaTotal": 45.5,
+  "espejosAgua": 12.2
 }
 
 Respuesta exitosa:
