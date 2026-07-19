@@ -3,11 +3,12 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: comprador.controller.js
-Autor: Jose Espinoza
-Fecha: 05/07/2026
+Autor: Jose Espinoza 
+Fecha: 17/07/2026
 Modulo: Compradores
 Descripcion:
-Controlador de compradores asíncrono alineado al uso de la base de datos MySQL.
+Controlador de compradores asíncrono alineado al uso de la base de datos MySQL,
+extrayendo la seguridad y el grupo de datos desde el JSON Web Token (JWT).
 //////////////////////////////////////////////////////////
 */
 
@@ -20,14 +21,6 @@ import { CompradorDTO } from '../dtos/comprador.dto.js';
 import * as CompradorService from '../services/comprador.service.js';
 import * as CompradorModel from '../models/comprador.model.js';
 import { exito, error } from '../common/respuestaJson.js';
-
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
 
 /*
 //////////////////////////////////////////////////////////
@@ -53,7 +46,8 @@ FUNCIONES PRINCIPALES
 
 export async function getCompradores(req, res) {
     try {
-        const data = await CompradorModel.findAll();
+        const grupoDatos = req.user.grupoDatos; // Extracción obligatoria del JWT
+        const data = await CompradorModel.findAll(grupoDatos);
         return exito(res, 'Compradores obtenidos correctamente.', data);
     } catch (err) {
         return error(res, 'Error al obtener los compradores.', err.message, 500);
@@ -62,7 +56,8 @@ export async function getCompradores(req, res) {
 
 export async function getCompradorById(req, res) {
     try {
-        const comprador = await CompradorModel.findById(req.params.id);
+        const grupoDatos = req.user.grupoDatos; // Extracción obligatoria del JWT
+        const comprador = await CompradorModel.findById(req.params.id, grupoDatos);
         if (!comprador) return error(res, 'Comprador no encontrado.', null, 404);
         return exito(res, 'Comprador obtenido correctamente.', comprador);
     } catch (err) {
@@ -72,13 +67,14 @@ export async function getCompradorById(req, res) {
 
 export async function createComprador(req, res) {
     try {
+        const grupoDatos = req.user.grupoDatos; // Extracción obligatoria del JWT
         const { nombre, contacto, telefono } = req.body;
 
         const err = validarCuerpo({ nombre, contacto, telefono }, res);
         if (err) return err;
 
         const dto = new CompradorDTO({ nombre, contacto, telefono });
-        const nuevo = await CompradorModel.create(dto);
+        const nuevo = await CompradorModel.create(dto, grupoDatos);
         return exito(res, 'Comprador creado correctamente.', nuevo, 201);
     } catch (err) {
         return error(res, 'Error al crear el comprador.', err.message, 500);
@@ -87,13 +83,14 @@ export async function createComprador(req, res) {
 
 export async function updateComprador(req, res) {
     try {
+        const grupoDatos = req.user.grupoDatos; // Extracción obligatoria del JWT
         const { nombre, contacto, telefono } = req.body;
 
         const err = validarCuerpo({ nombre, contacto, telefono }, res);
         if (err) return err;
 
         const dto = new CompradorDTO({ nombre, contacto, telefono });
-        const actualizado = await CompradorModel.update(req.params.id, dto);
+        const actualizado = await CompradorModel.update(req.params.id, dto, grupoDatos);
         if (!actualizado) return error(res, 'Comprador no encontrado.', null, 404);
 
         return exito(res, 'Comprador actualizado correctamente.', actualizado);
@@ -104,7 +101,8 @@ export async function updateComprador(req, res) {
 
 export async function deleteComprador(req, res) {
     try {
-        const desactivado = await CompradorModel.removeLogicamente(req.params.id);
+        const grupoDatos = req.user.grupoDatos; // Extracción obligatoria del JWT
+        const desactivado = await CompradorModel.removeLogicamente(req.params.id, grupoDatos);
         if (!desactivado) return error(res, 'Comprador no encontrado.', null, 404);
         return exito(res, 'Comprador desactivado correctamente.', desactivado);
     } catch (err) {
