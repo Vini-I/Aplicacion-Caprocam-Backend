@@ -50,9 +50,11 @@ Crea un nuevo registro de crecimiento.
 
 Body (JSON):
 {
-    "finca":       "Finca La Perla",
-    "estanque":    "EST-03",
-    "pesoActual":  4.2
+  "finca": 1,
+  "estanque": 1,
+  "colaborador": null,
+  "fechaRegistro": "2026-07-18",
+  "pesoActual": 12.50
 }
 
 Campos requeridos: finca, estanque, pesoActual
@@ -91,9 +93,11 @@ Parametros URL:
 
 Body (JSON):
 {
-    "finca":      "Finca La Perla",
-    "estanque":   "EST-01",
-    "pesoActual": 5.1
+  "finca": 1,
+  "estanque": 1,
+  "colaborador": 1,
+  "fechaRegistro": "2026-07-18",
+  "pesoActual": 18.85
 }
 
 Campos requeridos: finca, estanque, pesoActual

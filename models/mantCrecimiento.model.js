@@ -34,7 +34,7 @@ FUNCIONES PRINCIPALES
 Contiene las funciones exportables que interactuan
 con la fuente de datos del modulo de crecimiento.
 */
-export async function findAll() {
+export async function findAll(grupoDatos) {
     /*
     Descripcion:
     Obtiene todos los registros de crecimiento.
@@ -49,13 +49,15 @@ export async function findAll() {
     const [rows] = await pool.execute(
         `SELECT *
         FROM crecimientos
-        WHERE deleted_at IS NULL`
+        WHERE grupo_datos = ?
+        AND deleted_at IS NULL`,
+        [grupoDatos]
     );
 
     return rows;
 }
 
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
     Busca un registro de crecimiento por su ID.
@@ -71,8 +73,9 @@ export async function findById(id) {
         `SELECT *
         FROM crecimientos
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL`,
-        [id]
+        [id, grupoDatos]
     );
 
     return rows[0] || null;
@@ -109,23 +112,24 @@ export async function create(dto) {
         ]
     );
 
-    return await findById(result.insertId);
+    return await findById(result.insertId, dto.grupoDatos);
 }
 
-export async function update(id, dto) {
+export async function update(id, grupoDatos, dto) {
     /*
     Descripcion:
     Actualiza un registro de crecimiento.
 
     Parametros:
     - id: Identificador del crecimiento.
+    - grupoDatos: Grupo de datos al que pertenece el crecimiento.
     - dto: Datos actualizados.
 
     Retorna:
     - El registro actualizado o null si no existe.
     */
 
-    const registro = await findById(id);
+    const registro = await findById(id, grupoDatos);
 
     if (!registro) {
         return null;
@@ -134,39 +138,40 @@ export async function update(id, dto) {
     await pool.execute(
         `UPDATE crecimientos
         SET
-            grupo_datos = ?,
             finca_id = ?,
             estanque_id = ?,
             colaborador_id = ?,
             fecha_registro = ?,
             peso_actual = ?
-        WHERE id = ?`,
+        WHERE id = ?
+        AND grupo_datos = ?`,
         [
-            dto.grupoDatos,
             dto.finca,
             dto.estanque,
             dto.colaborador,
             dto.fechaRegistro,
             dto.pesoActual,
-            id
+            id,
+            grupoDatos
         ]
     );
-    return await findById(id);
+    return await findById(id, grupoDatos);
 }
 
-export async function remove(id) {
+export async function remove(id, grupoDatos) {
     /*
     Descripcion:
     Elimina logicamente un registro de crecimiento.
 
     Parametros:
     - id: Identificador del crecimiento.
+    - grupoDatos: Grupo de datos al que pertenece el crecimiento.
 
     Retorna:
     - El registro eliminado o null si no existe.
     */
 
-    const registro = await findById(id);
+    const registro = await findById(id, grupoDatos);
 
     if (!registro) {
         return null;
@@ -175,9 +180,9 @@ export async function remove(id) {
     await pool.execute(
         `UPDATE crecimientos
         SET deleted_at = NOW()
-        WHERE id = ?`,
-        [id]
+        WHERE id = ?
+        AND grupo_datos = ?`,
+        [id, grupoDatos]
     );
-
     return registro;
 }
