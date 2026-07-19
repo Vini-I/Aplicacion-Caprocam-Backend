@@ -751,10 +751,6 @@ CREATE TABLE IF NOT EXISTS fisico_quimico (
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
     fecha_registro DATE NOT NULL,
-    ph DECIMAL(5,2) NULL,
-    salinidad DECIMAL(5,2) NULL,
-    temperatura DECIMAL(5,2) NULL,
-    oxigeno DECIMAL(5,2) NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -768,7 +764,30 @@ CREATE TABLE IF NOT EXISTS fisico_quimico (
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
 
     CONSTRAINT fk_fq_estanques
-    FOREIGN KEY (estanque_id) REFERENCES estanques(id)
+    FOREIGN KEY (estanque_id) REFERENCES estanques(id),
+
+    CONSTRAINT uq_fq_estanque_fecha
+    UNIQUE (grupo_datos, estanque_id, fecha_registro)
+);
+
+CREATE TABLE IF NOT EXISTS fisico_quimico_detalle (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    lectura_id INT NOT NULL,
+    tipo_medicion ENUM('ph', 'salinidad', 'temperatura', 'oxigeno') NOT NULL,
+    etiqueta VARCHAR(20) NOT NULL,
+    valor DECIMAL(6,2) NOT NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    version INT NOT NULL DEFAULT 1,
+
+    CONSTRAINT fk_fq_detalle_lectura
+    FOREIGN KEY (lectura_id) REFERENCES fisico_quimico(id),
+
+    CONSTRAINT uq_fq_detalle_lectura_tipo_etiqueta
+    UNIQUE (lectura_id, tipo_medicion, etiqueta)
 );
 
 CREATE TABLE IF NOT EXISTS trazabilidad (
@@ -846,3 +865,7 @@ CREATE INDEX idx_lotes_larva_grupo ON lotes_larva(grupo_datos);
 CREATE INDEX idx_precrias_grupo ON precrias(grupo_datos);
 CREATE INDEX idx_siembras_grupo ON siembras(grupo_datos);
 CREATE INDEX idx_raleos_grupo ON raleos(grupo_datos);
+
+CREATE INDEX idx_fq_estanque_fecha ON fisico_quimico(estanque_id, fecha_registro);
+CREATE INDEX idx_fq_detalle_lectura ON fisico_quimico_detalle(lectura_id);
+CREATE INDEX idx_fq_detalle_tipo ON fisico_quimico_detalle(tipo_medicion);
