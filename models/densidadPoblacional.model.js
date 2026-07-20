@@ -104,7 +104,7 @@ export async function findAll(filtros) {
     return mapearLista(rows);
 }
 
-export async function findById(id) {
+export async function findById(id,grupoDatos) {
     /*
     Descripcion:
     Busca un registro de densidad poblacional activo por su
@@ -143,11 +143,12 @@ export async function findById(id) {
             version
         FROM densidad_poblacional
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         LIMIT 1
         `,
-        [id]
+        [id,grupoDatos]
     );
 
     if (rows.length === 0) {
@@ -157,7 +158,7 @@ export async function findById(id) {
     return mapearFila(rows[0]);
 }
 
-export async function findByFechaAndEstanque(fecha, idEstanque, idIgnorado) {
+export async function findByFechaAndEstanque(fecha, idEstanque, idIgnorado, grupoDatos) {
     /*
     Descripcion:
     Busca un registro de densidad poblacional por fecha y estanque.
@@ -200,11 +201,12 @@ export async function findByFechaAndEstanque(fecha, idEstanque, idIgnorado) {
         FROM densidad_poblacional
         WHERE fecha = ?
         AND estanque_id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
     `;
 
-    const params = [fecha, idEstanque];
+    const params = [fecha, idEstanque,grupoDatos];
 
     if (idIgnorado !== null) {
         if (idIgnorado !== undefined) {
@@ -275,10 +277,10 @@ export async function create(dto) {
         ]
     );
 
-    return await findById(result.insertId);
+    return await findById(result.insertId,grupoDatos);
 }
 
-export async function update(id, dto) {
+export async function update(id, dto,grupoDatos) {
     /*
     Descripcion:
     Actualiza un registro de densidad poblacional existente en la base de datos.
@@ -293,20 +295,18 @@ export async function update(id, dto) {
     - null si el registro no existe o fue eliminado logicamente.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(id,grupoDatos);
 
     if (!actual) {
         return null;
     }
 
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
     const fecha = normalizarFechaMysql(dto.fecha);
 
     await pool.execute(
         `
         UPDATE densidad_poblacional
         SET
-            grupo_datos = ?,
             finca_id = ?,
             estanque_id = ?,
             fecha = ?,
@@ -321,11 +321,11 @@ export async function update(id, dto) {
             notas_conteo = ?,
             version = version + 1
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         `,
         [
-            grupoDatos,
             dto.idFinca,
             dto.idEstanque,
             fecha,
@@ -338,14 +338,15 @@ export async function update(id, dto) {
             dto.sobrevivencia,
             dto.densidad,
             dto.notasConteo,
-            id
+            id,
+            grupoDatos
         ]
     );
 
-    return await findById(id);
+    return await findById(id,grupoDatos);
 }
 
-export async function remove(id) {
+export async function remove(id,grupoDatos) {
     /*
     Descripcion:
     Elimina logicamente un registro de densidad poblacional.
@@ -360,7 +361,7 @@ export async function remove(id) {
     - null si el registro no existe o ya fue eliminado.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(id,grupoDatos);
 
     if (!actual) {
         return null;
@@ -376,8 +377,9 @@ export async function remove(id) {
         WHERE id = ?
         AND deleted_at IS NULL
         AND activo = TRUE
+        AND grupo_datos=?
         `,
-        [id]
+        [id,grupoDatos]
     );
 
     return actual;
@@ -452,32 +454,33 @@ function mapearFila(row) {
 }
 
 function obtenerGrupoDatos(valor) {
-    /*
-    Descripcion:
-    Obtiene el grupo de datos del registro.
-    Si no viene definido, utiliza el grupo 1 como valor temporal
-    para pruebas mientras se implementa la autenticacion.
+/*
+Descripcion:
+Obtiene y valida el grupo de datos recibido.
+Verifica que el valor exista y que corresponda a un numero
+mayor que cero antes de utilizarlo en las consultas de la
+base de datos.
 
-    Parametros:
-    - valor: Valor recibido como grupo de datos.
+Parametros:
+- valor: Valor recibido como grupo de datos.
 
-    Retorna:
-    - Numero del grupo de datos.
-    */
+Retorna:
+- Numero del grupo de datos cuando el valor es valido.
+- null si el valor no existe, no es numerico o es menor
+  o igual a cero.
+*/
 
-    if (valor === undefined) {
-        return 1;
+   if (valor === undefined || valor === null) {
+        return null;
     }
 
-    if (valor === null) {
-        return 1;
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero) || numero <= 0) {
+        return null;
     }
 
-    if (String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
+    return numero;
 }
 
 function normalizarFechaMysql(valor) {

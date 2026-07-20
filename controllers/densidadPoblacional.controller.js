@@ -164,12 +164,6 @@ function validarCuerpo(body, res) {
         errores.push("El campo fecha no es una fecha valida.");
     }
 
-    if (!isEmpty(body.grupoDatos)) {
-        if (!isNumeroMayorCero(body.grupoDatos)) {
-            errores.push("El campo grupoDatos debe ser numerico y mayor que cero.");
-        }
-    }
-
     if (!isNumeroOpcionalMayorIgualCero(body.cantidadSiembra)) {
         errores.push("El campo cantidadSiembra debe ser numerico y mayor o igual que cero.");
     }
@@ -262,10 +256,12 @@ export async function getDensidades(req, res) {
     */
 
     try {
+        const grupoDatos = req.user.grupoDatos;
+
         const filtros = {
             idFinca: req.query.idFinca,
             idEstanque: req.query.idEstanque,
-            grupoDatos: req.query.grupoDatos
+            grupoDatos:grupoDatos
         };
 
         const data = await DensidadPoblacionalModel.findAll(filtros);
@@ -293,13 +289,15 @@ export async function getDensidadById(req, res) {
     */
 
     try {
+        const grupoDatos = req.user.grupoDatos;
+
         const errId = validarIdParametro(req.params.id, res);
 
         if (errId) {
             return errId;
         }
 
-        const registro = await DensidadPoblacionalModel.findById(req.params.id);
+        const registro = await DensidadPoblacionalModel.findById(req.params.id,grupoDatos);
 
         if (!registro) {
             return error(res, "Registro de densidad poblacional no encontrado.", null, 404);
@@ -330,6 +328,8 @@ export async function createDensidad(req, res) {
     */
 
     try {
+        const grupoDatos = req.user.grupoDatos;
+
         const err = validarCuerpo(req.body, res);
 
         if (err) {
@@ -341,7 +341,8 @@ export async function createDensidad(req, res) {
         const existente = await DensidadPoblacionalModel.findByFechaAndEstanque(
             req.body.fecha,
             idEstanque,
-            null
+            null,
+            grupoDatos
         );
 
         if (existente) {
@@ -353,7 +354,8 @@ export async function createDensidad(req, res) {
             );
         }
 
-        const dto = new DensidadPoblacionalDTO(req.body);
+        const dto = new DensidadPoblacionalDTO(req.body, grupoDatos);
+
         const nuevo = await DensidadPoblacionalModel.create(dto);
 
         return exito(res, "Registro de densidad poblacional creado correctamente.", nuevo, 201);
@@ -384,6 +386,8 @@ export async function updateDensidad(req, res) {
     */
 
     try {
+        const grupoDatos = req.user.grupoDatos;
+
         const errId = validarIdParametro(req.params.id, res);
 
         if (errId) {
@@ -396,7 +400,7 @@ export async function updateDensidad(req, res) {
             return err;
         }
 
-        const registroActual = await DensidadPoblacionalModel.findById(req.params.id);
+        const registroActual = await DensidadPoblacionalModel.findById(req.params.id, grupoDatos);
 
         if (!registroActual) {
             return error(res, "Registro de densidad poblacional no encontrado.", null, 404);
@@ -407,7 +411,8 @@ export async function updateDensidad(req, res) {
         const existente = await DensidadPoblacionalModel.findByFechaAndEstanque(
             req.body.fecha,
             idEstanque,
-            req.params.id
+            req.params.id,
+            grupoDatos
         );
 
         if (existente) {
@@ -419,8 +424,9 @@ export async function updateDensidad(req, res) {
             );
         }
 
-        const dto = new DensidadPoblacionalDTO(req.body);
-        const actualizado = await DensidadPoblacionalModel.update(req.params.id, dto);
+        const dto = new DensidadPoblacionalDTO(req.body,grupoDatos);
+
+        const actualizado = await DensidadPoblacionalModel.update(req.params.id, dto, grupoDatos);
 
         return exito(res, "Registro de densidad poblacional actualizado correctamente.", actualizado);
     } catch (err) {
@@ -447,13 +453,15 @@ export async function deleteDensidad(req, res) {
     */
 
     try {
+        const grupoDatos = req.user.grupoDatos;
+
         const errId = validarIdParametro(req.params.id, res);
 
         if (errId) {
             return errId;
         }
 
-        const eliminado = await DensidadPoblacionalModel.remove(req.params.id);
+        const eliminado = await DensidadPoblacionalModel.remove(req.params.id,grupoDatos);
 
         if (!eliminado) {
             return error(res, "Registro de densidad poblacional no encontrado.", null, 404);
