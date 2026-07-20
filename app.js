@@ -44,6 +44,9 @@ import inventarioRoute  from './routes/inventario.routes.js';
 import siembraRoute     from './routes/siembra.route.js';
 import loteLarvaRoute   from './routes/loteLarva.routes.js';
 import precriaRoute     from './routes/preCria.routes.js';
+import procedenciaRouter from './routes/procedencia.routes.js';
+import laboratorioRouter from './routes/laboratorio.routes.js';
+import proveedorLarvaRouter from './routes/proveedorLarva.routes.js';
 /*
 //////////////////////////////////////////////////////////
 CONSTANTES
@@ -93,6 +96,9 @@ app.use('/api/v0/inventario',  inventarioRoute);
 app.use('/api/v0/siembras',     siembraRoute);
 app.use('/api/v0/lotes-larva',  loteLarvaRoute);
 app.use('/api/v0/precrias',     precriaRoute);
+app.use('/api/v0/procedencias', procedenciaRouter);
+app.use('/api/v0/laboratorios', laboratorioRouter);
+app.use('/api/v0/proveedores-larva', proveedorLarvaRouter);
 
 /*
 //////////////////////////////////////////////////////////
