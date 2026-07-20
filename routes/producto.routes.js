@@ -28,10 +28,10 @@ import { validarBodyProducto } from '../middlewares/producto.middleware.js';
 // Controladores
 import {
     getProductos,
-    getProductoById,
-    createProducto,
-    updateProducto,
-    deleteProducto
+    getProductoPorId,
+    crearProducto,
+    actualizarProducto,
+    desactivarProducto
 } from '../controllers/producto.controller.js';
 
 /*
@@ -49,12 +49,12 @@ RUTAS
 */
 
 router.get('/',           verificarAuth,                       getProductos);
-router.get('/:id',        verificarAuth,                       getProductoById);
-router.post('/',          verificarAuth, validarBodyProducto,  createProducto);
+router.get('/:id',        verificarAuth,                       getProductoPorId);
+router.post('/',          verificarAuth, validarBodyProducto,  crearProducto);
 
 // Ruta especifica de borrado logico arriba de la generica de actualizacion
-router.put('/:id/activo', verificarAuth,                       deleteProducto);
-router.put('/:id',        verificarAuth, validarBodyProducto,  updateProducto);
+router.put('/:id/activo', verificarAuth,                       desactivarProducto);
+router.put('/:id',        verificarAuth, validarBodyProducto,  actualizarProducto);
 
 /*
 //////////////////////////////////////////////////////////

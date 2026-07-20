@@ -28,10 +28,10 @@ import { validarBodyComprador } from '../middlewares/comprador.middleware.js';
 // Controladores
 import {
     getCompradores,
-    getCompradorById,
-    createComprador,
-    updateComprador,
-    deleteComprador
+    getCompradorPorId,
+    crearComprador,
+    actualizarComprador,
+    desactivarComprador
 } from '../controllers/comprador.controller.js';
 
 /*
@@ -49,12 +49,12 @@ RUTAS
 */
 
 router.get('/',           verificarAuth,                        getCompradores);
-router.get('/:id',        verificarAuth,                        getCompradorById);
-router.post('/',          verificarAuth, validarBodyComprador,  createComprador);
+router.get('/:id',        verificarAuth,                        getCompradorPorId);
+router.post('/',          verificarAuth, validarBodyComprador,  crearComprador);
 
 // Ruta especifica de borrado logico arriba de la generica de actualizacion
-router.put('/:id/activo', verificarAuth,                        deleteComprador);
-router.put('/:id',        verificarAuth, validarBodyComprador,  updateComprador);
+router.put('/:id/activo', verificarAuth,                        desactivarComprador);
+router.put('/:id',        verificarAuth, validarBodyComprador,  actualizarComprador);
 
 /*
 //////////////////////////////////////////////////////////

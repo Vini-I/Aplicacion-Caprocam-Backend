@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.model.js
 Autor: Jose Espinoza
-Fecha: 05/07/2026
+Fecha: 20/07/2026
 Modulo: Productos
 Descripcion:
 Maneja las consultas SQL directas a la base de datos para la entidad de Productos.
@@ -14,37 +14,36 @@ Maneja las consultas SQL directas a la base de datos para la entidad de Producto
 import pool from '../config/database.js';
 
 /**
- * Obtiene todos los productos que estén activos en la base de datos.
+ * Obtiene todos los productos activos de la base de datos.
  */
 export async function findAll() {
     const [rows] = await pool.query(
-        'SELECT id, uuid, grupo_datos AS grupoDatos, proveedor_id AS proveedorId, nombre, categoria, unidad, precio_unidad AS precioUnidad, estado FROM productos WHERE estado = "ACTIVO" AND deleted_at IS NULL'
+        'SELECT id, uuid, grupo_datos AS grupoDatos, proveedor_id AS proveedorId, nombre, categoria, unidad, precio_unidad AS precioUnidad, fecha_ingreso AS fechaIngreso, fecha_caducidad AS fechaCaducidad, estado FROM productos WHERE estado = "ACTIVO" AND deleted_at IS NULL'
     );
     return rows;
 }
 
 /**
- * Busca un producto activo específico por su ID.
+ * Busca un producto activo por su ID.
  */
 export async function findById(id) {
     const [rows] = await pool.query(
-        'SELECT id, uuid, grupo_datos AS grupoDatos, proveedor_id AS proveedorId, nombre, categoria, unidad, precio_unidad AS precioUnidad, estado FROM productos WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL',
+        'SELECT id, uuid, grupo_datos AS grupoDatos, proveedor_id AS proveedorId, nombre, categoria, unidad, precio_unidad AS precioUnidad, fecha_ingreso AS fechaIngreso, fecha_caducidad AS fechaCaducidad, estado FROM productos WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL',
         [id]
     );
     return rows.length > 0 ? rows[0] : null;
 }
 
 /**
- * Inserta un nuevo producto utilizando un objeto DTO.
+ * Registra un nuevo producto en la base de datos a partir de su DTO.
  */
 export async function create(dto) {
-    const { nombre, categoria, unidad, precioUnidad, proveedorId, grupoDatos } = dto;
+    const { proveedorId, nombre, categoria, unidad, precioUnidad, fechaIngreso, fechaCaducidad, grupoDatos } = dto;
     const gd = grupoDatos ?? 1;
-    const provId = proveedorId ?? null;
-    
+
     const [result] = await pool.query(
-        'INSERT INTO productos (grupo_datos, proveedor_id, nombre, categoria, unidad, precio_unidad, estado) VALUES (?, ?, ?, ?, ?, ?, "ACTIVO")',
-        [gd, provId, nombre, categoria, unidad, precioUnidad]
+        'INSERT INTO productos (grupo_datos, proveedor_id, nombre, categoria, unidad, precio_unidad, fecha_ingreso, fecha_caducidad, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, "ACTIVO")',
+        [gd, proveedorId || null, nombre, categoria || null, unidad || null, precioUnidad || 0, fechaIngreso || null, fechaCaducidad || null]
     );
 
     return {
@@ -55,15 +54,14 @@ export async function create(dto) {
 }
 
 /**
- * Actualiza los datos de un producto existente por su ID.
+ * Actualiza la información de un producto por su ID.
  */
 export async function update(id, dto) {
-    const { nombre, categoria, unidad, precioUnidad, proveedorId } = dto;
-    const provId = proveedorId ?? null;
+    const { proveedorId, nombre, categoria, unidad, precioUnidad, fechaIngreso, fechaCaducidad } = dto;
 
     const [result] = await pool.query(
-        'UPDATE productos SET nombre = ?, categoria = ?, unidad = ?, precio_unidad = ?, proveedor_id = ? WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL',
-        [nombre, categoria, unidad, precioUnidad, provId, id]
+        'UPDATE productos SET proveedor_id = ?, nombre = ?, categoria = ?, unidad = ?, precio_unidad = ?, fecha_ingreso = ?, fecha_caducidad = ? WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL',
+        [proveedorId || null, nombre, categoria || null, unidad || null, precioUnidad || 0, fechaIngreso || null, fechaCaducidad || null, id]
     );
 
     if (result.affectedRows === 0) return null;
