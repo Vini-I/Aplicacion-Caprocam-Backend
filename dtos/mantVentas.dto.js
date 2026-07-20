@@ -40,7 +40,7 @@ export class mantVentaDTO {
         - comprador: Identificador del comprador (requerido)
         */
         this.grupoDatos = grupoDatos;
-        this.id = id || null;
+        this.id = id;
         this.finca = finca;
         this.estanque = estanque;
         this.pesoPromedio = pesoPromedio;

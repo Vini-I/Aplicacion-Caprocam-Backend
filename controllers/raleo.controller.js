@@ -65,12 +65,6 @@ function validarCuerpo(body, res) {
     */
     const errores = [];
 
-    if (!isEmpty(body.grupoDatos)) {
-            if (!isNumeroMayorCero(body.grupoDatos)) {
-                errores.push("El campo grupoDatos debe ser numerico y mayor que cero.");
-            }
-        }
-
     if (isEmpty(body.idFinca)) {
         errores.push("El campo idFinca es requerido.");
     }
@@ -185,12 +179,13 @@ export async function getRaleo(req, res) {
     Retorna:
     - 200 con lista de raleos
     */
+   const grupoDatos = req.user.grupoDatos;
    try {
     const filtros = {
         idFinca: req.query.idFinca
     };
 
-    const data = await RaleoModel.findAll(filtros);
+    const data = await RaleoModel.findAll(grupoDatos);
 
     return exito(res, "Raleos obtenidos correctamente.", data);
     } catch (err) {
@@ -211,6 +206,7 @@ export async function getRaleoById(req, res) {
     - 200 con el raleo encontrado
     - 404 si no existe
     */
+   const grupoDatos = req.user.grupoDatos;
    try {
     const errId = validarIdParametro(req.params.id, res);
 
@@ -218,7 +214,7 @@ export async function getRaleoById(req, res) {
         return errId;
     }
 
-    const raleo = await RaleoModel.findById(req.params.id);
+    const raleo = await RaleoModel.findById(req.params.id, grupoDatos);
 
     if (!raleo) {
         return error(res, "Raleo no encontrado.", null, 404);
@@ -243,6 +239,7 @@ export async function createRaleo(req, res) {
     - 201 con el raleo creado
     - 400/422 si hay errores de validacion
     */
+   const grupoDatos = req.user.grupoDatos;
    try {
     const err = validarCuerpo(req.body, res);
 
@@ -252,7 +249,7 @@ export async function createRaleo(req, res) {
     const dto = new RaleoDTO(req.body);
 
     const existente = await RaleoModel.findByEstanqueYFecha(
-        dto.grupoDatos,
+        grupoDatos,
         dto.idEstanque,
         dto.fecha
     );
@@ -266,7 +263,7 @@ export async function createRaleo(req, res) {
         );
     }
     
-    const nuevo = await RaleoModel.create(dto);
+    const nuevo = await RaleoModel.create(dto, grupoDatos);
 
     return exito(res, "Raleo creado correctamente.", nuevo, 201);
     } catch (err) {
@@ -293,6 +290,7 @@ export async function deleteRaleo(req, res) {
     - 200 con el raleo eliminado
     - 404 si no existe
     */
+   const grupoDatos = req.user.grupoDatos;
    try {
     const errId = validarIdParametro(req.params.id, res);
 
@@ -300,7 +298,7 @@ export async function deleteRaleo(req, res) {
         return errId;
     }
 
-    const eliminado = await RaleoModel.remove(req.params.id);
+    const eliminado = await RaleoModel.remove(req.params.id, grupoDatos);
 
     if (!eliminado) {
         return error(res, "Raleo no encontrado.", null, 404);

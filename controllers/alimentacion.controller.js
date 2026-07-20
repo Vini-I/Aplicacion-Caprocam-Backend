@@ -181,12 +181,6 @@ function validarCuerpo(body, res) {
         errores.push("Metodo invalido. Opciones: " + Object.values(MetodoAlimentacion).join(", "));
     }
 
-    if (!isEmpty(body.grupoDatos)) {
-        if (!isNumeroMayorCero(body.grupoDatos)) {
-            errores.push("El campo grupoDatos debe ser numerico y mayor que cero.");
-        }
-    }
-
     if (!isNumeroOpcionalMayorIgualCero(body.idProveedor)) {
         errores.push("El campo idProveedor debe ser numerico y mayor o igual que cero.");
     }
@@ -254,10 +248,12 @@ export async function getAlimentaciones(req, res) {
     */
 
     try {
+        const grupoDatos = req.user.grupoDatos;
+
         const filtros = {
             idFinca: req.query.idFinca,
             idEstanque: req.query.idEstanque,
-            grupoDatos: req.query.grupoDatos
+            grupoDatos: grupoDatos
         };
 
         const data = await AlimentacionModel.findAll(filtros);
@@ -285,13 +281,15 @@ export async function getAlimentacionById(req, res) {
     */
 
     try {
+        const grupoDatos = req.user.grupoDatos;
+
         const errId = validarIdParametro(req.params.id, res);
 
         if (errId) {
             return errId;
         }
 
-        const registro = await AlimentacionModel.findById(req.params.id);
+        const registro = await AlimentacionModel.findById(req.params.id, grupoDatos);
 
         if (!registro) {
             return error(res, "Registro de alimentacion no encontrado.", null, 404);
@@ -322,6 +320,8 @@ export async function createAlimentacion(req, res) {
     */
 
     try {
+        const grupoDatos = req.user.grupoDatos;
+
         const err = validarCuerpo(req.body, res);
 
         if (err) {
@@ -334,7 +334,8 @@ export async function createAlimentacion(req, res) {
             req.body.fecha,
             req.body.hora,
             idEstanque,
-            null
+            null,
+            grupoDatos
         );
 
         if (existente) {
@@ -346,7 +347,8 @@ export async function createAlimentacion(req, res) {
             );
         }
 
-        const dto = new AlimentacionDTO(req.body);
+        const dto = new AlimentacionDTO(req.body, grupoDatos);
+
         const nuevo = await AlimentacionModel.create(dto);
 
         return exito(res, "Registro de alimentacion creado correctamente.", nuevo, 201);
@@ -377,6 +379,8 @@ export async function updateAlimentacion(req, res) {
     */
 
     try {
+        const grupoDatos = req.user.grupoDatos;
+
         const errId = validarIdParametro(req.params.id, res);
 
         if (errId) {
@@ -389,7 +393,7 @@ export async function updateAlimentacion(req, res) {
             return err;
         }
 
-        const registroActual = await AlimentacionModel.findById(req.params.id);
+        const registroActual = await AlimentacionModel.findById(req.params.id, grupoDatos);
 
         if (!registroActual) {
             return error(res, "Registro de alimentacion no encontrado.", null, 404);
@@ -401,7 +405,8 @@ export async function updateAlimentacion(req, res) {
             req.body.fecha,
             req.body.hora,
             idEstanque,
-            req.params.id
+            req.params.id,
+            grupoDatos
         );
 
         if (existente) {
@@ -413,8 +418,9 @@ export async function updateAlimentacion(req, res) {
             );
         }
 
-        const dto = new AlimentacionDTO(req.body);
-        const actualizado = await AlimentacionModel.update(req.params.id, dto);
+        const dto = new AlimentacionDTO(req.body, grupoDatos);
+
+        const actualizado = await AlimentacionModel.update(req.params.id, dto, grupoDatos);
 
         return exito(res, "Registro de alimentacion actualizado correctamente.", actualizado);
     } catch (err) {
@@ -441,13 +447,15 @@ export async function deleteAlimentacion(req, res) {
     */
 
     try {
+        const grupoDatos = req.user.grupoDatos;
+
         const errId = validarIdParametro(req.params.id, res);
 
         if (errId) {
             return errId;
         }
 
-        const eliminado = await AlimentacionModel.remove(req.params.id);
+        const eliminado = await AlimentacionModel.remove(req.params.id, grupoDatos);
 
         if (!eliminado) {
             return error(res, "Registro de alimentacion no encontrado.", null, 404);

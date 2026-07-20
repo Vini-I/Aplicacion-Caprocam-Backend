@@ -3,7 +3,7 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantVentas.controller.js
-Autor: Greivin Arguedas
+Autor: Greivin Arguedas, Ricardo Chaves
 Fecha: 04/07/2026
 Modulo: Ventas
 Descripcion:
@@ -22,14 +22,6 @@ import { exito, error } from '../common/respuestaJson.js';
 
 /*
 //////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
-
-/*
-//////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
@@ -45,7 +37,8 @@ export async function getVentas(req, res) {
     Retorna:
     - Una respuesta JSON con todos los registros de ventas.
     */
-    const data = await VentaModel.findAll();
+    const grupoDatos = req.user.grupoDatos;
+    const data = await VentaModel.findAll(grupoDatos);
     return exito(res, 'Ventas obtenidas correctamente.', data);
 }
 
@@ -60,7 +53,8 @@ export async function getVentaById(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de ventas si se encuentra, o un error si no existe.
     */
-    const registro = await VentaModel.findById(req.params.id);
+    const grupoDatos = req.user.grupoDatos;
+    const registro = await VentaModel.findById(req.params.id, grupoDatos);
     if (!registro) {
         return error(res, 'Venta no encontrada.', null, 404);
     }
@@ -79,9 +73,38 @@ export async function createVenta(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de venta creado.
     */
-    const { grupoDatos, id, finca, estanque, pesoPromedio, tamanoPromedio, cantVendida, precioKilo, fecha, total, colaborador, comprador } = req.body;
+
+    const grupoDatos = req.user.grupoDatos;
+
+    const { 
+        id, 
+        finca, 
+        estanque, 
+        pesoPromedio, 
+        tamanoPromedio, 
+        cantVendida, 
+        precioKilo, 
+        fecha, 
+        total, 
+        colaborador, 
+        comprador 
+    } = req.body;
     
-    const dto = new mantVentaDTO(grupoDatos, id, finca, estanque, pesoPromedio, tamanoPromedio, cantVendida, precioKilo, fecha, total, colaborador, comprador);
+    const dto = new mantVentaDTO(
+        grupoDatos, 
+        id, 
+        finca, 
+        estanque, 
+        pesoPromedio, 
+        tamanoPromedio, 
+        cantVendida, 
+        precioKilo, 
+        fecha, 
+        total, 
+        colaborador, 
+        comprador
+    );
+
     const nuevoRegistro = await VentaModel.create(dto);
 
     return exito(res, 'Venta creada correctamente.', nuevoRegistro, 201);
@@ -99,11 +122,39 @@ export async function updateVenta(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de venta actualizado si se encuentra, o un error si no existe.
     */
-    const { grupoDatos, id, finca, estanque, pesoPromedio, tamanoPromedio, cantVendida, precioKilo, fecha, total, colaborador, comprador } = req.body;
+
+    const grupoDatos = req.user.grupoDatos;
+
+    const { 
+        id, 
+        finca, 
+        estanque, 
+        pesoPromedio, 
+        tamanoPromedio, 
+        cantVendida, 
+        precioKilo, 
+        fecha, 
+        total, 
+        colaborador, 
+        comprador 
+    } = req.body;
     
-    const dto = new mantVentaDTO( grupoDatos, id, finca, estanque, pesoPromedio, tamanoPromedio, cantVendida, precioKilo, fecha, total, colaborador, comprador);
+    const dto = new mantVentaDTO( 
+        grupoDatos, 
+        id, 
+        finca, 
+        estanque, 
+        pesoPromedio, 
+        tamanoPromedio, 
+        cantVendida, 
+        precioKilo, 
+        fecha, 
+        total, 
+        colaborador, 
+        comprador
+    );
     
-    const actualizado = await VentaModel.update(req.params.id, dto);
+    const actualizado = await VentaModel.update(req.params.id, grupoDatos, dto);
     
     if (!actualizado) {
         return error(res, 'Venta no encontrada.', null, 404);
@@ -123,7 +174,8 @@ export async function deleteVenta(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de venta eliminado si se encuentra, o un error si no existe.
     */
-    const eliminado = await VentaModel.remove(req.params.id);
+    const grupoDatos = req.user.grupoDatos;
+    const eliminado = await VentaModel.remove(req.params.id, grupoDatos);
 
     if (!eliminado) {
         return error(res, 'Venta no encontrada.', null, 404);

@@ -40,6 +40,11 @@ export function validarMantFinca(req, res, next) {
     - Llama a next() si los datos son validos.
     - Retorna un error si los datos son invalidos.
     */
+  
+  if (req.user && req.user.grupoDatos) {
+    req.body.grupoDatos = req.user.grupoDatos;
+  }
+
   const {
     grupoDatos,
     idCBO,
