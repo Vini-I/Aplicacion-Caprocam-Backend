@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: enfermedades.service.js
-Autor: Isaac
-Fecha: 03/07/2026
+Autor: Isaac Chaves
+Fecha: 18/07/2026
 Modulo: Enfermedades
 Descripcion:
 Define las reglas de negocio, validaciones, catalogos,
