@@ -31,7 +31,7 @@ import {
 
 // Modelos
 import * as siembraModel from "../models/siembra.model.js";
-import * as loteLarvaModel from "../models/loteLarva.model.js";
+import * as loteLarvaModel from "../models/loteLarvas.model.js";
 import * as precriaModel from "../models/preCria.model.js";
 import { EstadoPrecria } from "../dtos/preCria.dto.js";
 
@@ -54,14 +54,11 @@ FUNCIONES SECUNDARIAS
 
 function validarCuerpo(body, res) {
     const errores = [];
-    const loteId  = body.lote_larva_id ?? body.id_lote_larva;
-    const fincaId = body.finca_id ?? body.id_finca;
-    const precriaId = body.precria_id ?? body.id_precria;
  
-    if (!isEnteroPositivo(loteId)) {
+    if (!isEnteroPositivo(body.lote_larva_id)) {
         errores.push("El campo lote_larva_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(fincaId)) {
+    if (!isEnteroPositivo(body.finca_id)) {
         errores.push("El campo finca_id debe ser un entero positivo.");
     }
     if (!isEnteroPositivo(body.estanque_id)) {
@@ -73,7 +70,7 @@ function validarCuerpo(body, res) {
     if (!isFechaValida(body.fecha_siembra)) {
         errores.push("El campo fecha_siembra debe ser una fecha valida.");
     }
-    if (!isEmpty(precriaId) && !isEnteroPositivo(precriaId)) {
+    if (!isEmpty(body.precria_id) && !isEnteroPositivo(body.precria_id)) {
         errores.push("El campo precria_id debe ser un entero positivo.");
     }
     if (
@@ -99,22 +96,19 @@ function validarCuerpo(body, res) {
 }
  
 async function validarReferencias(body, res) {
-    const loteId    = body.lote_larva_id ?? body.id_lote_larva;
-    const fincaId   = body.finca_id ?? body.id_finca;
-    const precriaId = body.precria_id ?? body.id_precria;
- 
-    const lote = await loteLarvaModel.findById(loteId);
+
+    const lote = await loteLarvaModel.findById(body.lote_larva_id);
     if (!lote) {
         return error(res, "El lote de larva indicado no existe.", null, 400);
     }
  
-    const fincaExiste = await siembraModel.verificarFincaExiste(fincaId);
+    const fincaExiste = await siembraModel.verificarFincaExiste(body.finca_id);
     if (!fincaExiste) {
         return error(res, "La finca indicada no existe.", null, 400);
     }
  
     const estanqueExiste = await siembraModel.verificarEstanqueExiste(
-        body.estanque_id, fincaId
+        body.estanque_id, body.finca_id
     );
     if (!estanqueExiste) {
         return error(
@@ -125,8 +119,8 @@ async function validarReferencias(body, res) {
     // Fuente de la que sale la cantidad sembrada: precria (si se indico) o el lote directo.
     let origenCantidad = lote.cantidad_inicial;
  
-    if (!isEmpty(precriaId)) {
-        const precria = await precriaModel.findById(precriaId);
+    if (!isEmpty(body.precria_id)) {
+        const precria = await precriaModel.findById(body.precria_id);
         if (!precria) {
             return error(res, "La pre-cria indicada no existe.", null, 400);
         }
@@ -135,7 +129,7 @@ async function validarReferencias(body, res) {
                 res, "La pre-cria indicada no pertenece al lote de larva indicado.", null, 400
             );
         }
-        if (normalizarEstado(precria.estado) !== EstadoPrecria.FINALIZADA) {
+        if (String(precria.estado).toLowerCase() !==  EstadoPrecria.FINALIZADA.toLocaleLowerCase()) {
             return error(
                 res,
                 "La pre-cria debe estar Finalizada antes de poder sembrarse.",
@@ -150,7 +144,7 @@ async function validarReferencias(body, res) {
         return error(
             res,
             "cantidad_sembrada no puede superar la cantidad disponible del " +
-                (isEmpty(precriaId) ? "lote." : "pre-cria."),
+                (isEmpty(body.precria_id) ? "lote." : "pre-cria."),
             null,
             400
         );
@@ -165,9 +159,10 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
  
-export async function listarSiembras(req, res) {
+export async function listarSiembra(req, res) {
     try {
-        const siembras = await siembraModel.findAll();
+        const grupoDatos = req.user.grupoDatos
+        const siembras = await siembraModel.findAll(grupoDatos);
         return exito(res, "Siembras obtenidas correctamente.", siembras);
     } catch (err) {
         return error(res, "Error al obtener las siembras.", err, 500);
@@ -176,8 +171,9 @@ export async function listarSiembras(req, res) {
  
 export async function obtenerSiembra(req, res) {
     try {
+        const grupoDatos = req.user.grupoDatos
         const { id } = req.params;
-        const siembra = await siembraModel.findById(id);
+        const siembra = await siembraModel.findById(id, grupoDatos);
         if (!siembra) return error(res, "Siembra no encontrada.", null, 404);
         return exito(res, "Siembra obtenida correctamente.", siembra);
     } catch (err) {
@@ -190,11 +186,12 @@ export async function crearSiembra(req, res) {
     if (errBody) return errBody;
  
     try {
+        const grupoDatos = req.user.grupoDatos
         const errRef = await validarReferencias(req.body, res);
         if (errRef) return errRef;
  
         const dto = new SiembraDTO(req.body);
-        const nueva = await siembraModel.create(dto);
+        const nueva = await siembraModel.create(dto, grupoDatos);
         return exito(res, "Siembra creada correctamente.", nueva, 201);
     } catch (err) {
         return error(res, "Error al crear la siembra.", err, 500);
@@ -207,14 +204,15 @@ export async function actualizarSiembra(req, res) {
     if (errBody) return errBody;
  
     try {
-        const actual = await siembraModel.findById(id);
+        const grupoDatos = req.user.grupoDatos
+        const actual = await siembraModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Siembra no encontrada.", null, 404);
  
         const errRef = await validarReferencias(req.body, res);
         if (errRef) return errRef;
  
         const dto = new SiembraDTO(req.body);
-        const actualizada = await siembraModel.update(id, dto);
+        const actualizada = await siembraModel.update(id,grupoDatos, dto);
         return exito(res, "Siembra actualizada correctamente.", actualizada);
     } catch (err) {
         return error(res, "Error al actualizar la siembra.", err, 500);
@@ -224,7 +222,8 @@ export async function actualizarSiembra(req, res) {
 export async function finalizarSiembra(req, res) {
     const { id } = req.params;
     try {
-        const siembra = await siembraModel.findById(id);
+        const grupoDatos = req.user.grupoDatos
+        const siembra = await siembraModel.findById(id, grupoDatos);
         if (!siembra) return error(res, "Siembra no encontrada.", null, 404);
  
         if (normalizarEstado(siembra.estado) !== EstadoSiembra.ACTIVA) {
@@ -233,7 +232,7 @@ export async function finalizarSiembra(req, res) {
             );
         }
  
-        const actualizada = await siembraModel.update(id, {
+        const actualizada = await siembraModel.update(id, grupoDatos, {
             estado: EstadoSiembra.FINALIZADA,
         });
         return exito(res, "Siembra finalizada correctamente.", actualizada);
@@ -245,7 +244,8 @@ export async function finalizarSiembra(req, res) {
 export async function eliminarSiembra(req, res) {
     const { id } = req.params;
     try {
-        const eliminada = await siembraModel.remove(id);
+        const grupoDatos = req.user.grupoDatos
+        const eliminada = await siembraModel.remove(id, grupoDatos);
         if (!eliminada) return error(res, "Siembra no encontrada.", null, 404);
         return exito(res, "Siembra eliminada correctamente.", eliminada);
     } catch (err) {

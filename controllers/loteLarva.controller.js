@@ -22,7 +22,7 @@ import {
     isFechaValida,
     isEnteroPositivo,
 } from "../services/loteLarva.service.js";
-import * as loteLarvaModel from "../models/loteLarva.model.js";
+import * as loteLarvaModel from "../models/loteLarvas.model.js";
 import { exito, error } from "../common/respuestaJson.js";
  
 /*
@@ -68,7 +68,8 @@ FUNCIONES PRINCIPALES
  
 export async function listarLotes(req, res) {
     try {
-        const lotes = await loteLarvaModel.findAll();
+        const grupoDatos = req.user.grupoDatos
+        const lotes = await loteLarvaModel.findAll(grupoDatos);
         return exito(res, "Lotes de larva obtenidos correctamente.", lotes);
     } catch (err) {
         return error(res, "Error al obtener los lotes de larva.", err, 500);
@@ -77,8 +78,9 @@ export async function listarLotes(req, res) {
  
 export async function obtenerLote(req, res) {
     try {
+        const grupoDatos = req.user.grupoDatos
         const { id } = req.params;
-        const lote = await loteLarvaModel.findById(id);
+        const lote = await loteLarvaModel.findById(id, grupoDatos);
         if (!lote) return error(res, "Lote de larva no encontrado.", null, 404);
         return exito(res, "Lote de larva obtenido correctamente.", lote);
     } catch (err) {
@@ -91,21 +93,22 @@ export async function crearLote(req, res) {
     if (err) return err;
  
     try {
-        const existente = await loteLarvaModel.findByCodigo(req.body.codigo_lote);
+        const grupoDatos = req.user.grupoDatos
+        const existente = await loteLarvaModel.findByCodigo(req.body.codigo_lote, grupoDatos);
         if (existente) {
             return error(res, "Ya existe un lote con ese codigo.", null, 409);
         }
  
         const proveedorId = req.body.proveedor_id ?? req.body.proveedorId;
         if (!isEmpty(proveedorId)) {
-            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorId);
+            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorId, grupoDatos);
             if (!existe) {
                 return error(res, "El proveedor indicado no existe.", null, 400);
             }
         }
  
         const dto = new LoteLarvaDTO(req.body);
-        const nuevo = await loteLarvaModel.create(dto);
+        const nuevo = await loteLarvaModel.createLote(dto, grupoDatos);
         return exito(res, "Lote de larva creado correctamente.", nuevo, 201);
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
@@ -121,11 +124,12 @@ export async function actualizarLote(req, res) {
     if (err) return err;
  
     try {
-        const actual = await loteLarvaModel.findById(id);
+        const grupoDatos = req.user.grupoDatos
+        const actual = await loteLarvaModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Lote de larva no encontrado.", null, 404);
  
         const existente = await loteLarvaModel.findByCodigoIgnorandoId(
-            req.body.codigo_lote, id
+            req.body.codigo_lote, id, grupoDatos
         );
         if (existente) {
             return error(res, "Ya existe otro lote con ese codigo.", null, 409);
@@ -133,14 +137,14 @@ export async function actualizarLote(req, res) {
  
         const proveedorId = req.body.proveedor_id ?? req.body.proveedorId;
         if (!isEmpty(proveedorId)) {
-            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorId);
+            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorId, grupoDatos);
             if (!existe) {
                 return error(res, "El proveedor indicado no existe.", null, 400);
             }
         }
  
         const dto = new LoteLarvaDTO(req.body);
-        const actualizado = await loteLarvaModel.update(id, dto);
+        const actualizado = await loteLarvaModel.update(id, dto, grupoDatos);
         return exito(res, "Lote de larva actualizado correctamente.", actualizado);
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
@@ -153,7 +157,8 @@ export async function actualizarLote(req, res) {
 export async function eliminarLote(req, res) {
     const { id } = req.params;
     try {
-        const eliminado = await loteLarvaModel.remove(id);
+        const grupoDatos = req.user.grupoDatos
+        const eliminado = await loteLarvaModel.remove(id, grupoDatos);
         if (!eliminado) return error(res, "Lote de larva no encontrado.", null, 404);
         return exito(res, "Lote de larva eliminado correctamente.", eliminado);
     } catch (err) {

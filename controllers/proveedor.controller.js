@@ -68,14 +68,11 @@ function validarCuerpo(body, res) {
     - Objeto error de Express si falla, o null si es correcto.
     */
     const errores = [];
-    const nombre = body.nombre_empresa ?? body.nombre;
-    const tipoProducto = body.tipo_producto ?? body.tipoProducto;
-    const correo = body.correo_electronico ?? body.correo;
 
-    if (isEmpty(body.nombre)) {
+    if (isEmpty(body.nombre_empresa)) {
         errores.push("El campo nombre es requerido.");
     }
-    if (isEmpty(body.tipoProducto)) {
+    if (isEmpty(body.tipo_producto)) {
         errores.push("El campo tipoProducto es requerido.");
     }
     if (isEmpty(body.telefono)) {
@@ -136,7 +133,8 @@ export async function listarProveedores(req, res) {
     - 200 con la lista de proveedores DTO
     */
     try {
-        const proveedores = await proveedorModel.findAll();
+        const grupoDatos = req.user.grupoDatos
+        const proveedores = await proveedorModel.findAll(grupoDatos);
         return exito(
             res,
             "Proveedores obtenidos correctamente.",
@@ -165,7 +163,8 @@ export async function obtenerProveedor(req, res) {
     if (errId) return errId;
 
     try {
-        const proveedor = await proveedorModel.findById(req.params.id);
+        const grupoDatos = req.user.grupoDatos
+        const proveedor = await proveedorModel.findById(req.params.id, grupoDatos);
         if (!proveedor) {
             return error(res, "Proveedor no encontrado.", null, 404);
         }
@@ -197,8 +196,9 @@ export async function crearProveedor(req, res) {
     if (err) return err;
 
     try {
+        const grupoDatos = req.user.grupoDatos
         const nombre = req.body.nombre_empresa ?? req.body.nombre;
-        const existente = await proveedorModel.findByName(nombre);
+        const existente = await proveedorModel.findByName(nombre, grupoDatos);
         if (existente) {
             return error(
                 res, "Ya existe un proveedor con ese nombre.", null, 409
@@ -206,7 +206,7 @@ export async function crearProveedor(req, res) {
         }
 
         const dto    = new proveedorDto(req.body);
-        const nuevo  = await proveedorModel.create(dto);
+        const nuevo  = await proveedorModel.create(dto, grupoDatos);
 
         return exito(
             res,
@@ -245,14 +245,15 @@ export async function actualizarProveedor(req, res) {
     if (errBody) return errBody;
 
     try {
-        const proveedorActual = await proveedorModel.findById(req.params.id);
+        const grupoDatos = req.user.grupoDatos
+        const proveedorActual = await proveedorModel.findById(req.params.id, grupoDatos);
         if (!proveedorActual) {
             return error(res, "Proveedor no encontrado.", null, 404);
         }
 
         const existente = await proveedorModel.findByNameIgnorandoId(
-            req.body.nombre_empresa ?? req.body.nombre,
-            req.params.id
+            req.body.nombre_empresa,
+            req.params.id, grupoDatos
         );
         if (existente) {
             return error(
@@ -261,7 +262,7 @@ export async function actualizarProveedor(req, res) {
         }
 
         const dto        = new proveedorDto(req.body);
-        const actualizado = await proveedorModel.update(req.params.id, dto);
+        const actualizado = await proveedorModel.update(req.params.id, grupoDatos ,dto);
 
         return exito(
             res,
@@ -296,7 +297,8 @@ export async function eliminarProveedor(req, res) {
     if (errId) return errId;
 
     try {
-        const eliminado = await proveedorModel.remove(req.params.id);
+        const grupoDatos = req.user.grupoDatos
+        const eliminado = await proveedorModel.remove(req.params.id, grupoDatos);
         if (!eliminado) {
             return error(res, "Proveedor no encontrado.", null, 404);
         }

@@ -29,7 +29,7 @@ CONSTANTES
 Campos minimos requeridos en el body para proveedores.
 */
 
-const camposRequeridos = ["nombre", "tipoProducto", "telefono"];
+const camposRequeridos = ["nombre_empresa", "tipo_producto", "telefono"];
 
 /*
 //////////////////////////////////////////////////////////
@@ -79,7 +79,7 @@ export function validarBodyProveedor(req, res, next) {
 
     // Validar tipo de producto
     const tiposValidos = Object.values(tipoProductos);
-    if (!tiposValidos.includes(req.body.tipoProducto)) {
+    if (!tiposValidos.includes(req.body.tipo_producto)) {
         return error(
             res,
             "Tipo de producto invalido. Valores permitidos: " +

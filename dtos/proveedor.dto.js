@@ -18,13 +18,13 @@ ENUM
 */
 
 export const tipoProductos = Object.freeze({
-    ALIMENTO: 'alimento',
-    ANTIBIOTICO: 'antibiotico',
-    FERTILIZANTES: 'fertilizante',
-    PROBIOTICOS: 'probioticos',
-    EQUIPOS: 'equipos',
-    LARVA: 'larva',
-    OTROS: 'otros'
+    ALIMENTO: 'Alimento',
+    ANTIBIOTICO: 'Antibiotico',
+    FERTILIZANTES: 'Fertilizante',
+    PROBIOTICOS: 'Probioticos',
+    EQUIPOS: 'Equipos',
+    LARVA: 'Larva',
+    OTROS: 'Otros'
 });
 
 /*
@@ -85,7 +85,7 @@ export function proveedorDTO(proveedor) {
     if (!proveedor) return null;
     return {
         id:                 proveedor.id,
-        uuid:                proveedor.uuid,
+        uuid:               proveedor.uuid,
         nombreEmpresa:      proveedor.nombre_empresa,
         tipoProducto:       proveedor.tipo_producto,
         telefono:           proveedor.telefono,
