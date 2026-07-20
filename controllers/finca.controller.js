@@ -38,8 +38,8 @@ export async function getFincas(req, res) {
     Retorna:
     - Una respuesta JSON con todos los registros de fincas.
     */
-
-  const data = await FincaModel.findAll();
+  const grupoDatos = req.user.grupoDatos;
+  const data = await FincaModel.findAll(grupoDatos);
   return exito(res, "Fincas obtenidas correctamente.", data);
 }
 
@@ -54,7 +54,8 @@ export async function getFincaById(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de finca correspondiente al ID CBO proporcionado.
     */
-  const registro = await FincaModel.findByIdCBO(req.params.idCBO);
+  const grupoDatos = req.user.grupoDatos;
+  const registro = await FincaModel.findByIdCBO(req.params.idCBO, grupoDatos);
 
   if (!registro) {
     return error(res, "Finca no encontrada.", null, 404);
@@ -74,8 +75,8 @@ export async function createFinca(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de finca creado.
     */
+  const grupoDatos = req.user.grupoDatos;
   const {
-    grupoDatos,
     idCBO,
     nombreFinca,
     provincia,
@@ -117,8 +118,8 @@ export async function updateFinca(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de finca actualizado.
     */
+  const grupoDatos = req.user.grupoDatos;
   const {
-    grupoDatos,
     idCBO,
     nombreFinca,
     provincia,
@@ -144,7 +145,7 @@ export async function updateFinca(req, res) {
     espejosAgua,
   );
 
-  const actualizado = await FincaModel.update(req.params.idCBO, dto);
+  const actualizado = await FincaModel.update(req.params.idCBO, grupoDatos, dto);
   if (!actualizado) {
     return error(res, "Finca no encontrada.", null, 404);
   }
@@ -162,7 +163,8 @@ export async function deleteFinca(req, res) {
     Retorna:
     - Una respuesta JSON indicando si la eliminación fue exitosa o no.
     */
-  const eliminado = await FincaModel.remove(req.params.idCBO);
+  const grupoDatos = req.user.grupoDatos;
+  const eliminado = await FincaModel.remove(req.params.idCBO, grupoDatos);
   if (!eliminado) {
     return error(res, "Finca no encontrada.", null, 404);
   }

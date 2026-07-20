@@ -4,11 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.controller.js
 Autor: Gerald Alfaro
-Fecha: 03/07/2026
+Fecha: 18/07/2026
 Modulo: Estanques
 Descripcion:
-Recibe las peticiones HTTP, delega al modelo,
-y devuelve la respuesta al cliente.
+Recibe las peticiones HTTP, obtiene el grupo de datos
+desde el JWT, delega las operaciones al modelo y devuelve
+la respuesta al cliente.
 //////////////////////////////////////////////////////////
 */
 
@@ -20,7 +21,10 @@ IMPORTS
 DTOs
 */
 
-import { EstanqueDTO, EstadoEstanque } from "../dtos/estanques.dto.js";
+import {
+    EstanqueDTO,
+    EstadoEstanque
+} from "../dtos/estanques.dto.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -57,7 +61,10 @@ IMPORTS
 Common
 */
 
-import { exito, error } from "../common/respuestaJson.js";
+import {
+    exito,
+    error
+} from "../common/respuestaJson.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -68,12 +75,51 @@ Contiene funciones internas utilizadas por las funciones
 principales del controller.
 */
 
+function obtenerGrupoDatosUsuario(req, res) {
+    /*
+    Descripcion:
+    Obtiene y valida el grupo de datos incluido en el JWT.
+
+    Parametros:
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
+
+    Retorna:
+    - Numero del grupo de datos si es valido.
+    - null si el JWT no contiene un grupo valido.
+    */
+
+    if (!req.user) {
+        error(
+            res,
+            "No fue posible obtener el usuario autenticado.",
+            null,
+            403
+        );
+
+        return null;
+    }
+
+    if (!isNumeroMayorCero(req.user.grupoDatos)) {
+        error(
+            res,
+            "El usuario no tiene un grupo de datos valido.",
+            null,
+            403
+        );
+
+        return null;
+    }
+
+    return Number(req.user.grupoDatos);
+}
+
 function validarCuerpo(body, res) {
     /*
     Descripcion:
     Valida los campos del body antes de construir el DTO.
-    Se encarga de revisar campos requeridos, campos numericos,
-    estado permitido y valores opcionales.
+    Revisa campos requeridos, campos numericos, estado
+    permitido y valores opcionales.
 
     Parametros:
     - body: Campos recibidos en el body de la peticion.
@@ -115,45 +161,61 @@ function validarCuerpo(body, res) {
     }
 
     if (!isNumeroMayorCero(body.idFinca)) {
-        errores.push("El campo idFinca debe ser numerico y mayor que cero.");
+        errores.push(
+            "El campo idFinca debe ser numerico y mayor que cero."
+        );
     }
 
     if (!isNumeroMayorCero(body.largo)) {
-        errores.push("El campo largo debe ser numerico y mayor que cero.");
+        errores.push(
+            "El campo largo debe ser numerico y mayor que cero."
+        );
     }
 
     if (!isNumeroMayorCero(body.ancho)) {
-        errores.push("El campo ancho debe ser numerico y mayor que cero.");
+        errores.push(
+            "El campo ancho debe ser numerico y mayor que cero."
+        );
     }
 
     if (!isNumeroMayorCero(body.profundidad)) {
-        errores.push("El campo profundidad debe ser numerico y mayor que cero.");
-    }
-
-    if (!isEmpty(body.grupoDatos)) {
-        if (!isNumeroMayorCero(body.grupoDatos)) {
-            errores.push("El campo grupoDatos debe ser numerico y mayor que cero.");
-        }
+        errores.push(
+            "El campo profundidad debe ser numerico y mayor que cero."
+        );
     }
 
     if (!isEmpty(body.densidadSiembra)) {
         if (!isNumeroMayorIgualCero(body.densidadSiembra)) {
-            errores.push("El campo densidadSiembra debe ser numerico y mayor o igual que cero.");
+            errores.push(
+                "El campo densidadSiembra debe ser numerico " +
+                "y mayor o igual que cero."
+            );
         }
     }
 
-    if (!isNumeroOpcionalMayorIgualCero(body.numeroAireadores)) {
-        errores.push("El campo numeroAireadores debe ser numerico y mayor o igual que cero.");
+    if (!isNumeroOpcionalMayorIgualCero(
+        body.numeroAireadores
+    )) {
+        errores.push(
+            "El campo numeroAireadores debe ser numerico " +
+            "y mayor o igual que cero."
+        );
     }
 
     if (!isEstadoEstanque(body.estado)) {
         errores.push(
-            "Estado invalido. Opciones: " + Object.values(EstadoEstanque).join(", ")
+            "Estado invalido. Opciones: " +
+            Object.values(EstadoEstanque).join(", ")
         );
     }
 
     if (errores.length > 0) {
-        return error(res, "Datos invalidos para el estanque.", errores, 422);
+        return error(
+            res,
+            "Datos invalidos para el estanque.",
+            errores,
+            422
+        );
     }
 
     return null;
@@ -162,8 +224,8 @@ function validarCuerpo(body, res) {
 function validarIdParametro(id, res) {
     /*
     Descripcion:
-    Valida que el parametro id recibido por la URL sea numerico
-    y mayor que cero.
+    Valida que el parametro id recibido por la URL sea
+    numerico y mayor que cero.
 
     Parametros:
     - id: ID recibido en req.params.
@@ -175,10 +237,55 @@ function validarIdParametro(id, res) {
     */
 
     if (!isIdValido(id)) {
-        return error(res, "El id debe ser numerico y mayor que cero.", null, 400);
+        return error(
+            res,
+            "El id debe ser numerico y mayor que cero.",
+            null,
+            400
+        );
     }
 
     return null;
+}
+
+async function validarFincaGrupo(
+    idFinca,
+    grupoDatos,
+    res
+) {
+    /*
+    Descripcion:
+    Verifica que la finca exista y pertenezca al mismo
+    grupo de datos del usuario autenticado.
+
+    Parametros:
+    - idFinca: Identificador de la finca.
+    - grupoDatos: Grupo obtenido desde el JWT.
+    - res: Objeto response de Express.
+
+    Retorna:
+    - true si la finca es valida.
+    - false si la finca no existe o pertenece a otro grupo.
+    */
+
+    const fincaValida = await EstanqueModel
+        .fincaPerteneceGrupo(
+            idFinca,
+            grupoDatos
+        );
+
+    if (!fincaValida) {
+        error(
+            res,
+            "La finca no existe o no pertenece al usuario.",
+            null,
+            404
+        );
+
+        return false;
+    }
+
+    return true;
 }
 
 /*
@@ -193,8 +300,9 @@ del modulo de estanques.
 export async function getEstanques(req, res) {
     /*
     Descripcion:
-    Obtiene todos los estanques activos desde MySQL.
-    Permite filtrar por idFinca y grupoDatos mediante query params.
+    Obtiene los estanques activos que pertenecen al grupo
+    de datos del usuario autenticado.
+    Permite filtrar por idFinca mediante query params.
 
     Parametros:
     - req: Objeto request de Express.
@@ -202,27 +310,62 @@ export async function getEstanques(req, res) {
 
     Retorna:
     - 200 con lista de estanques.
+    - 400 si el filtro de finca es invalido.
+    - 403 si el JWT no contiene un grupo valido.
     - 500 si ocurre un error en la base de datos.
     */
 
     try {
+        const grupoDatos = obtenerGrupoDatosUsuario(
+            req,
+            res
+        );
+
+        if (grupoDatos === null) {
+            return;
+        }
+
+        if (!isEmpty(req.query.idFinca)) {
+            if (!isNumeroMayorCero(req.query.idFinca)) {
+                return error(
+                    res,
+                    "El filtro idFinca debe ser numerico " +
+                    "y mayor que cero.",
+                    null,
+                    400
+                );
+            }
+        }
+
         const filtros = {
             idFinca: req.query.idFinca,
-            grupoDatos: req.query.grupoDatos
+            grupoDatos
         };
 
-        const data = await EstanqueModel.findAll(filtros);
+        const data = await EstanqueModel.findAll(
+            filtros
+        );
 
-        return exito(res, "Estanques obtenidos correctamente.", data);
+        return exito(
+            res,
+            "Estanques obtenidos correctamente.",
+            data
+        );
     } catch (err) {
-        return error(res, "Error al obtener los estanques.", err, 500);
+        return error(
+            res,
+            "Error al obtener los estanques.",
+            err,
+            500
+        );
     }
 }
 
 export async function getEstanqueById(req, res) {
     /*
     Descripcion:
-    Obtiene un estanque por su ID desde MySQL.
+    Obtiene un estanque por su ID y verifica que pertenezca
+    al grupo de datos del usuario autenticado.
 
     Parametros:
     - req: Objeto request de Express.
@@ -231,35 +374,66 @@ export async function getEstanqueById(req, res) {
     Retorna:
     - 200 con el estanque encontrado.
     - 400 si el id recibido no es valido.
-    - 404 si no existe el estanque.
+    - 403 si el JWT no contiene un grupo valido.
+    - 404 si no existe o pertenece a otro grupo.
     - 500 si ocurre un error en la base de datos.
     */
 
     try {
-        const errId = validarIdParametro(req.params.id, res);
+        const errId = validarIdParametro(
+            req.params.id,
+            res
+        );
 
         if (errId) {
             return errId;
         }
 
-        const estanque = await EstanqueModel.findById(req.params.id);
+        const grupoDatos = obtenerGrupoDatosUsuario(
+            req,
+            res
+        );
 
-        if (!estanque) {
-            return error(res, "Estanque no encontrado.", null, 404);
+        if (grupoDatos === null) {
+            return;
         }
 
-        return exito(res, "Estanque obtenido correctamente.", estanque);
+        const estanque = await EstanqueModel.findById(
+            req.params.id,
+            grupoDatos
+        );
+
+        if (!estanque) {
+            return error(
+                res,
+                "Estanque no encontrado.",
+                null,
+                404
+            );
+        }
+
+        return exito(
+            res,
+            "Estanque obtenido correctamente.",
+            estanque
+        );
     } catch (err) {
-        return error(res, "Error al obtener el estanque.", err, 500);
+        return error(
+            res,
+            "Error al obtener el estanque.",
+            err,
+            500
+        );
     }
 }
 
 export async function createEstanque(req, res) {
     /*
     Descripcion:
-    Crea un nuevo estanque en la base de datos MySQL.
-    Antes de crear, valida el body y verifica que no exista otro
-    estanque con el mismo codigo dentro de la misma finca.
+    Crea un nuevo estanque utilizando el grupo de datos
+    obtenido desde el JWT.
+    Verifica que la finca pertenezca al mismo grupo y que
+    no exista un codigo duplicado dentro de la finca.
 
     Parametros:
     - req: Objeto request de Express.
@@ -267,49 +441,95 @@ export async function createEstanque(req, res) {
 
     Retorna:
     - 201 con el estanque creado.
-    - 409 si ya existe un estanque con el mismo codigo en la finca.
+    - 403 si el JWT no contiene un grupo valido.
+    - 404 si la finca no pertenece al grupo.
+    - 409 si el codigo ya existe en la finca.
     - 422 si hay errores de validacion.
     - 500 si ocurre un error en la base de datos.
     */
 
     try {
-        const err = validarCuerpo(req.body, res);
+        const grupoDatos = obtenerGrupoDatosUsuario(
+            req,
+            res
+        );
 
-        if (err) {
-            return err;
+        if (grupoDatos === null) {
+            return;
         }
 
-        const existente = await EstanqueModel.findByCodigoAndFinca(
-            req.body.codigo,
-            req.body.idFinca,
-            null
+        const errValidacion = validarCuerpo(
+            req.body,
+            res
         );
+
+        if (errValidacion) {
+            return errValidacion;
+        }
+
+        const fincaValida = await validarFincaGrupo(
+            req.body.idFinca,
+            grupoDatos,
+            res
+        );
+
+        if (!fincaValida) {
+            return;
+        }
+
+        const existente = await EstanqueModel
+            .findByCodigoAndFinca(
+                req.body.codigo,
+                req.body.idFinca,
+                null,
+                grupoDatos
+            );
 
         if (existente) {
             return error(
                 res,
-                "Ya existe un estanque con ese codigo en la finca.",
+                "Ya existe un estanque con ese codigo " +
+                "en la finca.",
                 null,
                 409
             );
         }
 
-        const dto = new EstanqueDTO(req.body);
-        const nuevo = await EstanqueModel.create(dto);
+        const datosEstanque = {
+            ...req.body,
+            grupoDatos
+        };
 
-        return exito(res, "Estanque creado correctamente.", nuevo, 201);
+        const dto = new EstanqueDTO(
+            datosEstanque
+        );
+
+        const nuevo = await EstanqueModel.create(
+            dto
+        );
+
+        return exito(
+            res,
+            "Estanque creado correctamente.",
+            nuevo,
+            201
+        );
     } catch (err) {
-        return error(res, "Error al crear el estanque.", err, 500);
+        return error(
+            res,
+            "Error al crear el estanque.",
+            err,
+            500
+        );
     }
 }
 
 export async function updateEstanque(req, res) {
     /*
     Descripcion:
-    Actualiza un estanque existente por su ID.
-    Antes de actualizar, valida el id, valida el body,
-    confirma que el estanque exista y revisa que el codigo no
-    pertenezca a otro estanque de la misma finca.
+    Actualiza un estanque que pertenece al grupo de datos
+    del usuario autenticado.
+    El grupo de datos no puede ser cambiado mediante el body.
 
     Parametros:
     - req: Objeto request de Express.
@@ -318,61 +538,119 @@ export async function updateEstanque(req, res) {
     Retorna:
     - 200 con el estanque actualizado.
     - 400 si el id recibido no es valido.
-    - 404 si no existe el estanque.
-    - 409 si ya existe otro estanque con el mismo codigo en la finca.
+    - 403 si el JWT no contiene un grupo valido.
+    - 404 si el estanque o la finca no pertenecen al grupo.
+    - 409 si existe un codigo duplicado en la finca.
     - 422 si hay errores de validacion.
     - 500 si ocurre un error en la base de datos.
     */
 
     try {
-        const errId = validarIdParametro(req.params.id, res);
+        const errId = validarIdParametro(
+            req.params.id,
+            res
+        );
 
         if (errId) {
             return errId;
         }
 
-        const err = validarCuerpo(req.body, res);
+        const grupoDatos = obtenerGrupoDatosUsuario(
+            req,
+            res
+        );
 
-        if (err) {
-            return err;
+        if (grupoDatos === null) {
+            return;
         }
 
-        const estanqueActual = await EstanqueModel.findById(req.params.id);
+        const errValidacion = validarCuerpo(
+            req.body,
+            res
+        );
+
+        if (errValidacion) {
+            return errValidacion;
+        }
+
+        const estanqueActual = await EstanqueModel
+            .findById(
+                req.params.id,
+                grupoDatos
+            );
 
         if (!estanqueActual) {
-            return error(res, "Estanque no encontrado.", null, 404);
+            return error(
+                res,
+                "Estanque no encontrado.",
+                null,
+                404
+            );
         }
 
-        const existente = await EstanqueModel.findByCodigoAndFinca(
-            req.body.codigo,
+        const fincaValida = await validarFincaGrupo(
             req.body.idFinca,
-            req.params.id
+            grupoDatos,
+            res
         );
+
+        if (!fincaValida) {
+            return;
+        }
+
+        const existente = await EstanqueModel
+            .findByCodigoAndFinca(
+                req.body.codigo,
+                req.body.idFinca,
+                req.params.id,
+                grupoDatos
+            );
 
         if (existente) {
             return error(
                 res,
-                "Ya existe otro estanque con ese codigo en la finca.",
+                "Ya existe otro estanque con ese codigo " +
+                "en la finca.",
                 null,
                 409
             );
         }
 
-        const dto = new EstanqueDTO(req.body);
-        const actualizado = await EstanqueModel.update(req.params.id, dto);
+        const datosEstanque = {
+            ...req.body,
+            grupoDatos
+        };
 
-        return exito(res, "Estanque actualizado correctamente.", actualizado);
+        const dto = new EstanqueDTO(
+            datosEstanque
+        );
+
+        const actualizado = await EstanqueModel.update(
+            req.params.id,
+            dto,
+            grupoDatos
+        );
+
+        return exito(
+            res,
+            "Estanque actualizado correctamente.",
+            actualizado
+        );
     } catch (err) {
-        return error(res, "Error al actualizar el estanque.", err, 500);
+        return error(
+            res,
+            "Error al actualizar el estanque.",
+            err,
+            500
+        );
     }
 }
 
 export async function deleteEstanque(req, res) {
     /*
     Descripcion:
-    Elimina logicamente un estanque por su ID.
-    No elimina fisicamente el registro de la base de datos.
-    El model se encarga de actualizar activo, deleted_at y version.
+    Elimina logicamente un estanque que pertenece al grupo
+    de datos del usuario autenticado.
 
     Parametros:
     - req: Objeto request de Express.
@@ -381,25 +659,55 @@ export async function deleteEstanque(req, res) {
     Retorna:
     - 200 con el estanque eliminado logicamente.
     - 400 si el id recibido no es valido.
-    - 404 si no existe el estanque.
+    - 403 si el JWT no contiene un grupo valido.
+    - 404 si el estanque no existe o pertenece a otro grupo.
     - 500 si ocurre un error en la base de datos.
     */
 
     try {
-        const errId = validarIdParametro(req.params.id, res);
+        const errId = validarIdParametro(
+            req.params.id,
+            res
+        );
 
         if (errId) {
             return errId;
         }
 
-        const eliminado = await EstanqueModel.remove(req.params.id);
+        const grupoDatos = obtenerGrupoDatosUsuario(
+            req,
+            res
+        );
 
-        if (!eliminado) {
-            return error(res, "Estanque no encontrado.", null, 404);
+        if (grupoDatos === null) {
+            return;
         }
 
-        return exito(res, "Estanque eliminado correctamente.", eliminado);
+        const eliminado = await EstanqueModel.remove(
+            req.params.id,
+            grupoDatos
+        );
+
+        if (!eliminado) {
+            return error(
+                res,
+                "Estanque no encontrado.",
+                null,
+                404
+            );
+        }
+
+        return exito(
+            res,
+            "Estanque eliminado correctamente.",
+            eliminado
+        );
     } catch (err) {
-        return error(res, "Error al eliminar el estanque.", err, 500);
+        return error(
+            res,
+            "Error al eliminar el estanque.",
+            err,
+            500
+        );
     }
 }

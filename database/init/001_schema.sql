@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS equipos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
+    identificador VARCHAR(100) NOT NULL,
     descripcion VARCHAR(255) NULL,
     fecha_instalacion DATE NULL,
     tipo VARCHAR(80) NULL,
@@ -328,15 +328,72 @@ CREATE TABLE IF NOT EXISTS movimientos_inventario (
     FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
 );
 
+CREATE TABLE IF NOT EXISTS laboratorios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    grupo_datos INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(150) NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    version INT NOT NULL DEFAULT 1,
+
+    CONSTRAINT fk_laboratorios_grupos_datos
+    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
+
+    CONSTRAINT uq_laboratorio_nombre_grupo
+    UNIQUE (grupo_datos, nombre)
+);
+
+CREATE TABLE IF NOT EXISTS procedencias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    grupo_datos INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(150) NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    version INT NOT NULL DEFAULT 1,
+
+    CONSTRAINT fk_procedencias_grupos_datos
+    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
+
+    CONSTRAINT uq_procedencia_nombre_grupo
+    UNIQUE (grupo_datos, nombre)
+);
+
+CREATE TABLE IF NOT EXISTS proveedores_larva (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    grupo_datos INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(150) NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    version INT NOT NULL DEFAULT 1,
+
+    CONSTRAINT fk_proveedores_larva_grupos_datos
+    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
+
+    CONSTRAINT uq_proveedor_larva_nombre_grupo
+    UNIQUE (grupo_datos, nombre)
+);
+
 CREATE TABLE IF NOT EXISTS lotes_larva (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
     codigo_lote VARCHAR(50) NOT NULL,
-    proveedor_id INT NULL,
-    laboratorio VARCHAR(100) NULL,
-    lugar_procedencia VARCHAR(100) NULL,
-    certificado_larva VARCHAR(150) NULL,
+    proveedor_larva_id INT NULL,
+    laboratorio_id INT NULL,
+    procedencia_id INT NULL,
+    certificado_larva VARCHAR(100) NULL,
     pl_inicial INT NULL,
     cantidad_inicial INT NOT NULL,
     fecha_ingreso DATE NOT NULL,
@@ -350,8 +407,14 @@ CREATE TABLE IF NOT EXISTS lotes_larva (
     CONSTRAINT fk_lotes_grupos_datos
     FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
-    CONSTRAINT fk_lotes_proveedores
-    FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
+    CONSTRAINT fk_lotes_proveedores_larva
+    FOREIGN KEY (proveedor_larva_id) REFERENCES proveedores_larva(id),
+
+    CONSTRAINT fk_lotes_laboratorios
+    FOREIGN KEY (laboratorio_id) REFERENCES laboratorios(id),
+
+    CONSTRAINT fk_lotes_procedencias
+    FOREIGN KEY (procedencia_id) REFERENCES procedencias(id),
 
     CONSTRAINT uq_lote_codigo_grupo
     UNIQUE (grupo_datos, codigo_lote)
@@ -656,7 +719,6 @@ CREATE TABLE IF NOT EXISTS raleos (
     estanque_id INT NOT NULL,
     colaborador_id INT NULL,
     fecha DATE NOT NULL,
-    responsable VARCHAR(100) NULL,
     porcentaje VARCHAR(10) NULL,
     peso_estimado DECIMAL(10,2) NULL,
     biomasa_estimada DECIMAL(10,2) NULL,
@@ -744,7 +806,28 @@ CREATE TABLE IF NOT EXISTS trazabilidad (
     FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
 );
 
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    usuario_id INT NULL,
+    colaborador_id INT NULL,
+    token VARCHAR(512) NOT NULL UNIQUE,
+    expira_en DATETIME NOT NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    version INT NOT NULL DEFAULT 1,
+
+    CONSTRAINT fk_refresh_tokens_usuarios
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_refresh_tokens_colaboradores
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+);
+
 CREATE INDEX idx_usuarios_grupo ON usuarios(grupo_datos);
+CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_colaboradores_grupo ON colaboradores(grupo_datos);
 CREATE INDEX idx_fincas_grupo ON fincas(grupo_datos);
 CREATE INDEX idx_estanques_grupo ON estanques(grupo_datos);
@@ -754,3 +837,12 @@ CREATE INDEX idx_parasitologias_grupo ON parasitologias(grupo_datos);
 CREATE INDEX idx_enfermedades_grupo ON enfermedades(grupo_datos);
 CREATE INDEX idx_alimentaciones_grupo ON alimentaciones(grupo_datos);
 CREATE INDEX idx_fisico_quimico_grupo ON fisico_quimico(grupo_datos);
+
+CREATE INDEX idx_equipos_grupo ON equipos(grupo_datos);
+CREATE INDEX idx_laboratorios_grupo ON laboratorios(grupo_datos);
+CREATE INDEX idx_procedencias_grupo ON procedencias(grupo_datos);
+CREATE INDEX idx_proveedores_larva_grupo ON proveedores_larva(grupo_datos);
+CREATE INDEX idx_lotes_larva_grupo ON lotes_larva(grupo_datos);
+CREATE INDEX idx_precrias_grupo ON precrias(grupo_datos);
+CREATE INDEX idx_siembras_grupo ON siembras(grupo_datos);
+CREATE INDEX idx_raleos_grupo ON raleos(grupo_datos);

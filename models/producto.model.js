@@ -11,25 +11,14 @@ Maneja las consultas SQL directas a la base de datos para la entidad de Producto
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-*/
-import pool from '../config/db.js';
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
-*/
+import pool from '../config/database.js';
 
 /**
  * Obtiene todos los productos que estén activos en la base de datos.
  */
 export async function findAll() {
     const [rows] = await pool.query(
-        'SELECT id, nombre, categoria, cantidad, stock_minimo AS stockMinimo, precio_unidad AS precioUnidad, estado FROM productos WHERE estado = "ACTIVO"'
+        'SELECT id, uuid, grupo_datos AS grupoDatos, proveedor_id AS proveedorId, nombre, categoria, unidad, precio_unidad AS precioUnidad, estado FROM productos WHERE estado = "ACTIVO" AND deleted_at IS NULL'
     );
     return rows;
 }
@@ -39,7 +28,7 @@ export async function findAll() {
  */
 export async function findById(id) {
     const [rows] = await pool.query(
-        'SELECT id, nombre, categoria, cantidad, stock_minimo AS stockMinimo, precio_unidad AS precioUnidad, estado FROM productos WHERE id = ? AND estado = "ACTIVO"',
+        'SELECT id, uuid, grupo_datos AS grupoDatos, proveedor_id AS proveedorId, nombre, categoria, unidad, precio_unidad AS precioUnidad, estado FROM productos WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL',
         [id]
     );
     return rows.length > 0 ? rows[0] : null;
@@ -49,11 +38,13 @@ export async function findById(id) {
  * Inserta un nuevo producto utilizando un objeto DTO.
  */
 export async function create(dto) {
-    const { nombre, categoria, cantidad, stockMinimo, precioUnidad } = dto;
+    const { nombre, categoria, unidad, precioUnidad, proveedorId, grupoDatos } = dto;
+    const gd = grupoDatos ?? 1;
+    const provId = proveedorId ?? null;
     
     const [result] = await pool.query(
-        'INSERT INTO productos (nombre, categoria, cantidad, stock_minimo, precio_unidad, estado) VALUES (?, ?, ?, ?, ?, "ACTIVO")',
-        [nombre, categoria, cantidad, stockMinimo, precioUnidad]
+        'INSERT INTO productos (grupo_datos, proveedor_id, nombre, categoria, unidad, precio_unidad, estado) VALUES (?, ?, ?, ?, ?, ?, "ACTIVO")',
+        [gd, provId, nombre, categoria, unidad, precioUnidad]
     );
 
     return {
@@ -67,11 +58,12 @@ export async function create(dto) {
  * Actualiza los datos de un producto existente por su ID.
  */
 export async function update(id, dto) {
-    const { nombre, categoria, cantidad, stockMinimo, precioUnidad } = dto;
+    const { nombre, categoria, unidad, precioUnidad, proveedorId } = dto;
+    const provId = proveedorId ?? null;
 
     const [result] = await pool.query(
-        'UPDATE productos SET nombre = ?, categoria = ?, cantidad = ?, stock_minimo = ?, precio_unidad = ? WHERE id = ? AND estado = "ACTIVO"',
-        [nombre, categoria, cantidad, stockMinimo, precioUnidad, id]
+        'UPDATE productos SET nombre = ?, categoria = ?, unidad = ?, precio_unidad = ?, proveedor_id = ? WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL',
+        [nombre, categoria, unidad, precioUnidad, provId, id]
     );
 
     if (result.affectedRows === 0) return null;
@@ -91,7 +83,7 @@ export async function removeLogicamente(id) {
     if (!producto) return null;
 
     const [result] = await pool.query(
-        'UPDATE productos SET estado = "INACTIVO" WHERE id = ?',
+        'UPDATE productos SET estado = "INACTIVO", deleted_at = NOW() WHERE id = ?',
         [id]
     );
 

@@ -41,7 +41,6 @@ const camposRegistro = [
     ["usuario", "nombreUsuario"],
     ["contrasena"],
     ["rolId"],
-    ["grupoDatos"]
 ];
 
 const camposRegistroOperario = [
@@ -50,7 +49,6 @@ const camposRegistroOperario = [
     ["usuario", "nombreUsuario"],
     ["rolId"],
     ["pin"],
-    ["grupoDatos"]
 ];
 
 const camposVerificarPin = [["operarioId"], ["pin"]];

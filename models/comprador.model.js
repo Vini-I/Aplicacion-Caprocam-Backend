@@ -11,25 +11,14 @@ Maneja las consultas SQL directas a la base de datos para la entidad de Comprado
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-*/
-import pool from '../config/db.js';
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
-*/
+import pool from '../config/database.js';
 
 /**
  * Obtiene todos los compradores activos de la base de datos.
  */
 export async function findAll() {
     const [rows] = await pool.query(
-        'SELECT id, nombre, contacto, telefono, estado FROM compradores WHERE estado = "ACTIVO"'
+        'SELECT id, uuid, grupo_datos AS grupoDatos, nombre, contacto, telefono, correo, estado FROM compradores WHERE estado = "ACTIVO" AND deleted_at IS NULL'
     );
     return rows;
 }
@@ -39,7 +28,7 @@ export async function findAll() {
  */
 export async function findById(id) {
     const [rows] = await pool.query(
-        'SELECT id, nombre, contacto, telefono, estado FROM compradores WHERE id = ? AND estado = "ACTIVO"',
+        'SELECT id, uuid, grupo_datos AS grupoDatos, nombre, contacto, telefono, correo, estado FROM compradores WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL',
         [id]
     );
     return rows.length > 0 ? rows[0] : null;
@@ -49,11 +38,12 @@ export async function findById(id) {
  * Registra un nuevo comprador en la base de datos a partir de su DTO.
  */
 export async function create(dto) {
-    const { nombre, contacto, telefono } = dto;
+    const { nombre, contacto, telefono, correo, grupoDatos } = dto;
+    const gd = grupoDatos ?? 1;
 
     const [result] = await pool.query(
-        'INSERT INTO compradores (nombre, contacto, telefono, estado) VALUES (?, ?, ?, "ACTIVO")',
-        [nombre, contacto, telefono || null]
+        'INSERT INTO compradores (grupo_datos, nombre, contacto, telefono, correo, estado) VALUES (?, ?, ?, ?, ?, "ACTIVO")',
+        [gd, nombre, contacto, telefono || null, correo || null]
     );
 
     return {
@@ -67,11 +57,11 @@ export async function create(dto) {
  * Actualiza la información de un comprador por su ID.
  */
 export async function update(id, dto) {
-    const { nombre, contacto, telefono } = dto;
+    const { nombre, contacto, telefono, correo } = dto;
 
     const [result] = await pool.query(
-        'UPDATE compradores SET nombre = ?, contacto = ?, telefono = ? WHERE id = ? AND estado = "ACTIVO"',
-        [nombre, contacto, telefono || null, id]
+        'UPDATE compradores SET nombre = ?, contacto = ?, telefono = ?, correo = ? WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL',
+        [nombre, contacto, telefono || null, correo || null, id]
     );
 
     if (result.affectedRows === 0) return null;
@@ -91,7 +81,7 @@ export async function removeLogicamente(id) {
     if (!comprador) return null;
 
     const [result] = await pool.query(
-        'UPDATE compradores SET estado = "INACTIVO" WHERE id = ?',
+        'UPDATE compradores SET estado = "INACTIVO", deleted_at = NOW() WHERE id = ?',
         [id]
     );
 
