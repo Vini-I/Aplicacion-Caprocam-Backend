@@ -3,109 +3,146 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: comprador.controller.js
-Autor: Jose Espinoza 
-Fecha: 17/07/2026
+Autor: Jose Espinoza
+Fecha: 20/07/2026
 Modulo: Compradores
 Descripcion:
-Controlador de compradores asíncrono alineado al uso de la base de datos MySQL,
-extrayendo la seguridad y el grupo de datos desde el JSON Web Token (JWT).
+Maneja las peticiones HTTP para la entidad de Compradores, validando datos de entrada y encapsulando respuestas.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-*/
-import { CompradorDTO } from '../dtos/comprador.dto.js';
-import * as CompradorService from '../services/comprador.service.js';
-import * as CompradorModel from '../models/comprador.model.js';
-import { exito, error } from '../common/respuestaJson.js';
+import * as compradorModel from '../models/comprador.model.js';
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
-*/
-
-function validarCuerpo({ nombre, contacto, telefono }, res) {
-    if (CompradorService.isEmpty(nombre) || CompradorService.isEmpty(contacto))
-        return error(res, 'Nombre y contacto son requeridos.', null, 400);
-
-    if (telefono && !CompradorService.isPhone(telefono))
-        return error(res, 'El teléfono debe tener 8 dígitos.', null, 422);
-
-    return null;
-}
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
-*/
-
+/**
+ * Obtiene todos los compradores activos.
+ */
 export async function getCompradores(req, res) {
     try {
-        const grupoDatos = req.user.grupoDatos; // Extracción obligatoria del JWT
-        const data = await CompradorModel.findAll(grupoDatos);
-        return exito(res, 'Compradores obtenidos correctamente.', data);
-    } catch (err) {
-        return error(res, 'Error al obtener los compradores.', err.message, 500);
+        const compradores = await compradorModel.findAll();
+        return res.status(200).json({ data: compradores });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Error al obtener los compradores",
+            error: error.message
+        });
     }
 }
 
-export async function getCompradorById(req, res) {
+/**
+ * Obtiene un comprador activo por ID.
+ */
+export async function getCompradorPorId(req, res) {
     try {
-        const grupoDatos = req.user.grupoDatos; // Extracción obligatoria del JWT
-        const comprador = await CompradorModel.findById(req.params.id, grupoDatos);
-        if (!comprador) return error(res, 'Comprador no encontrado.', null, 404);
-        return exito(res, 'Comprador obtenido correctamente.', comprador);
-    } catch (err) {
-        return error(res, 'Error al obtener el comprador.', err.message, 500);
+        const { id } = req.params;
+        const comprador = await compradorModel.findById(id);
+
+        if (!comprador) {
+            return res.status(404).json({ message: "Comprador no encontrado" });
+        }
+
+        return res.status(200).json({ data: comprador });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Error al obtener el comprador",
+            error: error.message
+        });
     }
 }
 
-export async function createComprador(req, res) {
+/**
+ * Crea un nuevo comprador aceptando 'cedula' o 'contacto'.
+ */
+export async function crearComprador(req, res) {
     try {
-        const grupoDatos = req.user.grupoDatos; // Extracción obligatoria del JWT
-        const { nombre, contacto, telefono } = req.body;
+        const { nombre, cedula, contacto, telefono, correo, notas } = req.body;
+        const valorCedula = cedula || contacto;
 
-        const err = validarCuerpo({ nombre, contacto, telefono }, res);
-        if (err) return err;
+        // Validacion flexible: requiere nombre y al menos uno de los dos campos de identificacion
+        if (!nombre || !valorCedula) {
+            return res.status(400).json({
+                success: false,
+                message: "Faltan campos requeridos: nombre y cedula (o contacto)."
+            });
+        }
 
-        const dto = new CompradorDTO({ nombre, contacto, telefono });
-        const nuevo = await CompradorModel.create(dto, grupoDatos);
-        return exito(res, 'Comprador creado correctamente.', nuevo, 201);
-    } catch (err) {
-        return error(res, 'Error al crear el comprador.', err.message, 500);
+        const dto = {
+            nombre,
+            cedula: valorCedula,
+            telefono: telefono || null,
+            correo: correo || null,
+            notas: notas || null,
+            grupoDatos: req.user?.grupoDatos ?? 1
+        };
+
+        const nuevoComprador = await compradorModel.create(dto);
+        return res.status(201).json({ data: nuevoComprador });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Error al crear el comprador",
+            error: error.message
+        });
     }
 }
 
-export async function updateComprador(req, res) {
+/**
+ * Actualiza la información de un comprador existente.
+ */
+export async function actualizarComprador(req, res) {
     try {
-        const grupoDatos = req.user.grupoDatos; // Extracción obligatoria del JWT
-        const { nombre, contacto, telefono } = req.body;
+        const { id } = req.params;
+        const { nombre, cedula, contacto, telefono, correo, notas } = req.body;
+        const valorCedula = cedula || contacto;
 
-        const err = validarCuerpo({ nombre, contacto, telefono }, res);
-        if (err) return err;
+        if (!nombre || !valorCedula) {
+            return res.status(400).json({
+                success: false,
+                message: "Faltan campos requeridos: nombre y cedula (o contacto)."
+            });
+        }
 
-        const dto = new CompradorDTO({ nombre, contacto, telefono });
-        const actualizado = await CompradorModel.update(req.params.id, dto, grupoDatos);
-        if (!actualizado) return error(res, 'Comprador no encontrado.', null, 404);
+        const dto = {
+            nombre,
+            cedula: valorCedula,
+            telefono: telefono || null,
+            correo: correo || null,
+            notas: notas || null
+        };
 
-        return exito(res, 'Comprador actualizado correctamente.', actualizado);
-    } catch (err) {
-        return error(res, 'Error al actualizar el comprador.', err.message, 500);
+        const compradorActualizado = await compradorModel.update(id, dto);
+
+        if (!compradorActualizado) {
+            return res.status(404).json({ message: "Comprador no encontrado o inactivo" });
+        }
+
+        return res.status(200).json({ data: compradorActualizado });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Error al actualizar el comprador",
+            error: error.message
+        });
     }
 }
 
-export async function deleteComprador(req, res) {
+/**
+ * Realiza la desactivacion (borrado logico) del comprador.
+ */
+export async function desactivarComprador(req, res) {
     try {
-        const grupoDatos = req.user.grupoDatos; // Extracción obligatoria del JWT
-        const desactivado = await CompradorModel.removeLogicamente(req.params.id, grupoDatos);
-        if (!desactivado) return error(res, 'Comprador no encontrado.', null, 404);
-        return exito(res, 'Comprador desactivado correctamente.', desactivado);
-    } catch (err) {
-        return error(res, 'Error al desactivar el comprador.', err.message, 500);
+        const { id } = req.params;
+        const compradorEliminado = await compradorModel.removeLogicamente(id);
+
+        if (!compradorEliminado) {
+            return res.status(404).json({ message: "Comprador no encontrado o ya inactivo" });
+        }
+
+        return res.status(200).json({
+            message: "Comprador desactivado correctamente",
+            data: compradorEliminado
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Error al desactivar el comprador",
+            error: error.message
+        });
     }
 }
