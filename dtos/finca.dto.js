@@ -27,7 +27,7 @@ export class FincaDTO {
 
     Parametros:
     - id: ID de la finca.
-    - idCBO: ID del CBO asociado a la finca.
+    - codigoCBO: ID del CBO asociado a la finca.
     - nombreFinca: Nombre de la finca. 
     - provincia: Provincia donde se encuentra la finca.
     - canton: Cantón donde se encuentra la finca.
@@ -43,7 +43,7 @@ export class FincaDTO {
     */
   constructor(
     grupoDatos,
-    idCBO,
+    codigoCBO,
     nombreFinca,
     provincia,
     canton,
@@ -55,7 +55,7 @@ export class FincaDTO {
     espejosAgua,
   ) {
     this.grupoDatos = grupoDatos;
-    this.idCBO = idCBO;
+    this.codigoCBO = codigoCBO;
     this.nombreFinca = nombreFinca;
     this.provincia = provincia;
     this.canton = canton;
