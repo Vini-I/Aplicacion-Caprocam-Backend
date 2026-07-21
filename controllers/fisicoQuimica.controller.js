@@ -12,24 +12,17 @@ devuelve la respuesta al cliente.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Librerias externas
-*/
 import { FisicoQuimicaDTO } from '../dtos/fisicoQuimica.dto.js';
 
 // Servicios
 import {
-    isEmpty,
     isFechaValida,
     isIdValido,
     isPhValido,
     isSalinidadValida,
     isTemperaturaValida,
     isOxigeno,
+    isListaMedicionesValida,
 } from '../services/fisicoQuimica.service.js';
 
 // Modelos
@@ -40,29 +33,29 @@ import { exito, error } from '../common/respuestaJson.js';
 
 /*
 //////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
-
-/*
-//////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
-
-Las funciones createLectura() dependen de
-esta funcion para trabajar.
 */
 
-function validarCuerpo({ fincaId, estanqueId, fecha, ph, salinidad, temperatura, oxigeno }, res) {
+function validarCuerpo({
+    fincaId,
+    estanqueId,
+    fecha,
+    ph,
+    salinidad,
+    temperatura,
+    oxigenoDisuelto,
+}, res) {
     /*
     Descripcion:
     Valida los campos del body antes de construir el DTO.
-
-    Parametros:
-    - fincaId, estanqueId, fecha, ph, salinidad, temperatura, oxigeno: Campos del body
-    - res: Objeto response de Express
+    Alineado con el modelo: ph, salinidad, temperatura y
+    oxigenoDisuelto son ahora arreglos de mediciones
+    ({ valor, etiqueta }), porque un mismo estanque/dia
+    puede tener mas de una lectura del mismo tipo (ej.
+    pH dia/noche, oxigeno hasta 5 veces). fincaId y
+    estanqueId son numericos porque asi estan definidos
+    en la base de datos (columnas INT).
 
     Retorna:
     - Una respuesta de error si algo falla, null si todo esta bien.
@@ -70,23 +63,35 @@ function validarCuerpo({ fincaId, estanqueId, fecha, ph, salinidad, temperatura,
     if (!isIdValido(fincaId))
         return error(res, 'El fincaId no es valido.', null, 400);
 
-    if (isEmpty(estanqueId))
-        return error(res, 'El estanqueId es obligatorio.', null, 400);
+    if (!isIdValido(estanqueId))
+        return error(res, 'El estanqueId no es valido.', null, 400);
 
     if (!isFechaValida(fecha))
         return error(res, 'La fecha es obligatoria.', null, 400);
 
     if (!isPhValido(ph))
-        return error(res, 'El ph debe ser un arreglo con al menos un elemento.', null, 400);
+        return error(res, 'El ph debe ser un arreglo con al menos una medicion.', null, 400);
 
     if (!isSalinidadValida(salinidad))
-        return error(res, 'La salinidad debe ser un arreglo con al menos un elemento.', null, 400);
+        return error(res, 'La salinidad debe ser un arreglo con al menos una medicion.', null, 400);
 
     if (!isTemperaturaValida(temperatura))
-        return error(res, 'La temperatura debe ser un arreglo con al menos un elemento.', null, 400);
+        return error(res, 'La temperatura debe ser un arreglo con al menos una medicion.', null, 400);
 
-    if (!isOxigeno(oxigeno))
-        return error(res, 'El oxigeno debe ser un arreglo con al menos un elemento.', null, 400);
+    if (!isOxigeno(oxigenoDisuelto))
+        return error(res, 'El oxigenoDisuelto debe ser un arreglo con al menos una medicion.', null, 400);
+
+    if (!isListaMedicionesValida(ph))
+        return error(res, 'Cada medicion de ph debe tener un valor numerico mayor a cero y una etiqueta.', null, 400);
+
+    if (!isListaMedicionesValida(salinidad))
+        return error(res, 'Cada medicion de salinidad debe tener un valor numerico mayor a cero y una etiqueta.', null, 400);
+
+    if (!isListaMedicionesValida(temperatura))
+        return error(res, 'Cada medicion de temperatura debe tener un valor numerico mayor a cero y una etiqueta.', null, 400);
+
+    if (!isListaMedicionesValida(oxigenoDisuelto))
+        return error(res, 'Cada medicion de oxigenoDisuelto debe tener un valor numerico mayor a cero y una etiqueta.', null, 400);
 
     return null;
 }
@@ -95,26 +100,13 @@ function validarCuerpo({ fincaId, estanqueId, fecha, ph, salinidad, temperatura,
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-
-Contiene las funciones exportables que manejan cada
-ruta del modulo de fisico quimica.
 */
 
 export async function obtenerTodasLasLecturas(req, res) {
-    /*
-    Descripcion:
-    Obtiene todas las lecturas fisico quimicas.
-
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con lista de lecturas
-    - 500 si ocurre un error inesperado
-    */
     try {
-        const data = await FisicoQuimicaModel.findAll();
+        const grupoDatos = req.user.grupoDatos;
+
+        const data = await FisicoQuimicaModel.findAll(grupoDatos);
         return exito(res, 'Lecturas obtenidas correctamente.', data);
     } catch (err) {
         return error(res, 'Error al obtener las lecturas.', err);
@@ -122,21 +114,10 @@ export async function obtenerTodasLasLecturas(req, res) {
 }
 
 export async function obtenerLecturaPorId(req, res) {
-    /*
-    Descripcion:
-    Obtiene una lectura fisico quimica por su ID.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con la lectura encontrada
-    - 404 si no existe
-    - 500 si ocurre un error inesperado
-    */
     try {
-        const data = await FisicoQuimicaModel.findById(req.params.id);
+        const grupoDatos = req.user.grupoDatos;
+
+        const data = await FisicoQuimicaModel.findById(req.params.id, grupoDatos);
 
         if (!data)
             return error(res, 'Lectura no encontrada.', null, 404);
@@ -147,27 +128,77 @@ export async function obtenerLecturaPorId(req, res) {
     }
 }
 
-export async function registrarLectura(req, res) {
+export async function obtenerLecturaPorEstanqueYFecha(req, res) {
     /*
     Descripcion:
-    Registra una nueva lectura fisico quimica.
+    Busca si ya existe una lectura fisico quimica de un
+    estanque especifico en una fecha dada. Permite al
+    frontend decidir entre "Guardar" (no existe todavia)
+    y "Actualizar" (ya existe, precargar valores).
 
-    Parametros:
-    - req: Objeto request de Express (req.body)
-    - res: Objeto response de Express
+    Parametros esperados:
+    - req.params.estanqueId: Identificador del estanque.
+    - req.query.fecha: Fecha a consultar (YYYY-MM-DD).
 
     Retorna:
-    - 201 con la lectura creada
-    - 400 si hay errores de validacion
-    - 500 si ocurre un error inesperado
+    - 200 con data: la lectura encontrada, o null si no existe.
+    - 400 si el estanqueId o la fecha no son validos.
     */
-    const { fincaId, estanqueId, fecha, ph, salinidad, temperatura, oxigeno } = req.body;
+    try {
+        const { estanqueId } = req.params;
+        const { fecha } = req.query;
 
-    const err = validarCuerpo({ fincaId, estanqueId, fecha, ph, salinidad, temperatura, oxigeno }, res);
+        if (!isIdValido(estanqueId))
+            return error(res, 'El estanqueId no es valido.', null, 400);
+
+        if (!isFechaValida(fecha))
+            return error(res, 'Debe indicar una fecha valida (YYYY-MM-DD) en el query string.', null, 400);
+
+        const grupoDatos = req.user.grupoDatos;
+
+        const data = await FisicoQuimicaModel.findByEstanqueYFecha(estanqueId, fecha, grupoDatos);
+
+        return exito(res, 'Consulta realizada correctamente.', data);
+    } catch (err) {
+        return error(res, 'Error al consultar la lectura del estanque.', err);
+    }
+}
+
+export async function registrarLectura(req, res) {
+    const {
+        fincaId,
+        estanqueId,
+        fecha,
+        ph,
+        salinidad,
+        temperatura,
+        oxigenoDisuelto,
+    } = req.body;
+
+    const err = validarCuerpo({
+        fincaId,
+        estanqueId,
+        fecha,
+        ph,
+        salinidad,
+        temperatura,
+        oxigenoDisuelto,
+    }, res);
     if (err) return err;
 
     try {
-        const dto  = new fisicoQuimicaDto({ fincaId, estanqueId, fecha, ph, salinidad, temperatura, oxigeno });
+        const grupoDatos = req.user.grupoDatos;
+
+        const dto = new FisicoQuimicaDTO({
+            grupoDatos,
+            fincaId,
+            estanqueId,
+            fecha,
+            ph,
+            salinidad,
+            temperatura,
+            oxigenoDisuelto,
+        });
         const data = await FisicoQuimicaModel.create(dto);
         return exito(res, 'Lectura registrada correctamente.', data, 201);
     } catch (err) {
@@ -175,29 +206,49 @@ export async function registrarLectura(req, res) {
     }
 }
 
-export async function desactivarLectura(req, res) {
-    /*
-    Descripcion:
-    Realiza el borrado logico de una lectura
-    fisico quimica por su ID.
+export async function actualizarLectura(req, res) {
+    const {
+        fincaId,
+        estanqueId,
+        fecha,
+        ph,
+        salinidad,
+        temperatura,
+        oxigenoDisuelto,
+    } = req.body;
 
-    Parametros:
-    - req: Objeto request de Express (req.params.id)
-    - res: Objeto response de Express
+    const err = validarCuerpo({
+        fincaId,
+        estanqueId,
+        fecha,
+        ph,
+        salinidad,
+        temperatura,
+        oxigenoDisuelto,
+    }, res);
+    if (err) return err;
 
-    Retorna:
-    - 200 con la lectura desactivada
-    - 404 si no existe
-    - 500 si ocurre un error inesperado
-    */
     try {
-        const data = await FisicoQuimicaModel.remove(req.params.id);
+        const grupoDatos = req.user.grupoDatos;
+
+        const dto = new FisicoQuimicaDTO({
+            grupoDatos,
+            fincaId,
+            estanqueId,
+            fecha,
+            ph,
+            salinidad,
+            temperatura,
+            oxigenoDisuelto,
+        });
+
+        const data = await FisicoQuimicaModel.update(req.params.id, dto);
 
         if (!data)
             return error(res, 'Lectura no encontrada.', null, 404);
 
-        return exito(res, 'Estado actualizado correctamente.', data);
+        return exito(res, 'Lectura actualizada correctamente.', data);
     } catch (err) {
-        return error(res, 'Error al actualizar el estado.', err);
+        return error(res, 'Error al actualizar la lectura.', err);
     }
 }

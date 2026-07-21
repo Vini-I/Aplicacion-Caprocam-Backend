@@ -13,13 +13,6 @@ esten presentes antes de llegar al controller.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Common
-*/
 import { error } from '../common/respuestaJson.js';
 
 /*
@@ -37,16 +30,38 @@ const camposRequeridos = [
     'ph',
     'salinidad',
     'temperatura',
-    'oxigeno',        
+    'oxigenoDisuelto',
 ];
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+*/
+
+function estaVacio(valor) {
+    /*
+    Descripcion:
+    Verifica si un valor esta vacio, sin marcar
+    como faltante un 0 valido (bug del !valor anterior).
+
+    Parametros:
+    - valor: Valor a revisar.
+
+    Retorna:
+    - true si esta vacio.
+    - false si tiene contenido, incluyendo 0.
+    */
+    if (valor === undefined) return true;
+    if (valor === null) return true;
+    if (typeof valor === 'string' && valor.trim() === '') return true;
+    return false;
+}
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-
-Contiene los middlewares de validacion de body
-para el modulo de fisico quimica.
 */
 
 export function validarFisicoQuimica(req, res, next) {
@@ -68,7 +83,7 @@ export function validarFisicoQuimica(req, res, next) {
     if (!req.body || Object.keys(req.body).length === 0)
         return error(res, 'El body no puede estar vacio.', null, 400);
 
-    const faltantes = camposRequeridos.filter(campo => !req.body[campo]);
+    const faltantes = camposRequeridos.filter(campo => estaVacio(req.body[campo]));
 
     if (faltantes.length > 0)
         return error(

@@ -1,14 +1,34 @@
 # Trazabilidad
 
-## GET /api/v1/registrosTrazabilidad
-Obtiene todos los registros de trazabilidad.
+## GET /api/v0/registrosTrazabilidad
+Obtiene todos los registros de trazabilidad activos, limitados al grupo de datos del usuario autenticado (JWT).
 
 Respuesta:
 200 OK
 {
     "success": true,
     "message": "Registros obtenidos correctamente.",
-    "data": [ ... ]
+    "data": [
+        {
+            "id": 5,
+            "uuid": "10a4dc29-8349-11f1-a686-06337dcb40ba",
+            "grupoDatos": 1,
+            "fincaId": 1,
+            "estanqueOrigenId": 1,
+            "estanqueDestinoId": 2,
+            "colaboradorId": 1,
+            "fecha": "2026-07-19",
+            "tamano": 0.5,
+            "dias": 30,
+            "pl": 15000,
+            "tipoMovimiento": "SIEMBRA",
+            "activo": true,
+            "fechaCreacion": "2026-07-19T14:08:46.000Z",
+            "fechaActualizacion": "2026-07-19T14:08:46.000Z",
+            "deletedAt": null,
+            "version": 1
+        }
+    ]
 }
 
 Respuesta de error:
@@ -21,7 +41,7 @@ Respuesta de error:
 
 ---
 
-## GET /api/v1/registrosTrazabilidad/:id
+## GET /api/v0/registrosTrazabilidad/:id
 Obtiene un registro de trazabilidad por su ID.
 
 Parametros URL:
@@ -32,7 +52,25 @@ Respuesta exitosa:
 {
     "success": true,
     "message": "Registro obtenido correctamente.",
-    "data": { ... }
+    "data": {
+        "id": 5,
+        "uuid": "10a4dc29-8349-11f1-a686-06337dcb40ba",
+        "grupoDatos": 1,
+        "fincaId": 1,
+        "estanqueOrigenId": 1,
+        "estanqueDestinoId": 2,
+        "colaboradorId": 1,
+        "fecha": "2026-07-19",
+        "tamano": 0.5,
+        "dias": 30,
+        "pl": 15000,
+        "tipoMovimiento": "SIEMBRA",
+        "activo": true,
+        "fechaCreacion": "2026-07-19T14:08:46.000Z",
+        "fechaActualizacion": "2026-07-19T14:08:46.000Z",
+        "deletedAt": null,
+        "version": 1
+    }
 }
 
 Respuesta de error:
@@ -45,27 +83,51 @@ Respuesta de error:
 
 ---
 
-## POST /api/v1/registrosTrazabilidad
+## POST /api/v0/registrosTrazabilidad
 Registra un nuevo movimiento de trazabilidad.
 
 Body (JSON):
 {
     "fincaId":           1,
-    "estanqueOrigenId":  "E-01",
-    "estanqueDestinoId": "E-05",
-    "fecha":             "2026-07-03",
-    "colaboradorId":     3,
-    "tamano":            8.5,
-    "dias":              45,
-    "pl":                5000
+    "estanqueOrigenId":  1,
+    "estanqueDestinoId": 2,
+    "fecha":             "2026-07-19",
+    "colaboradorId":     1,
+    "tamano":            0.5,
+    "dias":              30,
+    "pl":                15000
 }
+
+Notas:
+- `fincaId`, `estanqueOrigenId`, `estanqueDestinoId` y `colaboradorId` son numericos (IDs reales de la base de datos, no slugs de texto).
+- `estanqueOrigenId` y `estanqueDestinoId` no pueden ser el mismo valor.
+- `fecha` no puede ser una fecha futura.
+- `tipoMovimiento` no se envia en el body: el backend siempre lo guarda como `"SIEMBRA"`.
 
 Respuesta exitosa:
 201 Created
 {
     "success": true,
     "message": "Registro guardado correctamente.",
-    "data": { ... }
+    "data": {
+        "id": 5,
+        "uuid": "10a4dc29-8349-11f1-a686-06337dcb40ba",
+        "grupoDatos": 1,
+        "fincaId": 1,
+        "estanqueOrigenId": 1,
+        "estanqueDestinoId": 2,
+        "colaboradorId": 1,
+        "fecha": "2026-07-19",
+        "tamano": 0.5,
+        "dias": 30,
+        "pl": 15000,
+        "tipoMovimiento": "SIEMBRA",
+        "activo": true,
+        "fechaCreacion": "2026-07-19T14:08:46.000Z",
+        "fechaActualizacion": "2026-07-19T14:08:46.000Z",
+        "deletedAt": null,
+        "version": 1
+    }
 }
 
 Respuesta de error:
@@ -78,7 +140,7 @@ Respuesta de error:
 
 ---
 
-## PUT /api/v1/registrosTrazabilidad/:id/activo
+## PUT /api/v0/registrosTrazabilidad/:id/activo
 Realiza el borrado logico de un registro de trazabilidad.
 Invierte el estado activo del registro.
 
