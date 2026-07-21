@@ -39,6 +39,9 @@ import fincaRoutes from "./routes/finca.routes.js";
 import equipoRouter    from "./routes/equipo.routes.js";
 import fisicoQuimicaRoutes from './routes/fisicoQuimica.routes.js';
 import trazabilidadRoutes from './routes/trazabilidad.routes.js';
+import procedenciaRouter from './routes/procedencia.routes.js';
+import laboratorioRouter from './routes/laboratorio.routes.js';
+import proveedorLarvaRouter from './routes/proveedorLarva.routes.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -84,6 +87,9 @@ app.use("/api/v0/fincas", fincaRoutes);
 app.use("/api/v0/equipos", equipoRouter);
 app.use('/api/v0/lecturasFisicoQuimicas', fisicoQuimicaRoutes);
 app.use('/api/v0/registrosTrazabilidad', trazabilidadRoutes);
+app.use('/api/v0/procedencias', procedenciaRouter);
+app.use('/api/v0/laboratorios', laboratorioRouter);
+app.use('/api/v0/proveedores-larva', proveedorLarvaRouter);
 
 /*
 //////////////////////////////////////////////////////////
