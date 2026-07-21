@@ -925,6 +925,71 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
 );
 
+INSERT INTO grupos_datos (
+    codigo,
+    nombre,
+    descripcion,
+    acceso_global,
+    activo
+)
+SELECT
+    1,
+    'Caprocam',
+    'Grupo base inicial del sistema',
+    TRUE,
+    TRUE
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM grupos_datos
+    WHERE codigo = 1
+);
+
+INSERT INTO roles (
+    nombre,
+    descripcion,
+    acceso_global,
+    activo
+)
+SELECT
+    'administrador',
+    'Rol administrativo inicial del sistema',
+    TRUE,
+    TRUE
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM roles
+    WHERE nombre = 'administrador'
+);
+
+INSERT INTO usuarios (
+    grupo_datos,
+    rol_id,
+    nombre,
+    apellidos,
+    email,
+    nombre_usuario,
+    password_hash,
+    activo
+)
+SELECT
+    (SELECT codigo FROM grupos_datos WHERE codigo = 1 LIMIT 1),
+    (SELECT id FROM roles WHERE nombre = 'administrador' LIMIT 1),
+    'Administrador',
+    'Sistema',
+    'admin@caprocam.local',
+    'admin',
+    '$2b$10$NuxtO925LglHJtx3CmDnROVHip/58kvWhpcKC4dF5XcQV3Mh9N1Di',
+    TRUE
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM usuarios
+    WHERE nombre_usuario = 'admin'
+       OR email = 'admin@caprocam.local'
+);
+
 CREATE INDEX idx_usuarios_grupo ON usuarios(grupo_datos);
 CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_colaboradores_grupo ON colaboradores(grupo_datos);
