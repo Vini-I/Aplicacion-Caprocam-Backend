@@ -33,14 +33,6 @@ import { exito, error } from '../common/respuestaJson.js';
 
 /*
 //////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
-
-/*
-//////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 
@@ -90,7 +82,8 @@ export async function getTareas(req, res) {
     - 200 con lista de tareas
     */
     try {
-        const data = await TareaModel.findAll(GRUPO_DATOS_PROVISIONAL);
+        const grupoDatos = req.user.grupoDatos;
+        const data       = await TareaModel.findAll(grupoDatos);
         return exito(res, 'Tareas obtenidas correctamente.', data);
     } catch (err) {
         return error(res, 'Error al obtener tareas.', err);
@@ -111,7 +104,8 @@ export async function getTareaById(req, res) {
     - 404 si no existe
     */
     try {
-        const tarea = await TareaModel.findById(req.params.id, GRUPO_DATOS_PROVISIONAL);
+        const grupoDatos = req.user.grupoDatos;
+        const tarea      = await TareaModel.findById(req.params.id, grupoDatos);
 
         if (!tarea)
             return error(res, 'Tarea no encontrada.', null, 404);
@@ -135,8 +129,9 @@ export async function getCatalogoTareas(req, res) {
     - 200 con lista de { id, nombre }
     */
     try {
-        const tareas   = await TareaModel.findAll(GRUPO_DATOS_PROVISIONAL);
-        const catalogo = tareas.map(t => ({ id: t.id, nombre: t.nombre }));
+        const grupoDatos = req.user.grupoDatos;
+        const tareas     = await TareaModel.findAll(grupoDatos);
+        const catalogo   = tareas.map(t => ({ id: t.id, nombre: t.nombre }));
         return exito(res, 'Catalogo de tareas obtenido correctamente.', catalogo);
     } catch (err) {
         return error(res, 'Error al obtener catalogo de tareas.', err);
@@ -157,6 +152,7 @@ export async function createTarea(req, res) {
     - 400/422 si hay errores de validacion
     */
     try {
+        const grupoDatos = req.user.grupoDatos;
         const { nombre, descripcion, categoria, horas,
                 colaboradorId, equipoId, estado } = req.body;
 
@@ -165,7 +161,7 @@ export async function createTarea(req, res) {
 
         const dto   = new TareaDTO({ nombre, descripcion, categoria, horas,
                                      colaboradorId, equipoId, estado });
-        const nueva = await TareaModel.create(dto, GRUPO_DATOS_PROVISIONAL);
+        const nueva = await TareaModel.create(dto, grupoDatos);
 
         return exito(res, 'Tarea creada correctamente.', nueva, 201);
     } catch (err) {
@@ -188,6 +184,7 @@ export async function updateTarea(req, res) {
     - 404 si no existe
     */
     try {
+        const grupoDatos = req.user.grupoDatos;
         const { nombre, descripcion, categoria, horas,
                 colaboradorId, equipoId, estado } = req.body;
 
@@ -196,7 +193,7 @@ export async function updateTarea(req, res) {
 
         const dto         = new TareaDTO({ nombre, descripcion, categoria, horas,
                                            colaboradorId, equipoId, estado });
-        const actualizada = await TareaModel.update(req.params.id, dto, GRUPO_DATOS_PROVISIONAL);
+        const actualizada = await TareaModel.update(req.params.id, dto, grupoDatos);
 
         if (!actualizada)
             return error(res, 'Tarea no encontrada.', null, 404);
@@ -221,7 +218,8 @@ export async function deleteTarea(req, res) {
     - 404 si no existe
     */
     try {
-        const eliminada = await TareaModel.remove(req.params.id, GRUPO_DATOS_PROVISIONAL);
+        const grupoDatos = req.user.grupoDatos;
+        const eliminada  = await TareaModel.remove(req.params.id, grupoDatos);
 
         if (!eliminada)
             return error(res, 'Tarea no encontrada.', null, 404);
