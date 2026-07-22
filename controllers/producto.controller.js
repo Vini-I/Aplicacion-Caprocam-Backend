@@ -4,24 +4,34 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.controller.js
 Autor: Jose Espinoza
-Fecha: 20/07/2026
+Fecha: 21/07/2026
 Modulo: Productos
 Descripcion:
-Controlador que gestiona las peticiones HTTP y orquesta las respuestas para Productos.
+Controlador HTTP para Productos.
 //////////////////////////////////////////////////////////
 */
 
 import * as productoModel from '../models/producto.model.js';
 
 /**
- * Obtiene todos los productos.
+ * Obtiene todos los productos o ejecuta búsqueda recortada por query param ?nombre=...
  */
 export async function getProductos(req, res) {
     try {
+        const { nombre } = req.query;
+
+        if (nombre) {
+            const productos = await productoModel.findByName(nombre);
+            return res.status(200).json({ data: productos });
+        }
+
         const productos = await productoModel.findAll();
         return res.status(200).json({ data: productos });
     } catch (error) {
-        return res.status(500).json({ message: 'Error interno del servidor', error: error.message });
+        return res.status(500).json({
+            message: "Error al obtener los productos",
+            error: error.message
+        });
     }
 }
 
@@ -44,7 +54,7 @@ export async function getProductoPorId(req, res) {
 }
 
 /**
- * Crea un producto.
+ * Crea un producto recibiendo la estructura enviada por el Frontend.
  */
 export async function crearProducto(req, res) {
     try {
@@ -61,7 +71,7 @@ export async function crearProducto(req, res) {
 }
 
 /**
- * Actualiza un producto.
+ * Actualiza un producto por ID.
  */
 export async function actualizarProducto(req, res) {
     try {
