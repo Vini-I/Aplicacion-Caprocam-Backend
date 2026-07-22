@@ -9,6 +9,7 @@ En el futuro se migrara a Swagger.
 
 ## GET /api/v0/colaboradores
 
+## GET /api/v0/colaboradores
 Obtiene todos los colaboradores.
 
 Respuesta:
@@ -23,6 +24,7 @@ Respuesta:
 
 ## GET /api/v0/colaboradores/:id
 
+## GET /api/v0/colaboradores/:id
 Obtiene un colaborador por su ID.
 
 Parametros URL:
@@ -49,6 +51,7 @@ Respuesta de error:
 
 ## POST /api/v0/colaboradores
 
+## POST /api/v0/colaboradores
 Crea un nuevo colaborador.
 
 Body (JSON):
@@ -80,6 +83,7 @@ Respuesta de error:
 
 ## PUT /api/v0/colaboradores/:id
 
+## PUT /api/v0/colaboradores/:id
 Actualiza un colaborador existente.
 
 Parametros URL:
@@ -115,6 +119,7 @@ Respuesta de error:
 
 ## DELETE /api/v0/colaboradores/:id
 
+## DELETE /api/v0/colaboradores/:id
 Elimina un colaborador por su ID.
 
 Respuesta exitosa:
@@ -179,6 +184,9 @@ Respuesta de error:
 
 ## Obtiene todos los productos en estado ACTIVO.
 
+## GET /api/v0/productos
+Obtiene todos los productos en estado ACTIVO.
+---
 ## POST /api/v0/densidad-poblacional
 
 Crea un nuevo registro de densidad poblacional.
@@ -247,6 +255,7 @@ Respuesta de error:
 
 ## GET /api/v0/estanques
 
+## GET /api/v0/estanques
 Obtiene todos los estanques registrados.
 
 Respuesta:
@@ -263,6 +272,7 @@ Respuesta:
 
 ## GET /api/v1/productos/:id
 
+## GET /api/v0/productos/:id
 Obtiene un producto activo por su ID.
 
 Parametros URL:
@@ -271,6 +281,7 @@ Parametros URL:
 
 ## GET /api/v0/estanques/:id
 
+## GET /api/v0/estanques/:id
 Obtiene un estanque por su ID.
 
 Parametros URL:
@@ -301,10 +312,16 @@ Respuesta de error:
 
 ## POST /api/v1/productos
 
+## POST /api/v0/productos
 Crea un nuevo producto.
 
 Body (JSON):
 {
+    "nombre": "Fertilizante Foliar H2",
+    "categoria": "Fertilizante",
+    "cantidad": 50,
+    "stockMinimo": 10,
+    "precioUnidad": 3500
 "nombre": "Fertilizante Foliar H2",
 "categoria": "Fertilizante",
 "cantidad": 50,
@@ -313,6 +330,9 @@ Body (JSON):
 
 ## POST /api/v0/estanques
 
+}
+
+## POST /api/v0/estanques
 Crea un nuevo estanque.
 
 Body (JSON):
@@ -359,6 +379,7 @@ Respuesta de error:
 
 ## PUT /api/v1/productos/:id/activos
 
+## PUT /api/v0/productos/:id/activos
 Desactiva un producto (Borrado logico).
 
 Parametros URL:
@@ -395,6 +416,7 @@ Respuesta de error:
 
 ## PUT /api/v1/productos/:id
 
+## PUT /api/v0/productos/:id
 Actualiza un producto existente.
 
 Parametros URL:
@@ -403,12 +425,20 @@ Parametros URL:
 
 Body (JSON):
 {
+    "nombre": "Fertilizante Foliar Premium",
+    "categoria": "Fertilizante",
+    "cantidad": 45,
+    "stockMinimo": 10,
+    "precioUnidad": 3800
 "nombre": "Fertilizante Foliar Premium",
 "categoria": "Fertilizante",
 "cantidad": 45,
 "stockMinimo": 10,
 "precioUnidad": 3800
 
+}
+
+## PUT /api/v0/estanques/:id
 Actualiza un estanque existente.
 
 Parametros URL:
@@ -467,10 +497,26 @@ Respuesta de error:
 
 ---
 
+## DELETE /api/v0/estanques/:id
+Elimina un estanque por su ID.
+
+Parametros URL:
+- id: ID numerico del estanque.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Comprador obtenido correctamente.",
+    "message": "Estanque eliminado correctamente.",
+    "data": { ... }
+}
+
 # Compradores
 
 ## GET /api/v1/compradores
 
+## GET /api/v0/compradores
 Obtiene todos los compradores en estado ACTIVO.
 
 Respuesta:
@@ -485,11 +531,29 @@ Respuesta:
 
 ## GET /api/v1/compradores/:id
 
+## GET /api/v0/compradores/:id
 Obtiene un comprador activo por su ID.
 
 Parametros URL:
 
 - id: ID numerico del comprador.
+
+## DELETE /api/v0/estanques/:id
+Elimina un estanque por su ID.
+
+Parametros URL:
+
+- id: ID numerico del estanque.
+
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Comprador obtenido correctamente.",
+    "message": "Estanque eliminado correctamente.",
+    "data": { ... }
+
+}
 
 ## DELETE /api/v0/estanques/:id
 
@@ -521,6 +585,7 @@ Respuesta de error:
 
 ## POST /api/v1/compradores
 
+## POST /api/v0/compradores
 Crea un nuevo comprador.
 
 Body (JSON):
@@ -550,6 +615,7 @@ Respuesta de error:
 
 ## PUT /api/v1/compradores/:id/activo
 
+## PUT /api/v0/compradores/:id/activo
 Desactiva un comprador (Borrado logico).
 
 Parametros URL:
@@ -576,6 +642,7 @@ Respuesta de error:
 
 ## PUT /api/v1/compradores/:id
 
+## PUT /api/v0/compradores/:id
 Actualiza un comprador existente.
 
 Parametros URL:
@@ -637,6 +704,14 @@ Obtiene una lectura fisico quimica por su ID.
 Parametros URL:
 
 - id: ID numerico de la lectura.
+Respuesta exitosa:
+200 OK
+{
+    "success": true,
+    "message": "Lectura obtenida correctamente.",
+    "data": { ... }
+}
+ 
   Respuesta exitosa:
   200 OK
   {
@@ -654,6 +729,7 @@ Respuesta de error:
 }
 
 ---
+ 
 
 ## POST /api/v1/lecturasFisicoQuimicas
 
@@ -692,6 +768,8 @@ Respuesta de error:
 
 Realiza el borrado logico de una lectura.
 Invierte el estado activo del registro.
+ 
+Parametros URL:
 
 Parametros URL:
 
@@ -799,6 +877,7 @@ Respuesta exitosa:
 
 ## GET /api/v0/crecimiento
 
+## GET /api/v0/crecimiento
 Obtiene todos los registros de crecimiento disponibles en la mockdata.
 
 Respuesta exitosa:
@@ -834,6 +913,7 @@ Respuesta de error:
 
 ## GET /api/v0/crecimiento/:id
 
+## GET /api/v0/crecimiento/:id
 Obtiene un registro de crecimiento por su ID.
 
 Parametros URL:
@@ -865,6 +945,7 @@ Respuesta de error:
 
 ## POST /api/v0/crecimiento
 
+## POST /api/v0/crecimiento
 Crea un nuevo registro de crecimiento.
 
 Body (JSON):
@@ -914,6 +995,7 @@ Respuesta de error:
 
 ## PUT /api/v0/crecimiento/:id
 
+## PUT /api/v0/crecimiento/:id
 Actualiza un registro de crecimiento existente.
 
 Parametros URL:
@@ -1456,6 +1538,8 @@ Respuesta de error:
 ## PUT /api/v0/parasitologias/:id
 
 Actualiza un registro de parasitologia existente.
+## DELETE /api/v0/crecimiento/:id
+Elimina un registro de crecimiento por su ID.
 
 Parametros URL:
 

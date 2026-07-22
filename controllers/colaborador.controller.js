@@ -35,12 +35,9 @@ import { exito, error } from '../common/respuestaJson.js';
 //////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
-
-Grupo de datos provisional hasta que JWT este implementado.
-TO-DO: reemplazar con req.user.grupoDatos cuando haya auth.
 */
 
-const GRUPO_DATOS_PROVISIONAL = 1;
+//const grupoDatos = req.user.grupoDatos;
 
 /*
 //////////////////////////////////////////////////////////

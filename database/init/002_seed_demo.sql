@@ -50,7 +50,6 @@ INSERT INTO usuarios (
     email,
     nombre_usuario,
     password_hash,
-    telefono
 )
 SELECT
     1,
@@ -59,7 +58,7 @@ SELECT
     'Demo',
     'usuario.demo@caprocam.test',
     'usuario_demo',
-    '$2b$10$hashdemonoesrealcambiarendbackend',
+    '$2a$12$oCh/xs1bgT70Xq9O0ftcyuyUHbir74i0Hai0xiT8403EC3Ua0Y4ZS',
     '88888888'
 FROM roles r
 WHERE r.nombre = 'dueno_finca';
@@ -88,7 +87,6 @@ SELECT
     'Cañas',
     'Ubicacion demo',
     'Usuario Demo',
-    '88888888',
     100.00,
     25.00
 FROM usuarios u

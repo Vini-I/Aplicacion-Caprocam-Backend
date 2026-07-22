@@ -35,41 +35,75 @@ export class RaleoDTO {
         Descripcion:
         Construye un objeto RaleoDTO con los datos recibidos.
         Parametros:
-        - id: Identificador unico                         (requerido)        
-        - idFinca: Identificador de la finca              (requerido)
-        - idEstanque: Identificador del estanque          (requerido)
-        - idResponsable: Identificador del responsable    (requerido)
-        - fecha: La fecha en la cual se realiza el raleo  (requerido)
-        - porcentaje: Porcentaje del raleo                (requerido)
-        - pesoEstimado: El peso estimado                  (requerido)
-        - biomasaEstimado: Biomasa estimada               (requerido)
-        - objetivo: El objetivo del raleo                 (requerido)
-        - metodo: Mtodo de extraccion del raleo           (requerido)
-        - notas: Apuntes adicionales del raleo            (opcional)  
+        - id: Identificador unico                                                (requerido)
+        - uuid: Identificador global usado para futura sincronizacion offline
+        - grupoDatos: Codigo del grupo de datos al que pertenece el raleo        
+        - idFinca: Identificador de la finca                                     (requerido)
+        - idEstanque: Identificador del estanque                                 (requerido)
+        - idColaborador: Identificador del colaborador                           (requerido)
+        - fecha: La fecha en la cual se realiza el raleo                         (requerido)
+        - porcentaje: Porcentaje del raleo                                       (requerido)
+        - pesoEstimado: El peso estimado                                         (requerido)
+        - biomasaEstimado: Biomasa estimada                                      (requerido)
+        - objetivo: El objetivo del raleo                                        (requerido)
+        - metodo: Mtodo de extraccion del raleo                                  (requerido)
+        - observaciones: Apuntes adicionales del raleo                           (opcional)
+        - activo: Estado logico del registro.
+        - fechaCreacion: Fecha de creacion del registro.
+        - fechaActualizacion: Fecha de ultima actualizacion.
+        - deletedAt: Fecha de borrado logico.
+        - version: Version del registro para control de cambios.
+
+        Retorna:
+        - Objeto RaleoDTO con campos normalizados.
         */
         id,
+        uuid,
+        grupoDatos,
         idFinca,
         idEstanque,
-        idResponsable,
+        idColaborador,
         fecha,
         porcentaje,
         pesoEstimado,
         biomasaEstimado,
         objetivo,
         metodo,
-        notas,
+        observaciones,
+        activo,
+        fechaCreacion,
+        fechaActualizacion, 
+        deletedAt,
+        version
+
     }) {
         this.id              = id;
+        this.uuid            = uuid;
+        this.grupoDatos      = grupoDatos;
         this.idFinca         = Number(idFinca);
         this.idEstanque      = Number(idEstanque);
-        this.idResponsable   = Number(idResponsable);
+        this.idColaborador   = Number(idColaborador);
         this.fecha           = normalizarTexto(fecha);
         this.porcentaje      = Number(porcentaje);
-        this.pesoEstimado    = normalizarTexto(pesoEstimado);
-        this.biomasaEstimado = normalizarTexto(biomasaEstimado);
+        this.pesoEstimado    = Number(pesoEstimado);
+        this.biomasaEstimado = Number(biomasaEstimado);
         this.objetivo        = normalizarTexto(objetivo);
         this.metodo          = normalizarTexto(metodo);
-        this.notas           = normalizarTextoOpcional(notas);
+        this.observaciones   = normalizarTextoOpcional(observaciones);
+        /*
+        Si activo no viene definido, el registro se considera activo
+        por defecto.
+        */
+        if (activo === undefined || activo === null) {
+            this.activo = true;
+        } else {
+            this.activo = normalizarBooleano(activo);
+        }
+
+        this.fechaCreacion = fechaCreacion;
+        this.fechaActualizacion = fechaActualizacion;
+        this.deletedAt = deletedAt;
+        this.version = version; 
     }
 }
 /*
@@ -95,4 +129,44 @@ function normalizarTextoOpcional(valor) {
     }
 
     return String(valor).trim();
+}
+
+function normalizarBooleano(valor) {
+    /*
+    Descripcion:
+    Convierte diferentes representaciones de verdadero o falso
+    a un valor booleano.
+
+    Parametros:
+    - valor: Valor recibido.
+
+    Retorna:
+    - true si el valor representa verdadero.
+    - false en cualquier otro caso.
+    */
+    if (valor === true) {
+        return true;
+    }
+
+    if (valor === "true") {
+        return true;
+    }
+
+    if (valor === "Si") {
+        return true;
+    }
+
+    if (valor === "si") {
+        return true;
+    }
+
+    if (valor === 1) {
+        return true;
+    }
+
+    if (valor === "1") {
+        return true;
+    }
+
+    return false;
 }

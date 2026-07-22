@@ -56,7 +56,6 @@ export async function findUsuarioByIdentificador(identificador) {
             email,
             nombre_usuario,
             password_hash,
-            telefono,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -100,7 +99,6 @@ export async function findUsuarioById(id) {
             email,
             nombre_usuario,
             password_hash,
-            telefono,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -184,10 +182,9 @@ export async function createUsuario(dto) {
             apellidos,
             email,
             nombre_usuario,
-            password_hash,
-            telefono
+            password_hash
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
@@ -197,7 +194,6 @@ export async function createUsuario(dto) {
             dto.email,
             dto.nombreUsuario,
             dto.passwordHash,
-            dto.telefono ?? null
         ]
     );
 

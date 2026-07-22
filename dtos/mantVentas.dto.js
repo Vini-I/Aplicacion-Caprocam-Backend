@@ -21,7 +21,7 @@ Caparazon de datos para el modulo de ventas.
 */
 
 export class mantVentaDTO {
-    constructor(id, finca, estanque, pesoPromedio, tamanoPromedio, cantVendida, precioKilo, fecha, total, colaborador, comprador) {
+    constructor(grupoDatos, id, finca, estanque, pesoPromedio, tamanoPromedio, cantVendida, precioKilo, fecha, total, colaborador, comprador) {
         /*
         Descripcion:
         Construye un objeto mantVentaDTO con los datos recibidos.
@@ -39,7 +39,8 @@ export class mantVentaDTO {
         - colaborador: Identificador del colaborador (requerido)
         - comprador: Identificador del comprador (requerido)
         */
-        this.id = id || null;
+        this.grupoDatos = grupoDatos;
+        this.id = id;
         this.finca = finca;
         this.estanque = estanque;
         this.pesoPromedio = pesoPromedio;

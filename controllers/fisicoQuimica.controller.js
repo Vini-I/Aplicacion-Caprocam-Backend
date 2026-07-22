@@ -19,7 +19,7 @@ IMPORTS
 
 Librerias externas
 */
-import { fisicoQuimicaDto } from '../dtos/fisicoQuimica.dto.js';
+import { FisicoQuimicaDTO } from '../dtos/fisicoQuimica.dto.js';
 
 // Servicios
 import {
@@ -37,6 +37,14 @@ import * as FisicoQuimicaModel from '../models/fisicoQuimica.model.js';
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
+
+/*
+//////////////////////////////////////////////////////////
+CONSTANTES
+//////////////////////////////////////////////////////////
+*/
+
+//const grupoDatos = req.user.grupoDatos;
 
 /*
 //////////////////////////////////////////////////////////

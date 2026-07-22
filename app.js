@@ -29,7 +29,7 @@ import estanquesRouter from "./routes/estanques.routes.js";
 import parasitologiasRouter from "./routes/parasitologias.routes.js";
 import enfermedadesRouter from "./routes/enfermedades.routes.js";
 import densidadPoblacionalRouter from "./routes/densidadPoblacional.routes.js";
-//import alimentacionRouter from "./routes/alimentacion.routes.js";
+import alimentacionRouter from "./routes/alimentacion.routes.js";
 import raleoRouter from "./routes/raleo.routes.js"
 import ventasRouter from "./routes/mantVentas.routes.js";
 import mantenimientoRouter from './routes/mantenimiento.routes.js';
@@ -55,7 +55,11 @@ MIDDLEWARES GLOBALES
 //////////////////////////////////////////////////////////
 */
 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:8081', // direccion del frontend en desarrollo
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 /*
@@ -69,7 +73,7 @@ app.use("/api/v0/crecimiento", crecimientoRouter);
 app.use("/api/v0/estanques", estanquesRouter);
 app.use("/api/v0/parasitologias", parasitologiasRouter);
 app.use("/api/v0/enfermedades", enfermedadesRouter);
-//app.use("/api/v0/alimentaciones", alimentacionRouter);
+app.use("/api/v0/alimentaciones", alimentacionRouter);
 app.use("/api/v0/densidad-poblacional", densidadPoblacionalRouter);
 app.use("/api/v0/raleo", raleoRouter);
 app.use("/api/v0/ventas", ventasRouter);
