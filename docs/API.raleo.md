@@ -59,7 +59,7 @@ Crea un nuevo registro de raleo.
 {
     "idFinca": 1,
     "idEstanque": 1,
-    "idColaborador": 1,
+    // ahora se llama desde el JWT por lo que no se agrega con el POST "idColaborador": 1,
     "fecha": "2026-07-07",
     "porcentaje": 30,
     "pesoEstimado": 0.35,
