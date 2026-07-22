@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: enfermedades.dto.js
-Autor: Isaac
-Fecha: 03/07/2026
+Autor: Isaac Chaves
+Fecha: 18/07/2026
 Modulo: Enfermedades
 Descripcion:
 Archivo de transferencia de datos para enfermedades.
