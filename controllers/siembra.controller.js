@@ -17,29 +17,26 @@ IMPORTS
 //////////////////////////////////////////////////////////
 */
 
-import { LoteLarvaDTO, PrecriaDTO, EstadoPrecria } from "../dtos/siembra.dto.js";
+import { SiembraDTO, EstadoSiembra } from "../dtos/siembra.dto.js";
 
 // Servicios
 import {
     isEmpty,
     isFechaValida,
     isEnteroPositivo,
-    compararFechas
+    isDecimalPositivo,
+    isEstadoValido,
+    normalizarEstado,
 } from "../services/siembra.service.js";
 
 // Modelos
 import * as siembraModel from "../models/siembra.model.js";
+import * as loteLarvaModel from "../models/loteLarvas.model.js";
+import * as precriaModel from "../models/preCria.model.js";
+import { EstadoPrecria } from "../dtos/preCria.dto.js";
 
 // Common
 import { exito, error } from "../common/respuestaJson.js";
-
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
 
 /*
 //////////////////////////////////////////////////////////
@@ -47,274 +44,278 @@ FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 */
 
-function validarCuerpoLote(body, res) {
+function validarCuerpo(body, res) {
+    /*
+    Descripcion:
+    Valida que el cuerpo de la peticion contenga los campos
+    requeridos y con el formato correcto para una siembra.
+    */
     const errores = [];
 
-    if (isEmpty(body.codigo_lote)) errores.push("El campo codigo_lote es requerido.");
-    if (isEmpty(body.proveedor)) errores.push("El campo proveedor es requerido.");
-    if (isEmpty(body.laboratorio)) errores.push("El campo laboratorio es requerido.");
-    if (isEmpty(body.procedencia)) errores.push("El campo procedencia es requerido.");
-    if (isEmpty(body.certificado_larva)) errores.push("El campo certificado_larva es requerido.");
-
-    if (!isEnteroPositivo(body.pl_inicial)) {
-        errores.push("El campo pl_inicial debe ser un entero positivo.");
+    if (!isEnteroPositivo(body.lote_larva_id)) {
+        errores.push("El campo lote_larva_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.cantidad_inicial)) {
-        errores.push("El campo cantidad_inicial debe ser un entero positivo.");
+    if (!isEnteroPositivo(body.finca_id)) {
+        errores.push("El campo finca_id debe ser un entero positivo.");
     }
-    if (!isFechaValida(body.fecha_ingreso)) {
-        errores.push("El campo fecha_ingreso debe ser una fecha valida.");
+    if (!isEnteroPositivo(body.estanque_id)) {
+        errores.push("El campo estanque_id debe ser un entero positivo.");
+    }
+    if (!isEnteroPositivo(body.cantidad_sembrada)) {
+        errores.push("El campo cantidad_sembrada debe ser un entero positivo.");
+    }
+    if (!isFechaValida(body.fecha_siembra)) {
+        errores.push("El campo fecha_siembra debe ser una fecha valida.");
+    }
+    if (!isEmpty(body.precria_id) && !isEnteroPositivo(body.precria_id)) {
+        errores.push("El campo precria_id debe ser un entero positivo.");
+    }
+    if (
+        body.pl_siembra !== undefined && body.pl_siembra !== null &&
+        !isEnteroPositivo(body.pl_siembra)
+    ) {
+        errores.push("El campo pl_siembra debe ser un entero positivo.");
+    }
+    if (
+        !isEmpty(body.densidad_poblacional) &&
+        !isDecimalPositivo(body.densidad_poblacional)
+    ) {
+        errores.push("El campo densidad_poblacional debe ser un numero positivo.");
+    }
+    if (!isEmpty(body.estado) && !isEstadoValido(body.estado)) {
+        errores.push("El campo estado debe ser Activa o Finalizada.");
     }
 
     if (errores.length > 0) {
-        return error(res, "Datos invalidos para el lote.", errores, 422);
+        return error(res, "Datos invalidos para la siembra.", errores, 422);
     }
     return null;
 }
 
-function validarCuerpoPrecria(body, res) {
-    const errores = [];
-
-    if (isEmpty(body.unidad_precria)) errores.push("El campo unidad_precria es requerido.");
-
-    if (!isEnteroPositivo(body.id_lote_larva)) {
-        errores.push("El campo id_lote_larva debe ser un entero positivo.");
-    }
-    if (!isEnteroPositivo(body.id_finca)) {
-        errores.push("El campo id_finca debe ser un entero positivo.");
-    }
-    if (!isEnteroPositivo(body.pl_inicial)) {
-        errores.push("El campo pl_inicial debe ser un entero positivo.");
-    }
-    if (!isEnteroPositivo(body.cantidad_inicial)) {
-        errores.push("El campo cantidad_inicial debe ser un entero positivo.");
-    }
-    if (!isFechaValida(body.fecha_inicio)) {
-        errores.push("El campo fecha_inicio debe ser una fecha valida.");
-    }
-
-    if (errores.length > 0) {
-        return error(res, "Datos invalidos para la pre-cria.", errores, 422);
-    }
-    return null;
-}
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES - LOTES
-//////////////////////////////////////////////////////////
-*/
-
-export function listarLotes(req, res) {
+async function validarReferencias(body, res, grupoDatos) {
     /*
     Descripcion:
-    Obtiene todos los lotes de larva activos.
+    Verifica que el lote de larva, la finca y el estanque
+    indicados existan en la base de datos. Si se indica una
+    pre-cria, verifica que pertenezca al lote y este Finalizada.
+    Tambien valida que la cantidad sembrada no supere la disponible.
     */
-    const lotes = siembraModel.findLotesAll();
-    return exito(res, "Lotes de larva obtenidos correctamente.", lotes);
-}
-
-export function obtenerLote(req, res) {
-    /*
-    Descripcion:
-    Obtiene un lote de larva activo por su ID.
-    */
-    const { id } = req.params;
-    const lote = siembraModel.findLoteById(id);
+    const lote = await loteLarvaModel.findById(body.lote_larva_id, grupoDatos);
     if (!lote) {
-        return error(res, "Lote de larva no encontrado.", null, 404);
-    }
-    return exito(res, "Lote de larva obtenido correctamente.", lote);
-}
-
-export function crearLote(req, res) {
-    /*
-    Descripcion:
-    Crea un nuevo lote de larva.
-    */
-    const err = validarCuerpoLote(req.body, res);
-    if (err) return err;
-
-    const existente = siembraModel.findLoteByCodigo(req.body.codigo_lote);
-    if (existente) {
-        return error(res, "Ya existe un lote con ese codigo.", null, 409);
+        return error(res, "El lote de larva indicado no existe.", null, 400);
     }
 
-    const provExiste = siembraModel.verificarProveedorExiste(req.body.proveedor);
-    if (!provExiste) {
-        return error(res, "El proveedor indicado no existe.", null, 400);
+    const fincaExiste = await siembraModel.verificarFincaExiste(body.finca_id, grupoDatos);
+    if (!fincaExiste) {
+        return error(res, "La finca indicada no existe.", null, 400);
     }
 
-    const dto = new LoteLarvaDTO(req.body);
-    const nuevo = siembraModel.createLote(dto);
-    return exito(res, "Lote de larva creado correctamente.", nuevo, 201);
-}
-
-export function actualizarLote(req, res) {
-    /*
-    Descripcion:
-    Actualiza un lote de larva existente.
-    */
-    const { id } = req.params;
-    const loteActual = siembraModel.findLoteById(id);
-    if (!loteActual) {
-        return error(res, "Lote de larva no encontrado.", null, 404);
+    const estanqueExiste = await siembraModel.verificarEstanqueExiste(
+        body.estanque_id, body.finca_id, grupoDatos
+    );
+    if (!estanqueExiste) {
+        return error(
+            res, "El estanque indicado no existe o no pertenece a la finca.", null, 400
+        );
     }
 
-    const err = validarCuerpoLote(req.body, res);
-    if (err) return err;
+    let origenCantidad = lote.cantidad_inicial;
 
-    const existente = siembraModel.findLoteByCodigoIgnorandoId(req.body.codigo_lote, id);
-    if (existente) {
-        return error(res, "Ya existe otro lote con ese codigo.", null, 409);
+    if (!isEmpty(body.precria_id)) {
+        const precria = await precriaModel.findById(body.precria_id, grupoDatos);
+        if (!precria) {
+            return error(res, "La pre-cria indicada no existe.", null, 400);
+        }
+        if (precria.lote_larva_id !== Number(body.lote_larva_id)) {
+            return error(
+                res, "La pre-cria indicada no pertenece al lote de larva indicado.", null, 400
+            );
+        }
+        if (String(precria.estado).toLowerCase() !== EstadoPrecria.FINALIZADA.toLocaleLowerCase()) {
+            return error(
+                res,
+                "La pre-cria debe estar Finalizada antes de poder sembrarse.",
+                null,
+                400
+            );
+        }
+        origenCantidad = precria.cantidad_final;
     }
 
-    const provExiste = siembraModel.verificarProveedorExiste(req.body.proveedor);
-    if (!provExiste) {
-        return error(res, "El proveedor indicado no existe.", null, 400);
+    if (!isEmpty(body.cantidad_sembrada) && Number(body.cantidad_sembrada) > origenCantidad) {
+        return error(
+            res,
+            "cantidad_sembrada no puede superar la cantidad disponible del " +
+                (isEmpty(body.precria_id) ? "lote." : "pre-cria."),
+            null,
+            400
+        );
     }
 
-    const dto = new LoteLarvaDTO(req.body);
-    const actualizado = siembraModel.updateLote(id, dto);
-    return exito(res, "Lote de larva actualizado correctamente.", actualizado);
-}
-
-export function eliminarLote(req, res) {
-    /*
-    Descripcion:
-    Elimina un lote de larva (borrado logico).
-    */
-    const { id } = req.params;
-    const eliminado = siembraModel.removeLote(id);
-    if (!eliminado) {
-        return error(res, "Lote de larva no encontrado.", null, 404);
-    }
-    return exito(res, "Lote de larva eliminado correctamente.", eliminado);
+    return null;
 }
 
 /*
 //////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES - PRE-CRIAS
+FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export function listarPrecrias(req, res) {
+export async function listarSiembra(req, res) {
     /*
     Descripcion:
-    Obtiene todas las pre-crias activas.
+    Obtiene todas las siembras activas del grupo de datos.
     */
-    const precrias = siembraModel.findPrecriasAll();
-    return exito(res, "Pre-crias obtenidas correctamente.", precrias);
+    try {
+        const grupoDatos = req.user.grupoDatos;
+        const siembras = await siembraModel.findAll(grupoDatos);
+        return exito(res, "Siembras obtenidas correctamente.", siembras);
+    } catch (err) {
+        return error(res, "Error al obtener las siembras.", err, 500);
+    }
 }
 
-export function obtenerPrecria(req, res) {
+export async function obtenerSiembra(req, res) {
     /*
     Descripcion:
-    Obtiene una pre-cria activa por su ID.
+    Obtiene una siembra activa por su ID.
+    */
+    try {
+        const grupoDatos = req.user.grupoDatos;
+        const { id } = req.params;
+        const siembra = await siembraModel.findById(id, grupoDatos);
+        if (!siembra) return error(res, "Siembra no encontrada.", null, 404);
+        return exito(res, "Siembra obtenida correctamente.", siembra);
+    } catch (err) {
+        return error(res, "Error al obtener la siembra.", err, 500);
+    }
+}
+
+export async function crearSiembra(req, res) {
+    /*
+    Descripcion:
+    Crea una nueva siembra validando que el lote, finca, estanque
+    y pre-cria (si aplica) existan. Transiciona el lote a 'Sembrado'.
+    */
+    const errBody = validarCuerpo(req.body, res);
+    if (errBody) return errBody;
+
+    try {
+        const grupoDatos = req.user.grupoDatos;
+        const errRef = await validarReferencias(req.body, res, grupoDatos);
+        if (errRef) return errRef;
+
+        const dto = new SiembraDTO(req.body);
+        const nueva = await siembraModel.create(dto, grupoDatos);
+        return exito(res, "Siembra creada correctamente.", nueva, 201);
+    } catch (err) {
+        return error(res, "Error al crear la siembra.", err, 500);
+    }
+}
+
+export async function actualizarSiembra(req, res) {
+    /*
+    Descripcion:
+    Actualiza una siembra existente validando referencias.
     */
     const { id } = req.params;
-    const pc = siembraModel.findPrecriaById(id);
-    if (!pc) {
-        return error(res, "Pre-cria no encontrada.", null, 404);
+    const errBody = validarCuerpo(req.body, res);
+    if (errBody) return errBody;
+
+    try {
+        const grupoDatos = req.user.grupoDatos;
+        const actual = await siembraModel.findById(id, grupoDatos);
+        if (!actual) return error(res, "Siembra no encontrada.", null, 404);
+
+        const errRef = await validarReferencias(req.body, res, grupoDatos);
+        if (errRef) return errRef;
+
+        const dto = new SiembraDTO(req.body);
+        const actualizada = await siembraModel.update(id, grupoDatos, dto);
+        return exito(res, "Siembra actualizada correctamente.", actualizada);
+    } catch (err) {
+        return error(res, "Error al actualizar la siembra.", err, 500);
     }
-    return exito(res, "Pre-cria obtenida correctamente.", pc);
 }
 
-export function crearPrecria(req, res) {
+export async function finalizarSiembra(req, res) {
     /*
     Descripcion:
-    Crea una nueva pre-cria.
-    */
-    const err = validarCuerpoPrecria(req.body, res);
-    if (err) return err;
-
-    const loteExiste = siembraModel.findLoteById(req.body.id_lote_larva);
-    if (!loteExiste) {
-        return error(res, "El lote de larva indicado no existe.", null, 400);
-    }
-
-    const dto = new PrecriaDTO(req.body);
-    const nuevo = siembraModel.createPrecria(dto);
-    return exito(res, "Pre-cria creada correctamente.", nuevo, 201);
-}
-
-export function actualizarPrecria(req, res) {
-    /*
-    Descripcion:
-    Actualiza una pre-cria existente.
+    Finaliza una siembra en estado Activa cambiando su estado
+    a Finalizada.
     */
     const { id } = req.params;
-    const pcActual = siembraModel.findPrecriaById(id);
-    if (!pcActual) {
-        return error(res, "Pre-cria no encontrada.", null, 404);
+    try {
+        const grupoDatos = req.user.grupoDatos;
+        const siembra = await siembraModel.findById(id, grupoDatos);
+        if (!siembra) return error(res, "Siembra no encontrada.", null, 404);
+
+        if (normalizarEstado(siembra.estado) !== EstadoSiembra.ACTIVA) {
+            return error(
+                res, "La siembra ya no se encuentra en estado Activa.", null, 400
+            );
+        }
+
+        const actualizada = await siembraModel.update(id, grupoDatos, {
+            estado: EstadoSiembra.FINALIZADA,
+        });
+        return exito(res, "Siembra finalizada correctamente.", actualizada);
+    } catch (err) {
+        return error(res, "Error al finalizar la siembra.", err, 500);
     }
-
-    const err = validarCuerpoPrecria(req.body, res);
-    if (err) return err;
-
-    const loteExiste = siembraModel.findLoteById(req.body.id_lote_larva);
-    if (!loteExiste) {
-        return error(res, "El lote de larva indicado no existe.", null, 400);
-    }
-
-    const dto = new PrecriaDTO(req.body);
-    const actualizado = siembraModel.updatePrecria(id, dto);
-    return exito(res, "Pre-cria actualizada correctamente.", actualizado);
 }
 
-export function finalizarPrecria(req, res) {
+export async function eliminarSiembra(req, res) {
     /*
     Descripcion:
-    Finaliza una pre-cria en estado ACTIVA aplicando las reglas de negocio.
+    Realiza el borrado logico de una siembra.
     */
     const { id } = req.params;
-    const pc = siembraModel.findPrecriaById(id);
-    if (!pc) {
-        return error(res, "Pre-cria no encontrada.", null, 404);
+    try {
+        const grupoDatos = req.user.grupoDatos;
+        const eliminada = await siembraModel.remove(id, grupoDatos);
+        if (!eliminada) return error(res, "Siembra no encontrada.", null, 404);
+        return exito(res, "Siembra eliminada correctamente.", eliminada);
+    } catch (err) {
+        return error(res, "Error al eliminar la siembra.", err, 500);
     }
-
-    if (pc.estado !== EstadoPrecria.ACTIVA) {
-        return error(res, "La pre-cria ya no se encuentra en estado ACTIVA.", null, 400);
-    }
-
-    const { fecha_fin, cantidad_final, pl_final } = req.body;
-    const errores = [];
-
-    if (!isFechaValida(fecha_fin)) errores.push("fecha_fin debe ser una fecha valida.");
-    if (!isEnteroPositivo(cantidad_final)) errores.push("cantidad_final debe ser entero positivo.");
-    if (!isEnteroPositivo(pl_final)) errores.push("pl_final debe ser entero positivo.");
-
-    if (errores.length > 0) {
-        return error(res, "Datos invalidos para finalizar pre-cria.", errores, 422);
-    }
-
-    if (!compararFechas(pc.fecha_inicio, fecha_fin)) {
-        return error(res, "fecha_fin no puede ser menor que fecha_inicio.", null, 400);
-    }
-    if (Number(cantidad_final) > pc.cantidad_inicial) {
-        return error(res, "cantidad_final no puede ser mayor que cantidad_inicial.", null, 400);
-    }
-
-    const datosFinales = {
-        estado: EstadoPrecria.FINALIZADA,
-        fecha_fin,
-        cantidad_final: Number(cantidad_final),
-        pl_final: Number(pl_final)
-    };
-
-    const actualizado = siembraModel.updatePrecria(id, datosFinales);
-    return exito(res, "Pre-cria finalizada correctamente.", actualizado);
 }
 
-export function eliminarPrecria(req, res) {
+export async function obtenerSiembraActiva(req, res) {
     /*
     Descripcion:
-    Elimina una pre-cria (borrado logico).
+    Obtiene la siembra activa mas reciente de un estanque especifico
+    y calcula la duracion en dias actual.
     */
-    const { id } = req.params;
-    const eliminado = siembraModel.removePrecria(id);
-    if (!eliminado) {
-        return error(res, "Pre-cria no encontrada.", null, 404);
+    try {
+        const grupoDatos = req.user.grupoDatos;
+        const estanqueId = req.query.estanqueId;
+
+        if (!estanqueId) {
+            return error(res, "El parametro estanqueId es requerido.", null, 400);
+        }
+
+        const siembra = await siembraModel.findActivaByEstanque(estanqueId, grupoDatos);
+        if (!siembra) {
+            return error(res, "No existe ninguna siembra activa en el estanque indicado.", null, 404);
+        }
+
+        const hoy = new Date();
+        const fechaInicio = new Date(siembra.fecha_siembra);
+        const dias = Math.max(0, Math.floor((hoy - fechaInicio) / (1000 * 60 * 60 * 24)));
+
+        return exito(res, "Siembra activa obtenida correctamente.", {
+            id: siembra.id,
+            estanque_id: siembra.estanque_id,
+            finca_id: siembra.finca_id,
+            lote_larva_id: siembra.lote_larva_id,
+            fecha_siembra: siembra.fecha_siembra,
+            pl_siembra: siembra.pl_siembra,
+            cantidad_sembrada: siembra.cantidad_sembrada,
+            dias,
+            estado: siembra.estado
+        });
+    } catch (err) {
+        return error(res, "Error al obtener la siembra activa.", err, 500);
     }
-    return exito(res, "Pre-cria eliminada correctamente.", eliminado);
 }

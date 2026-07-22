@@ -2,32 +2,18 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: siembra.model.js
+Archivo: preCria.model.js
 Autor: Joan
 Fecha: 04/07/2026
-Modulo: Siembra
+Modulo: Pre-Cria
 Descripcion:
-Capa de datos para siembra.
+Capa de datos para pre-crias.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-*/
-
-import { EstadoLote }from "../dtos/loteLarva.dto.js";
-
+import { EstadoLote } from "../dtos/loteLarva.dto.js";
 import pool from '../config/database.js';
 
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-const GRUPO_DATOS = 1;
 
 /*
 //////////////////////////////////////////////////////////
@@ -38,7 +24,7 @@ FUNCIONES PRINCIPALES
 export async function findAll(grupoDatos) {
     const [rows] = await pool.execute(`
         SELECT *
-        FROM   siembras
+        FROM   precrias
         WHERE  grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
@@ -50,7 +36,7 @@ export async function findAll(grupoDatos) {
 export async function findById(id, grupoDatos) {
     const [rows] = await pool.execute(`
         SELECT *
-        FROM   siembras
+        FROM   precrias
         WHERE  id = ?
         AND    grupo_datos = ?
         AND    activo = TRUE
@@ -62,30 +48,32 @@ export async function findById(id, grupoDatos) {
 export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Crea una siembra y transiciona el lote asociado a 'Sembrado',
-    en una sola transaccion.
+    Crea una pre-cria y transiciona el lote asociado a
+    'En PreCria' (solo si estaba 'Disponible'), en una sola
+    transaccion.
     */
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
  
         const [result] = await connection.execute(`
-            INSERT INTO siembras (
-                grupo_datos, lote_larva_id, precria_id, finca_id, estanque_id,
-                fecha_siembra, tecnica_cultivo, densidad_poblacional,
-                cantidad_sembrada, pl_siembra, estado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO precrias (
+                grupo_datos, lote_larva_id, finca_id, estanque_id,
+                fecha_inicio, fecha_fin, duracion_dias,
+                cantidad_inicial, cantidad_final, pl_inicial, pl_final, estado
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             grupoDatos,
             dto.lote_larva_id,
-            dto.precria_id,
             dto.finca_id,
             dto.estanque_id,
-            dto.fecha_siembra,
-            dto.tecnica_cultivo,
-            dto.densidad_poblacional,
-            dto.cantidad_sembrada,
-            dto.pl_siembra,
+            dto.fecha_inicio,
+            dto.fecha_fin,
+            dto.duracion_dias,
+            dto.cantidad_inicial,
+            dto.cantidad_final,
+            dto.pl_inicial,
+            dto.pl_final,
             dto.estado || 'Activa',
         ]);
  
@@ -95,9 +83,15 @@ export async function create(dto, grupoDatos) {
                    version     = version + 1
             WHERE  id = ?
             AND    grupo_datos = ?
+            AND    estado_lote = ?
             AND    activo = TRUE
             AND    deleted_at IS NULL
-        `, [EstadoLote.SEMBRADO, dto.lote_larva_id, grupoDatos]);
+        `, [
+            EstadoLote.EN_PRECRIA,
+            dto.lote_larva_id,
+            grupoDatos,
+            EstadoLote.DISPONIBLE,
+        ]);
  
         await connection.commit();
         return findById(result.insertId, grupoDatos);
@@ -112,20 +106,21 @@ export async function create(dto, grupoDatos) {
 export async function update(id, grupoDatos, datos) {
     /*
     Descripcion:
-    Actualiza una siembra activa. Solo actualiza los campos
+    Actualiza una pre-cria activa. Solo actualiza los campos
     presentes en "datos" (actualizacion parcial).
     */
     const mapaCampos = {
-        lote_larva_id:         'lote_larva_id',
-        precria_id:            'precria_id',
-        finca_id:              'finca_id',
-        estanque_id:           'estanque_id',
-        fecha_siembra:         'fecha_siembra',
-        tecnica_cultivo:       'tecnica_cultivo',
-        densidad_poblacional:  'densidad_poblacional',
-        cantidad_sembrada:     'cantidad_sembrada',
-        pl_siembra:            'pl_siembra',
-        estado:                'estado',
+        lote_larva_id:    'lote_larva_id',
+        finca_id:         'finca_id',
+        estanque_id:      'estanque_id',
+        fecha_inicio:     'fecha_inicio',
+        cantidad_inicial: 'cantidad_inicial',
+        pl_inicial:       'pl_inicial',
+        estado:           'estado',
+        fecha_fin:        'fecha_fin',
+        cantidad_final:   'cantidad_final',
+        pl_final:         'pl_final',
+        duracion_dias:    'duracion_dias',
     };
  
     const setParts = [];
@@ -137,13 +132,13 @@ export async function update(id, grupoDatos, datos) {
             valores.push(datos[clave]);
         }
     }
-    if (setParts.length === 0) return findById(id, grupoDatos);
+    if (setParts.length === 0) return findById(id, grupoDatos);  // CORREGIDO: agregado grupoDatos
  
     setParts.push('version = version + 1');
     valores.push(Number(id), grupoDatos);
  
     const [result] = await pool.execute(`
-        UPDATE siembras
+        UPDATE precrias
         SET    ${setParts.join(', ')}
         WHERE  id = ?
         AND    grupo_datos = ?
@@ -156,11 +151,11 @@ export async function update(id, grupoDatos, datos) {
 }
  
 export async function remove(id, grupoDatos) {
-    const siembra = await findById(id, grupoDatos);
-    if (!siembra) return null;
+    const pc = await findById(id, grupoDatos);
+    if (!pc) return null;
  
     const [result] = await pool.execute(`
-        UPDATE siembras
+        UPDATE precrias
         SET    activo     = FALSE,
                deleted_at = NOW(),
                version    = version + 1
@@ -171,7 +166,7 @@ export async function remove(id, grupoDatos) {
     `, [Number(id), grupoDatos]);
  
     if (result.affectedRows === 0) return null;
-    return { ...siembra, activo: false };
+    return { ...pc, activo: false };
 }
  
  
@@ -192,19 +187,4 @@ export async function verificarEstanqueExiste(estanqueId, fincaId, grupoDatos) {
         AND activo = TRUE AND deleted_at IS NULL
     `, [Number(estanqueId), Number(fincaId), grupoDatos]);
     return rows.length > 0;
-}
-
-export async function findActivaByEstanque(estanqueId, grupoDatos) {
-    const [rows] = await pool.execute(`
-        SELECT *
-        FROM   siembras
-        WHERE  estanque_id = ?
-        AND    grupo_datos = ?
-        AND    LOWER(TRIM(estado)) = 'activa'
-        AND    activo = TRUE
-        AND    deleted_at IS NULL
-        ORDER BY fecha_siembra DESC, id DESC
-        LIMIT 1
-    `, [Number(estanqueId), grupoDatos]);
-    return rows[0] || null;
 }

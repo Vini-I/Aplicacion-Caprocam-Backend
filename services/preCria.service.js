@@ -2,12 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: siembra.service.js
+Archivo: preCria.service.js
 Autor: Joan
 Fecha: 04/07/2026
-Modulo: Siembra
+Modulo: Pre-cria
 Descripcion:
-Funciones de validacion y utilidades para el modulo de siembra.
+Funciones de validacion y utilidades para el modulo de pre-cria.
 //////////////////////////////////////////////////////////
 */
 
@@ -17,7 +17,7 @@ IMPORTS
 //////////////////////////////////////////////////////////
 */
 
-import { EstadoSiembra } from "../dtos/siembra.dto.js";
+import { EstadoPrecria } from "../dtos/preCria.dto.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -42,18 +42,20 @@ export function isEnteroPositivo(valor) {
     return !Number.isNaN(numero) && Number.isInteger(numero) && numero > 0;
 }
  
-export function isDecimalPositivo(valor) {
-    const numero = Number(valor);
-    return !Number.isNaN(numero) && numero > 0;
-}
- 
 export function normalizarEstado(estado) {
     if (isEmpty(estado)) return null;
     const valor = String(estado).trim().toLowerCase();
-    const opciones = Object.values(EstadoSiembra);
+    const opciones = Object.values(EstadoPrecria);
     return opciones.find((op) => op.toLowerCase() === valor) || null;
 }
  
 export function isEstadoValido(estado) {
     return normalizarEstado(estado) !== null;
+}
+ 
+export function compararFechas(fecha1, fecha2) {
+    // true si fecha2 >= fecha1
+    const d1 = new Date(fecha1);
+    const d2 = new Date(fecha2);
+    return d2.getTime() >= d1.getTime();
 }

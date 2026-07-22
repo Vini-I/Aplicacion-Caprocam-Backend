@@ -2,12 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: siembra.service.js
+Archivo: loteLarva.service.js
 Autor: Joan
 Fecha: 04/07/2026
-Modulo: Siembra
+Modulo: lotelarva
 Descripcion:
-Funciones de validacion y utilidades para el modulo de siembra.
+Funciones de validacion y utilidades para el modulo de loteLarva.
 //////////////////////////////////////////////////////////
 */
 
@@ -16,8 +16,8 @@ Funciones de validacion y utilidades para el modulo de siembra.
 IMPORTS
 //////////////////////////////////////////////////////////
 */
-
-import { EstadoSiembra } from "../dtos/siembra.dto.js";
+ 
+import { EstadoLote } from "../dtos/loteLarva.dto.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -42,18 +42,18 @@ export function isEnteroPositivo(valor) {
     return !Number.isNaN(numero) && Number.isInteger(numero) && numero > 0;
 }
  
-export function isDecimalPositivo(valor) {
-    const numero = Number(valor);
-    return !Number.isNaN(numero) && numero > 0;
-}
- 
-export function normalizarEstado(estado) {
+export function normalizarEstadoLote(estado) {
+    /*
+    Descripcion:
+    Busca el valor exacto del ENUM estado_lote (respetando la
+    capitalizacion real de la DB) sin importar mayusculas/minusculas.
+    */
     if (isEmpty(estado)) return null;
     const valor = String(estado).trim().toLowerCase();
-    const opciones = Object.values(EstadoSiembra);
+    const opciones = Object.values(EstadoLote);
     return opciones.find((op) => op.toLowerCase() === valor) || null;
 }
  
-export function isEstadoValido(estado) {
-    return normalizarEstado(estado) !== null;
+export function isEstadoLoteValido(estado) {
+    return normalizarEstadoLote(estado) !== null;
 }
