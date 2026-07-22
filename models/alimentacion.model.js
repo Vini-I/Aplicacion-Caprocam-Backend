@@ -233,7 +233,7 @@ export async function findByFechaHoraEstanque(fecha, hora, idEstanque, idIgnorad
     return mapearFila(rows[0]);
 }
 
-export async function create(dto) {
+export async function create(dto, idProveedor) {
     /*
     Descripcion:
     Inserta un nuevo registro de alimentacion en la base de datos.
@@ -271,7 +271,7 @@ export async function create(dto) {
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
-            dto.idProveedor,
+            idProveedor,
             dto.idProducto,
             fecha,
             dto.hora,
