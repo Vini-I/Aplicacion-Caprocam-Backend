@@ -154,11 +154,6 @@ export async function verificarProductoExiste(productoId, grupoDatos) {
     Verifica que el producto exista y este activo, dentro del
     grupo_datos actual.
  
-    NOTA: se asume que "productos" sigue la misma convencion del
-    resto del proyecto (columnas grupo_datos, activo, deleted_at).
-    Si tienes producto.model.js ya armado, avisame para reusar su
-    findById() en vez de esta consulta directa.
- 
     Parametros:
     - productoId: ID del producto a verificar.
  
