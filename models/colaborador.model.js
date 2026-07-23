@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.model.js
 Autor: Marco Vásquez
-Fecha: 06/07/2026
+Fecha: 22/07/2026
 Modulo: Colaboradores
 Descripcion:
 Capa de datos del modulo de colaboradores.
@@ -33,8 +33,7 @@ Todas las funciones principales dependen de mapearColaborador().
 function mapearColaborador(fila) {
     /*
     Descripcion:
-    Convierte una fila MySQL (snake_case) a camelCase
-    para el frontend.
+    Convierte una fila MySQL (snake_case) a camelCase.
 
     Parametros:
     - fila: Objeto crudo de MySQL.
@@ -50,12 +49,13 @@ function mapearColaborador(fila) {
         rolId:           fila.rol_id,
         nombre:          fila.nombre,
         apellidos:       fila.apellidos,
+        cedula:          fila.cedula,
         telefono:        fila.telefono,
         email:           fila.email,
         nombreUsuario:   fila.nombre_usuario,
         tipoColaborador: fila.tipo_colaborador,
         activo:          fila.activo,
-        fechaCreacion:   fila.fecha_creacion,
+        fechaCreacion:      fila.fecha_creacion,
         fechaActualizacion: fila.fecha_actualizacion,
     };
 }
@@ -91,8 +91,8 @@ export async function findById(id, grupoDatos) {
     Busca un colaborador por ID dentro del grupo.
 
     Parametros:
-    - id:          ID del colaborador.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID del colaborador.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El colaborador encontrado o null.
@@ -111,23 +111,24 @@ export async function create(dto, grupoDatos) {
     Inserta un nuevo colaborador en la DB.
 
     Parametros:
-    - dto:         Objeto ColaboradorDTO con los datos.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - dto:        Objeto ColaboradorDTO con los datos.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El colaborador recien creado.
     */
     const [result] = await pool.query(
         `INSERT INTO colaboradores
-         (grupo_datos, finca_id, rol_id, nombre, apellidos, telefono, email,
-          nombre_usuario, pin_hash, tipo_colaborador)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (grupo_datos, finca_id, rol_id, nombre, apellidos, cedula,
+          telefono, email, nombre_usuario, pin_hash, tipo_colaborador)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             grupoDatos,
             dto.fincaId,
             dto.rolId,
             dto.nombre,
             dto.apellidos,
+            dto.cedula,
             dto.telefono,
             dto.email,
             dto.nombreUsuario,
@@ -144,9 +145,9 @@ export async function update(id, dto, grupoDatos) {
     Actualiza un colaborador existente e incrementa version.
 
     Parametros:
-    - id:          ID del colaborador.
-    - dto:         Objeto ColaboradorDTO con los nuevos datos.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID del colaborador.
+    - dto:        Objeto ColaboradorDTO con los nuevos datos.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El colaborador actualizado o null si no existe.
@@ -154,7 +155,7 @@ export async function update(id, dto, grupoDatos) {
     const [result] = await pool.query(
         `UPDATE colaboradores
          SET finca_id = ?, rol_id = ?, nombre = ?, apellidos = ?,
-             telefono = ?, email = ?, tipo_colaborador = ?,
+             cedula = ?, telefono = ?, email = ?, tipo_colaborador = ?,
              version = version + 1
          WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
         [
@@ -162,6 +163,7 @@ export async function update(id, dto, grupoDatos) {
             dto.rolId,
             dto.nombre,
             dto.apellidos,
+            dto.cedula,
             dto.telefono,
             dto.email,
             dto.tipoColaborador,
@@ -176,11 +178,11 @@ export async function update(id, dto, grupoDatos) {
 export async function remove(id, grupoDatos) {
     /*
     Descripcion:
-    Borrado logico del colaborador. No elimina el registro.
+    Borrado logico del colaborador.
 
     Parametros:
-    - id:          ID del colaborador.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID del colaborador.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El colaborador antes de ser desactivado, o null si no existe.
