@@ -164,6 +164,17 @@ FUNCIONES PRINCIPALES
 export async function listarSiembra(req, res) {
     /*
     Descripcion:
+    Obtiene un listado completo de todos los registros activos del modulo siembra.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
+    Descripcion:
     Obtiene todas las siembras activas del grupo de datos.
     */
     try {
@@ -177,6 +188,17 @@ export async function listarSiembra(req, res) {
 
 export async function obtenerSiembra(req, res) {
     /*
+    Descripcion:
+    Busca y retorna un registro especifico de siembra mediante su identificador unico.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
     Descripcion:
     Obtiene una siembra activa por su ID.
     */
@@ -193,6 +215,17 @@ export async function obtenerSiembra(req, res) {
 
 export async function crearSiembra(req, res) {
     /*
+    Descripcion:
+    Registra una nueva entidad de siembra en la base de datos, estructurando la informacion proveniente del cliente.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
     Descripcion:
     Crea una nueva siembra validando que el lote, finca, estanque
     y pre-cria (si aplica) existan. Transiciona el lote a 'Sembrado'.
@@ -215,6 +248,17 @@ export async function crearSiembra(req, res) {
 
 export async function actualizarSiembra(req, res) {
     /*
+    Descripcion:
+    Actualiza parcialmente los datos de un registro existente de siembra, verificando primero su existencia y gestionando conflictos de unicidad.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
     Descripcion:
     Actualiza una siembra existente validando referencias.
     */
@@ -240,6 +284,17 @@ export async function actualizarSiembra(req, res) {
 
 export async function finalizarSiembra(req, res) {
     /*
+    Descripcion:
+    Gestiona logica de negocio para la operacion 'finalizarSiembra' en el modulo siembra.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
     Descripcion:
     Finaliza una siembra en estado Activa cambiando su estado
     a Finalizada.
@@ -268,6 +323,17 @@ export async function finalizarSiembra(req, res) {
 export async function eliminarSiembra(req, res) {
     /*
     Descripcion:
+    Realiza un borrado logico (soft-delete) sobre un registro de siembra, marcandolo como inactivo (activo = FALSE) y dejando rastro en deleted_at.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
+    Descripcion:
     Realiza el borrado logico de una siembra.
     */
     const { id } = req.params;
@@ -283,6 +349,17 @@ export async function eliminarSiembra(req, res) {
 
 export async function obtenerSiembraActiva(req, res) {
     /*
+    Descripcion:
+    Busca y retorna un registro especifico de siembra mediante su identificador unico.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
     Descripcion:
     Obtiene la siembra activa mas reciente de un estanque especifico
     y calcula la duracion en dias actual.

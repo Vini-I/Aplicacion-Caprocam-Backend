@@ -46,6 +46,14 @@ export class PrecriaDTO {
     }) {
         /*
         Descripcion:
+        Constructor del Data Transfer Object (DTO) para preCria. Se encarga de recibir datos crudos (ya sea del request del cliente o de una fila cruda de base de datos) y normalizarlos en una estructura segura, aplicando transformaciones de tipo, resolviendo llaves foraneas y seteando valores por defecto (ej. estados predeterminados).
+
+        Parametros:
+        - Objeto literal destructurado con las propiedades originales a mapear (incluyendo snake_case desde BD o camelCase desde JSON).
+        */
+
+/*
+        Descripcion:
         DTO de entrada para una Pre-cria.
  
         Parametros:

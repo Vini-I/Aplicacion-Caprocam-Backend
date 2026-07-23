@@ -128,7 +128,7 @@ export async function getInventarios(req, res) {
   */
 
   try {
-    const grupoDatos = req.user.grupoDatos
+    const grupoDatos = req.user.grupoDatos;
     const data = await InventarioModel.findAll(grupoDatos);
     return exito(res, "Inventario obtenido correctamente.", data);
   } catch (err) {
@@ -153,7 +153,7 @@ export async function getInventarioById(req, res) {
   if (errId) return errId;
 
   try {
-    const grupoDatos = req.user.grupoDatos
+    const grupoDatos = req.user.grupoDatos;
     const item = await InventarioModel.findById(req.params.id, grupoDatos);
     if (!item)
       return error(res, "Registro de inventario no encontrado.", null, 404);
@@ -180,10 +180,11 @@ export async function createInventario(req, res) {
   if (err) return err;
 
   try {
-    const grupoDatos = req.user.grupoDatos
+    const grupoDatos = req.user.grupoDatos;
 
     const productoExiste = await InventarioModel.verificarProductoExiste(
       req.body.producto_id,
+      grupoDatos
     );
     if (!productoExiste) {
       return error(res, "El producto indicado no existe.", null, 400);
@@ -191,6 +192,7 @@ export async function createInventario(req, res) {
 
     const yaExiste = await InventarioModel.findByProductoId(
       req.body.producto_id,
+      grupoDatos
     );
     if (yaExiste) {
       return error(
@@ -204,6 +206,7 @@ export async function createInventario(req, res) {
     if (!isEmpty(req.body.proveedor_id)) {
       const provExiste = await InventarioModel.verificarProveedorExiste(
         req.body.proveedor_id,
+        grupoDatos
       );
       if (!provExiste) {
         return error(res, "El proveedor indicado no existe.", null, 400);
@@ -211,7 +214,7 @@ export async function createInventario(req, res) {
     }
 
     const dto = new InventarioCreateDTO(req.body);
-    const nuevo = await InventarioModel.create(dto);
+    const nuevo = await InventarioModel.create(dto, grupoDatos);
 
     return exito(
       res,
@@ -249,34 +252,13 @@ export async function updateInventario(req, res) {
   const errId = validarIdParametro(req.params.id, res);
   if (errId) return errId;
 
-  //const stockMinimo = req.body.stock_minimo ?? req.body.stockMinimo;
   if (!isNumeroValido(req.body.stock_minimo)) {
     return error(res, "El stock_minimo debe ser mayor o igual a 0.", null, 422);
   }
 
-  if (!isEmpty(req.body.proveedor_id)) {
-    const idNumero = Number(req.body.proveedor_id);
-    if (
-      Number.isNaN(idNumero) ||
-      !Number.isInteger(idNumero) ||
-      idNumero <= 0
-    ) {
-      return error(
-        res,
-        "El proveedor_id debe ser un entero positivo.",
-        null,
-        422,
-      );
-    }
-    const provExiste =
-      await InventarioModel.verificarProveedorExiste(proveedorId);
-    if (!provExiste) {
-      return error(res, "El proveedor indicado no existe.", null, 400);
-    }
-  }
-
   try {
-    const grupoDatos = req.user.grupoDatos
+    const grupoDatos = req.user.grupoDatos;
+    
     if (!isEmpty(req.body.proveedor_id)) {
       const idNumero = Number(req.body.proveedor_id);
       if (
@@ -291,12 +273,15 @@ export async function updateInventario(req, res) {
           422,
         );
       }
-      const provExiste =
-        await InventarioModel.verificarProveedorExiste(proveedorId);
+      const provExiste = await InventarioModel.verificarProveedorExiste(
+        idNumero, 
+        grupoDatos
+      );
       if (!provExiste) {
         return error(res, "El proveedor indicado no existe.", null, 400);
       }
     }
+    
     const actual = await InventarioModel.findById(req.params.id, grupoDatos);
     if (!actual)
       return error(res, "Registro de inventario no encontrado.", null, 404);
@@ -336,7 +321,7 @@ export async function deleteInventario(req, res) {
   if (errId) return errId;
 
   try {
-    const grupoDatos = req.user.grupoDatos
+    const grupoDatos = req.user.grupoDatos;
     const eliminado = await InventarioModel.remove(req.params.id, grupoDatos);
     if (!eliminado)
       return error(res, "Registro de inventario no encontrado.", null, 404);

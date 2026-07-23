@@ -22,7 +22,16 @@ FUNCIONES PRINCIPALES
 */
 
 export async function findAll(grupoDatos) {
-    const [rows] = await pool.execute(`
+    /*
+    Descripcion:
+    Obtiene un listado completo de todos los registros activos del modulo preCria.
+    Parametros:
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+const [rows] = await pool.execute(`
         SELECT *
         FROM   precrias
         WHERE  grupo_datos = ?
@@ -34,7 +43,17 @@ export async function findAll(grupoDatos) {
 }
  
 export async function findById(id, grupoDatos) {
-    const [rows] = await pool.execute(`
+    /*
+    Descripcion:
+    Busca y retorna un registro especifico de preCria mediante su identificador unico.
+    Parametros:
+    - id: Entero que representa el identificador unico primario (PK) del registro.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+const [rows] = await pool.execute(`
         SELECT *
         FROM   precrias
         WHERE  id = ?
@@ -47,6 +66,17 @@ export async function findById(id, grupoDatos) {
  
 export async function create(dto, grupoDatos) {
     /*
+    Descripcion:
+    Registra una nueva entidad de preCria en la base de datos, estructurando la informacion proveniente del cliente.
+    Parametros:
+    - dto: Objeto JSON/DTO con la carga util (payload) a procesar en la transaccion.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+
+/*
     Descripcion:
     Crea una pre-cria y transiciona el lote asociado a
     'En PreCria' (solo si estaba 'Disponible'), en una sola
@@ -106,6 +136,18 @@ export async function create(dto, grupoDatos) {
 export async function update(id, grupoDatos, datos) {
     /*
     Descripcion:
+    Actualiza parcialmente los datos de un registro existente de preCria, verificando primero su existencia y gestionando conflictos de unicidad.
+    Parametros:
+    - id: Entero que representa el identificador unico primario (PK) del registro.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - datos: Objeto JSON/DTO con la carga util (payload) a procesar en la transaccion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+
+/*
+    Descripcion:
     Actualiza una pre-cria activa. Solo actualiza los campos
     presentes en "datos" (actualizacion parcial).
     */
@@ -151,7 +193,17 @@ export async function update(id, grupoDatos, datos) {
 }
  
 export async function remove(id, grupoDatos) {
-    const pc = await findById(id, grupoDatos);
+    /*
+    Descripcion:
+    Realiza un borrado logico (soft-delete) sobre un registro de preCria, marcandolo como inactivo (activo = FALSE) y dejando rastro en deleted_at.
+    Parametros:
+    - id: Entero que representa el identificador unico primario (PK) del registro.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+const pc = await findById(id, grupoDatos);
     if (!pc) return null;
  
     const [result] = await pool.execute(`
@@ -171,7 +223,17 @@ export async function remove(id, grupoDatos) {
  
  
 export async function verificarFincaExiste(fincaId, grupoDatos) {
-    if (!fincaId) return false;
+    /*
+    Descripcion:
+    Gestiona logica de negocio para la operacion 'verificarFincaExiste' en el modulo preCria.
+    Parametros:
+    - fincaId: Argumento requerido para el procesamiento interno de la logica.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+if (!fincaId) return false;
     const [rows] = await pool.execute(`
         SELECT id FROM fincas
         WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
@@ -180,7 +242,18 @@ export async function verificarFincaExiste(fincaId, grupoDatos) {
 }
  
 export async function verificarEstanqueExiste(estanqueId, fincaId, grupoDatos) {
-    if (!estanqueId || !fincaId) return false;
+    /*
+    Descripcion:
+    Gestiona logica de negocio para la operacion 'verificarEstanqueExiste' en el modulo preCria.
+    Parametros:
+    - estanqueId: Argumento requerido para el procesamiento interno de la logica.
+    - fincaId: Argumento requerido para el procesamiento interno de la logica.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+if (!estanqueId || !fincaId) return false;
     const [rows] = await pool.execute(`
         SELECT id FROM estanques
         WHERE id = ? AND finca_id = ? AND grupo_datos = ?

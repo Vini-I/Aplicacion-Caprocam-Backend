@@ -67,7 +67,17 @@ FUNCIONES PRINCIPALES
 */
  
 export async function listarLotes(req, res) {
-    try {
+    /*
+    Descripcion:
+    Obtiene un listado completo de todos los registros activos del modulo loteLarva.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+try {
         const grupoDatos = req.user.grupoDatos
         const lotes = await loteLarvaModel.findAll(grupoDatos);
         return exito(res, "Lotes de larva obtenidos correctamente.", lotes);
@@ -77,7 +87,17 @@ export async function listarLotes(req, res) {
 }
  
 export async function obtenerLote(req, res) {
-    try {
+    /*
+    Descripcion:
+    Busca y retorna un registro especifico de loteLarva mediante su identificador unico.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+try {
         const grupoDatos = req.user.grupoDatos
         const { id } = req.params;
         const lote = await loteLarvaModel.findById(id, grupoDatos);
@@ -89,7 +109,17 @@ export async function obtenerLote(req, res) {
 }
  
 export async function crearLote(req, res) {
-    const err = validarCuerpo(req.body, res);
+    /*
+    Descripcion:
+    Registra una nueva entidad de loteLarva en la base de datos, estructurando la informacion proveniente del cliente.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+const err = validarCuerpo(req.body, res);
     if (err) return err;
  
     try {
@@ -119,7 +149,17 @@ export async function crearLote(req, res) {
 }
  
 export async function actualizarLote(req, res) {
-    const { id } = req.params;
+    /*
+    Descripcion:
+    Actualiza parcialmente los datos de un registro existente de loteLarva, verificando primero su existencia y gestionando conflictos de unicidad.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+const { id } = req.params;
     const err = validarCuerpo(req.body, res);
     if (err) return err;
  
@@ -155,7 +195,17 @@ export async function actualizarLote(req, res) {
 }
  
 export async function eliminarLote(req, res) {
-    const { id } = req.params;
+    /*
+    Descripcion:
+    Realiza un borrado logico (soft-delete) sobre un registro de loteLarva, marcandolo como inactivo (activo = FALSE) y dejando rastro en deleted_at.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+const { id } = req.params;
     try {
         const grupoDatos = req.user.grupoDatos
         const eliminado = await loteLarvaModel.remove(id, grupoDatos);

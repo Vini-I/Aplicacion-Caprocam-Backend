@@ -44,7 +44,14 @@ export class SiembraDTO {
         pl_siembra,
         estado,
     }) {
-        const loteIdDb    = lote_larva_id ?? id_lote_larva;
+        /*
+        Descripcion:
+        Constructor del Data Transfer Object (DTO) para siembra. Se encarga de recibir datos crudos (ya sea del request del cliente o de una fila cruda de base de datos) y normalizarlos en una estructura segura, aplicando transformaciones de tipo, resolviendo llaves foraneas y seteando valores por defecto (ej. estados predeterminados).
+
+        Parametros:
+        - Objeto literal destructurado con las propiedades originales a mapear (incluyendo snake_case desde BD o camelCase desde JSON).
+        */
+const loteIdDb    = lote_larva_id ?? id_lote_larva;
         const precriaIdDb = precria_id ?? id_precria;
         const fincaIdDb   = finca_id ?? id_finca;
  

@@ -42,6 +42,7 @@ const SELECT_JOIN = `
         i.cantidad,
         i.stock_minimo,
         i.proveedor_id,
+        prov.nombre      AS nombre_proveedor,
         i.version,
         i.fecha_creacion,
         i.fecha_actualizacion,
@@ -55,6 +56,7 @@ const SELECT_JOIN = `
         p.estado
     FROM  inventario i
     INNER JOIN productos p ON i.producto_id = p.id
+    LEFT JOIN proveedores prov ON i.proveedor_id = prov.id
     WHERE i.grupo_datos = ?
     AND   i.activo = TRUE
     AND   i.deleted_at IS NULL
@@ -146,7 +148,7 @@ export async function verificarProveedorExiste(proveedorId, grupoDatos) {
     return rows.length > 0;
 }
  
-export async function verificarProductoExiste(productoId,grupoDatos) {
+export async function verificarProductoExiste(productoId, grupoDatos) {
     /*
     Descripcion:
     Verifica que el producto exista y este activo, dentro del
@@ -197,7 +199,7 @@ export async function create(dto, grupoDatos) {
         dto.proveedor_id,
         dto.stock_minimo,
     ]);
-    return findById(result.insertId);
+    return findById(result.insertId, grupoDatos);
 }
  
 export async function update(id, dto, grupoDatos) {

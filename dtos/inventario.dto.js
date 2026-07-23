@@ -22,7 +22,7 @@ auditoria como unica fuente de verdad.
 //////////////////////////////////////////////////////////
 DTO
 //////////////////////////////////////////////////////////
-
+ 
 Caparazon de datos para el modulo de inventario.
 */
 
@@ -46,7 +46,6 @@ export class InventarioCreateDTO {
         - proveedor_id:  ID del proveedor (opcional, FK nullable).
         - stock_minimo:  Cantidad minima antes de alertar (requerido).
         */
-
         const productoDb  = producto_id ?? productoId;
         const proveedorDb = proveedor_id ?? proveedorId;
         const stockMinDb  = stock_minimo ?? stockMinimo;
@@ -123,6 +122,7 @@ export function mapearInventario(row) {
         precioUnidad:       row.precio_unidad !== undefined
             ? Number(row.precio_unidad) : undefined,
         proveedorId:        row.proveedor_id,
+        nombreProveedor:    row.nombre_proveedor,
         cantidad:           Number(row.cantidad),
         stockMinimo:        Number(row.stock_minimo),
         estado:             row.estado,

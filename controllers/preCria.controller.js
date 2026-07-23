@@ -124,6 +124,17 @@ FUNCIONES PRINCIPALES
 export async function listarPrecrias(req, res) {
     /*
     Descripcion:
+    Obtiene un listado completo de todos los registros activos del modulo preCria.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
+    Descripcion:
     Obtiene todas las pre-crias activas del grupo de datos.
     */
     try {
@@ -137,6 +148,17 @@ export async function listarPrecrias(req, res) {
 
 export async function obtenerPrecria(req, res) {
     /*
+    Descripcion:
+    Busca y retorna un registro especifico de preCria mediante su identificador unico.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
     Descripcion:
     Obtiene una pre-cria activa por su ID.
     */
@@ -153,6 +175,17 @@ export async function obtenerPrecria(req, res) {
 
 export async function crearPrecria(req, res) {
     /*
+    Descripcion:
+    Registra una nueva entidad de preCria en la base de datos, estructurando la informacion proveniente del cliente.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
     Descripcion:
     Crea una nueva pre-cria validando que el lote, finca
     y estanque existan. Transiciona el lote a estado 'En PreCria'.
@@ -175,6 +208,17 @@ export async function crearPrecria(req, res) {
 
 export async function actualizarPrecria(req, res) {
     /*
+    Descripcion:
+    Actualiza parcialmente los datos de un registro existente de preCria, verificando primero su existencia y gestionando conflictos de unicidad.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
     Descripcion:
     Actualiza una pre-cria existente validando referencias.
     */
@@ -200,6 +244,17 @@ export async function actualizarPrecria(req, res) {
 
 export async function finalizarPrecria(req, res) {
     /*
+    Descripcion:
+    Gestiona logica de negocio para la operacion 'finalizarPrecria' en el modulo preCria.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
     Descripcion:
     Finaliza una pre-cria en estado Activa. Valida que la fecha
     de fin sea mayor o igual a la de inicio, y que la cantidad
@@ -254,6 +309,17 @@ export async function finalizarPrecria(req, res) {
 
 export async function eliminarPrecria(req, res) {
     /*
+    Descripcion:
+    Realiza un borrado logico (soft-delete) sobre un registro de preCria, marcandolo como inactivo (activo = FALSE) y dejando rastro en deleted_at.
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    */
+
+/*
     Descripcion:
     Realiza el borrado logico de una pre-cria.
     */
