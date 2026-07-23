@@ -769,6 +769,7 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
+    colaborador_id INT NULL,
     fecha DATE NOT NULL,
     cantidad_siembra INT NULL,
     area_estanque DECIMAL(10,2) NULL,
@@ -792,7 +793,10 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
 
     CONSTRAINT fk_densidad_estanques
-    FOREIGN KEY (estanque_id) REFERENCES estanques(id)
+    FOREIGN KEY (estanque_id) REFERENCES estanques(id),
+
+    CONSTRAINT fk_densidad_colaboradores
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS raleos (
@@ -1027,3 +1031,5 @@ CREATE INDEX idx_mant_prod_grupo ON mantenimiento_equipo_productos(grupo_datos);
 CREATE INDEX idx_mant_prod_ticket ON mantenimiento_equipo_productos(mantenimiento_equipo_id);
 CREATE INDEX idx_mant_tareas_grupo ON mantenimiento_equipo_tareas(grupo_datos);
 CREATE INDEX idx_mant_tareas_ticket ON mantenimiento_equipo_tareas(mantenimiento_equipo_id);
+
+CREATE INDEX idx_densidad_colaborador ON densidad_poblacional(colaborador_id);
