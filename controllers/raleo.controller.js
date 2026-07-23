@@ -240,6 +240,7 @@ export async function createRaleo(req, res) {
     - 400/422 si hay errores de validacion
     */
    const grupoDatos = req.user.grupoDatos;
+   const idColaborador = req.user.idColaborador;
    try {
     const err = validarCuerpo(req.body, res);
 
@@ -263,7 +264,7 @@ export async function createRaleo(req, res) {
         );
     }
     
-    const nuevo = await RaleoModel.create(dto, grupoDatos);
+    const nuevo = await RaleoModel.create(dto, grupoDatos, idColaborador);
 
     return exito(res, "Raleo creado correctamente.", nuevo, 201);
     } catch (err) {

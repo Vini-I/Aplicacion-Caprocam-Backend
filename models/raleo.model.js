@@ -125,7 +125,7 @@ export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
     return mapearFila(rows[0]);
 }
 
-export async function create(dto, grupoDatos) {
+export async function create(dto, grupoDatos, idColaborador) {
     /*
     Descripcion:
     Inserta un nuevo raleo en la base de datos.
@@ -158,7 +158,7 @@ export async function create(dto, grupoDatos) {
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
-            dto.idColaborador,
+            idColaborador,
             dto.fecha,
             dto.porcentaje,
             dto.pesoEstimado,
