@@ -39,7 +39,16 @@ export function validarMantVentas(req, res, next) {
     - next() si los datos son validos
     - 400 si los datos son invalidos
     */
-    const { finca, estanque, pesoPromedio, tamanoPromedio, cantVendida, precioKilo, fecha, total, colaborador, comprador } = req.body;
+
+    if (req.user && req.user.grupoDatos) {
+        req.body.grupoDatos = req.user.grupoDatos;
+    }
+
+    const { grupoDatos, finca, estanque, pesoPromedio, tamanoPromedio, cantVendida, precioKilo, fecha, total, colaborador, comprador } = req.body;
+
+    if (!grupoDatos) {
+        return error(res, "El grupo de datos es obligatorio.", null, 400);
+    }
 
     // Validación de campos obligatorios básicos
     if (!finca || String(finca).trim() === '') {

@@ -4,13 +4,13 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.model.js
 Autor: Gerald Alfaro
-Fecha: 03/07/2026
+Fecha: 18/07/2026
 Modulo: Estanques
 Descripcion:
 Capa de datos del modulo de estanques.
 Trabaja con la base de datos principal MySQL.
-Contiene las consultas necesarias para obtener, crear,
-actualizar y eliminar logicamente estanques.
+Todas las operaciones utilizan el grupo de datos obtenido
+desde el JWT para proteger los registros.
 //////////////////////////////////////////////////////////
 */
 
@@ -36,13 +36,12 @@ directamente con la base de datos MySQL.
 export async function findAll(filtros) {
     /*
     Descripcion:
-    Obtiene todos los estanques activos desde la base de datos.
-    Permite filtrar por finca y por grupo de datos.
+    Obtiene los estanques activos que pertenecen al grupo
+    de datos del usuario autenticado.
+    Permite filtrar opcionalmente por finca.
 
     Parametros:
-    - filtros: Objeto con filtros opcionales.
-        - idFinca: Identificador de la finca.
-        - grupoDatos: Codigo del grupo de datos.
+    - filtros: Objeto con grupoDatos e idFinca opcional.
 
     Retorna:
     - Lista de estanques encontrados.
@@ -77,42 +76,47 @@ export async function findAll(filtros) {
             deleted_at,
             version
         FROM estanques
-        WHERE deleted_at IS NULL
+        WHERE grupo_datos = ?
+        AND deleted_at IS NULL
         AND activo = TRUE
     `;
 
-    const params = [];
+    const params = [
+        filtros.grupoDatos
+    ];
 
-    if (filtros) {
-        if (filtros.idFinca) {
-            sql = sql + " AND finca_id = ?";
-            params.push(filtros.idFinca);
-        }
-
-        if (filtros.grupoDatos) {
-            sql = sql + " AND grupo_datos = ?";
-            params.push(filtros.grupoDatos);
-        }
+    if (filtros.idFinca) {
+        sql = sql + " AND finca_id = ?";
+        params.push(
+            filtros.idFinca
+        );
     }
 
     sql = sql + " ORDER BY id DESC";
 
-    const [rows] = await pool.execute(sql, params);
+    const [rows] = await pool.execute(
+        sql,
+        params
+    );
 
-    return mapearLista(rows);
+    return mapearLista(
+        rows
+    );
 }
 
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
-    Busca un estanque activo por su identificador numerico.
+    Busca un estanque activo por su identificador numerico
+    y por el grupo de datos del usuario autenticado.
 
     Parametros:
     - id: Identificador del estanque.
+    - grupoDatos: Grupo obtenido desde el JWT.
 
     Retorna:
     - El estanque encontrado.
-    - null si no existe o si fue eliminado logicamente.
+    - null si no existe, fue eliminado o pertenece a otro grupo.
     */
 
     const [rows] = await pool.execute(
@@ -146,31 +150,42 @@ export async function findById(id) {
             version
         FROM estanques
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         LIMIT 1
         `,
-        [id]
+        [
+            id,
+            grupoDatos
+        ]
     );
 
     if (rows.length === 0) {
         return null;
     }
 
-    return mapearFila(rows[0]);
+    return mapearFila(
+        rows[0]
+    );
 }
 
-export async function findByCodigoAndFinca(codigo, idFinca, idIgnorado) {
+export async function findByCodigoAndFinca(
+    codigo,
+    idFinca,
+    idIgnorado,
+    grupoDatos
+) {
     /*
     Descripcion:
-    Busca un estanque por codigo y finca.
-    Se utiliza para evitar codigos duplicados dentro de una misma finca.
-    Permite ignorar un id especifico cuando se esta actualizando un registro.
+    Busca un estanque por codigo, finca y grupo de datos.
+    Permite ignorar un id durante una actualizacion.
 
     Parametros:
     - codigo: Codigo del estanque.
     - idFinca: Identificador de la finca.
-    - idIgnorado: Identificador que se debe ignorar en la busqueda.
+    - idIgnorado: Identificador que se debe ignorar.
+    - grupoDatos: Grupo obtenido desde el JWT.
 
     Retorna:
     - El estanque encontrado.
@@ -208,46 +223,107 @@ export async function findByCodigoAndFinca(codigo, idFinca, idIgnorado) {
         FROM estanques
         WHERE LOWER(TRIM(codigo)) = LOWER(TRIM(?))
         AND finca_id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
     `;
 
-    const params = [codigo, idFinca];
+    const params = [
+        codigo,
+        idFinca,
+        grupoDatos
+    ];
 
     if (idIgnorado !== null) {
         if (idIgnorado !== undefined) {
             sql = sql + " AND id <> ?";
-            params.push(idIgnorado);
+            params.push(
+                idIgnorado
+            );
         }
     }
 
     sql = sql + " LIMIT 1";
 
-    const [rows] = await pool.execute(sql, params);
+    const [rows] = await pool.execute(
+        sql,
+        params
+    );
 
     if (rows.length === 0) {
         return null;
     }
 
-    return mapearFila(rows[0]);
+    return mapearFila(
+        rows[0]
+    );
+}
+
+export async function fincaPerteneceGrupo(
+    idFinca,
+    grupoDatos
+) {
+    /*
+    Descripcion:
+    Verifica que una finca exista, se encuentre activa
+    y pertenezca al grupo de datos del usuario.
+
+    Parametros:
+    - idFinca: Identificador de la finca.
+    - grupoDatos: Grupo obtenido desde el JWT.
+
+    Retorna:
+    - true si la finca pertenece al grupo.
+    - false si no existe o pertenece a otro grupo.
+    */
+
+    const [rows] = await pool.execute(
+        `
+        SELECT id
+        FROM fincas
+        WHERE id = ?
+        AND grupo_datos = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        LIMIT 1
+        `,
+        [
+            idFinca,
+            grupoDatos
+        ]
+    );
+
+    if (rows.length === 0) {
+        return false;
+    }
+
+    return true;
 }
 
 export async function create(dto) {
     /*
     Descripcion:
-    Inserta un nuevo estanque en la base de datos.
+    Inserta un nuevo estanque utilizando el grupo de datos
+    recibido desde el controller.
 
     Parametros:
-    - dto: Objeto EstanqueDTO con los datos normalizados del estanque.
+    - dto: Objeto EstanqueDTO con datos normalizados.
 
     Retorna:
-    - El estanque creado consultado nuevamente desde la base de datos.
+    - El estanque creado.
     */
 
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
-    const fechaSiembra = normalizarFechaMysqlOpcional(dto.fechaSiembra);
-    const fechaInicioEngorde = normalizarFechaMysqlOpcional(dto.fechaInicioEngorde);
-    const fechaMantenimiento = normalizarFechaMysqlOpcional(dto.fechaMantenimiento);
+    const fechaSiembra = normalizarFechaMysqlOpcional(
+        dto.fechaSiembra
+    );
+
+    const fechaInicioEngorde = normalizarFechaMysqlOpcional(
+        dto.fechaInicioEngorde
+    );
+
+    const fechaMantenimiento = normalizarFechaMysqlOpcional(
+        dto.fechaMantenimiento
+    );
 
     const [result] = await pool.execute(
         `
@@ -275,7 +351,7 @@ export async function create(dto) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
-            grupoDatos,
+            dto.grupoDatos,
             dto.idFinca,
             dto.codigo,
             dto.tipoEstanque,
@@ -297,40 +373,57 @@ export async function create(dto) {
         ]
     );
 
-    return await findById(result.insertId);
+    return await findById(
+        result.insertId,
+        dto.grupoDatos
+    );
 }
 
-export async function update(id, dto) {
+export async function update(
+    id,
+    dto,
+    grupoDatos
+) {
     /*
     Descripcion:
-    Actualiza un estanque existente en la base de datos.
-    Tambien incrementa la version del registro para control de cambios.
+    Actualiza un estanque que pertenece al grupo del usuario.
+    El campo grupo_datos no se modifica.
 
     Parametros:
-    - id: Identificador del estanque que se desea actualizar.
-    - dto: Objeto EstanqueDTO con los datos actualizados.
+    - id: Identificador del estanque.
+    - dto: Datos actualizados.
+    - grupoDatos: Grupo obtenido desde el JWT.
 
     Retorna:
     - El estanque actualizado.
-    - null si el estanque no existe o fue eliminado logicamente.
+    - null si no existe o pertenece a otro grupo.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(
+        id,
+        grupoDatos
+    );
 
     if (!actual) {
         return null;
     }
 
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
-    const fechaSiembra = normalizarFechaMysqlOpcional(dto.fechaSiembra);
-    const fechaInicioEngorde = normalizarFechaMysqlOpcional(dto.fechaInicioEngorde);
-    const fechaMantenimiento = normalizarFechaMysqlOpcional(dto.fechaMantenimiento);
+    const fechaSiembra = normalizarFechaMysqlOpcional(
+        dto.fechaSiembra
+    );
+
+    const fechaInicioEngorde = normalizarFechaMysqlOpcional(
+        dto.fechaInicioEngorde
+    );
+
+    const fechaMantenimiento = normalizarFechaMysqlOpcional(
+        dto.fechaMantenimiento
+    );
 
     await pool.execute(
         `
         UPDATE estanques
         SET
-            grupo_datos = ?,
             finca_id = ?,
             codigo = ?,
             tipo_estanque = ?,
@@ -351,11 +444,11 @@ export async function update(id, dto) {
             tiene_alimentador_automatico = ?,
             version = version + 1
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         `,
         [
-            grupoDatos,
             dto.idFinca,
             dto.codigo,
             dto.tipoEstanque,
@@ -374,29 +467,39 @@ export async function update(id, dto) {
             dto.proveedorAlimento,
             dto.numeroAireadores,
             dto.tieneAlimentadorAutomatico,
-            id
+            id,
+            grupoDatos
         ]
     );
 
-    return await findById(id);
+    return await findById(
+        id,
+        grupoDatos
+    );
 }
 
-export async function remove(id) {
+export async function remove(
+    id,
+    grupoDatos
+) {
     /*
     Descripcion:
-    Elimina logicamente un estanque.
-    No borra fisicamente el registro de la base de datos.
-    Cambia activo a false, llena deleted_at e incrementa version.
+    Elimina logicamente un estanque que pertenece al grupo
+    de datos del usuario autenticado.
 
     Parametros:
-    - id: Identificador del estanque que se desea eliminar.
+    - id: Identificador del estanque.
+    - grupoDatos: Grupo obtenido desde el JWT.
 
     Retorna:
     - El estanque eliminado logicamente.
-    - null si el estanque no existe o ya fue eliminado.
+    - null si no existe o pertenece a otro grupo.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(
+        id,
+        grupoDatos
+    );
 
     if (!actual) {
         return null;
@@ -410,10 +513,14 @@ export async function remove(id) {
             deleted_at = CURRENT_TIMESTAMP,
             version = version + 1
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         `,
-        [id]
+        [
+            id,
+            grupoDatos
+        ]
     );
 
     return actual;
@@ -424,15 +531,15 @@ export async function remove(id) {
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 
-Contiene funciones internas usadas por el modelo para mapear,
-normalizar y convertir datos.
+Contiene funciones internas usadas por el modelo para
+mapear, normalizar y convertir datos.
 */
 
 function mapearLista(rows) {
     /*
     Descripcion:
-    Convierte una lista de filas de MySQL al formato usado por
-    el backend y el frontend.
+    Convierte una lista de filas de MySQL al formato usado
+    por el backend y el frontend.
 
     Parametros:
     - rows: Lista de filas obtenidas desde MySQL.
@@ -444,7 +551,9 @@ function mapearLista(rows) {
     const resultado = [];
 
     for (let i = 0; i < rows.length; i++) {
-        resultado.push(mapearFila(rows[i]));
+        resultado.push(
+            mapearFila(rows[i])
+        );
     }
 
     return resultado;
@@ -453,14 +562,13 @@ function mapearLista(rows) {
 function mapearFila(row) {
     /*
     Descripcion:
-    Convierte una fila de MySQL en un objeto con formato camelCase.
-    Tambien convierte tipos de datos como numeros, fechas y booleanos.
+    Convierte una fila de MySQL en un objeto camelCase.
 
     Parametros:
     - row: Fila obtenida desde MySQL.
 
     Retorna:
-    - Objeto estanque en el formato esperado por el backend/frontend.
+    - Objeto estanque.
     */
 
     return {
@@ -476,16 +584,30 @@ function mapearFila(row) {
         profundidad: Number(row.profundidad),
         fuenteAgua: row.fuente_agua,
         especie: row.especie,
-        fechaSiembra: formatearFecha(row.fecha_siembra),
-        fechaInicioEngorde: formatearFecha(row.fecha_inicio_engorde),
-        fechaMantenimiento: formatearFecha(row.fecha_mantenimiento),
-        densidadSiembra: convertirNumero(row.densidad_siembra),
-        usaPrecria: Boolean(row.usa_precria),
+        fechaSiembra: formatearFecha(
+            row.fecha_siembra
+        ),
+        fechaInicioEngorde: formatearFecha(
+            row.fecha_inicio_engorde
+        ),
+        fechaMantenimiento: formatearFecha(
+            row.fecha_mantenimiento
+        ),
+        densidadSiembra: convertirNumero(
+            row.densidad_siembra
+        ),
+        usaPrecria: Boolean(
+            row.usa_precria
+        ),
         metodoAlimentacion: row.metodo_alimentacion,
         proveedorAlimento: row.proveedor_alimento,
         numeroAireadores: row.numero_aireadores,
-        tieneAlimentadorAutomatico: Boolean(row.tiene_alimentador_automatico),
-        activo: Boolean(row.activo),
+        tieneAlimentadorAutomatico: Boolean(
+            row.tiene_alimentador_automatico
+        ),
+        activo: Boolean(
+            row.activo
+        ),
         fechaCreacion: row.fecha_creacion,
         fechaActualizacion: row.fecha_actualizacion,
         deletedAt: row.deleted_at,
@@ -493,46 +615,16 @@ function mapearFila(row) {
     };
 }
 
-function obtenerGrupoDatos(valor) {
-    /*
-    Descripcion:
-    Obtiene el grupo de datos del registro.
-    Si no viene definido, utiliza el grupo 1 como valor temporal
-    para pruebas mientras se implementa la autenticacion.
-
-    Parametros:
-    - valor: Valor recibido como grupo de datos.
-
-    Retorna:
-    - Numero del grupo de datos.
-    */
-
-    if (valor === undefined) {
-        return 1;
-    }
-
-    if (valor === null) {
-        return 1;
-    }
-
-    if (String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
-}
-
 function normalizarFechaMysqlOpcional(valor) {
     /*
     Descripcion:
     Normaliza una fecha opcional para guardarla en MySQL.
-    Si la fecha viene vacia, undefined o null, retorna null.
 
     Parametros:
     - valor: Fecha recibida.
 
     Retorna:
-    - Fecha en formato compatible con MySQL o null.
+    - Fecha compatible con MySQL o null.
     */
 
     if (valor === undefined) {
@@ -547,14 +639,16 @@ function normalizarFechaMysqlOpcional(valor) {
         return null;
     }
 
-    return normalizarFechaMysql(valor);
+    return normalizarFechaMysql(
+        valor
+    );
 }
 
 function normalizarFechaMysql(valor) {
     /*
     Descripcion:
-    Convierte una fecha al formato YYYY-MM-DD compatible con MySQL.
-    Acepta fechas tipo Date, YYYY-MM-DD o DD/MM/YYYY.
+    Convierte una fecha al formato YYYY-MM-DD.
+    Acepta Date, YYYY-MM-DD o DD/MM/YYYY.
 
     Parametros:
     - valor: Fecha recibida.
@@ -564,7 +658,10 @@ function normalizarFechaMysql(valor) {
     */
 
     if (valor instanceof Date) {
-        return valor.toISOString().slice(0, 10);
+        return valor.toISOString().slice(
+            0,
+            10
+        );
     }
 
     const texto = String(valor).trim();
@@ -573,8 +670,16 @@ function normalizarFechaMysql(valor) {
         const partes = texto.split("/");
 
         if (partes.length === 3) {
-            const dia = partes[0].padStart(2, "0");
-            const mes = partes[1].padStart(2, "0");
+            const dia = partes[0].padStart(
+                2,
+                "0"
+            );
+
+            const mes = partes[1].padStart(
+                2,
+                "0"
+            );
+
             const anio = partes[2];
 
             return anio + "-" + mes + "-" + dia;
@@ -587,15 +692,13 @@ function normalizarFechaMysql(valor) {
 function formatearFecha(valor) {
     /*
     Descripcion:
-    Formatea una fecha recibida desde MySQL para devolverla en
-    formato simple YYYY-MM-DD.
+    Formatea una fecha recibida desde MySQL.
 
     Parametros:
     - valor: Fecha recibida desde MySQL.
 
     Retorna:
-    - Fecha formateada.
-    - null si no existe valor.
+    - Fecha YYYY-MM-DD o null.
     */
 
     if (valor === undefined) {
@@ -607,7 +710,10 @@ function formatearFecha(valor) {
     }
 
     if (valor instanceof Date) {
-        return valor.toISOString().slice(0, 10);
+        return valor.toISOString().slice(
+            0,
+            10
+        );
     }
 
     return String(valor);
@@ -617,14 +723,12 @@ function convertirNumero(valor) {
     /*
     Descripcion:
     Convierte un valor recibido desde MySQL a numero.
-    Si el valor no existe, retorna null.
 
     Parametros:
     - valor: Valor recibido.
 
     Retorna:
-    - Numero convertido.
-    - null si no existe valor.
+    - Numero convertido o null.
     */
 
     if (valor === undefined) {

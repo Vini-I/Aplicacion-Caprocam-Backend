@@ -4,10 +4,10 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: parasitologias.routes.js
 Autor: Andres Gutierrez
-Fecha: 03/07/2026
+Fecha: 18/07/2026
 Modulo: Parasitologias
 Descripcion:
-Define las rutas HTTP del modulo de parasitologias.
+Define las rutas HTTP protegidas del modulo.
 //////////////////////////////////////////////////////////
 */
 
@@ -15,17 +15,21 @@ Define las rutas HTTP del modulo de parasitologias.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
-
-Librerias externas
 */
 
-import { Router } from "express";
+import {
+    Router
+} from "express";
 
-// Middlewares
-import { verificarAuth } from "../middlewares/auth.middleware.js";
-import { validarBodyParasitologia } from "../middlewares/parasitologias.middleware.js";
+import {
+    verificarAuth
+} from "../middlewares/auth.middleware.js";
 
-// Controladores
+import {
+    validarGrupoDatos,
+    validarBodyParasitologia
+} from "../middlewares/parasitologias.middleware.js";
+
 import {
     obtenerParasitologias,
     obtenerParasitologiaPorId,
@@ -50,13 +54,56 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get("/", verificarAuth, obtenerParasitologias);
-router.get("/resumen", verificarAuth, obtenerResumenParasitologias);
-router.get("/catalogos/parasitos", verificarAuth, obtenerCatalogoParasitos);
-router.get("/:id", verificarAuth, obtenerParasitologiaPorId);
-router.post("/", verificarAuth, validarBodyParasitologia, crearParasitologia);
-router.put("/:id", verificarAuth, validarBodyParasitologia, actualizarParasitologia);
-router.delete("/:id", verificarAuth, eliminarParasitologia);
+router.get(
+    "/",
+    verificarAuth,
+    validarGrupoDatos,
+    obtenerParasitologias
+);
+
+router.get(
+    "/resumen",
+    verificarAuth,
+    validarGrupoDatos,
+    obtenerResumenParasitologias
+);
+
+router.get(
+    "/catalogos/parasitos",
+    verificarAuth,
+    validarGrupoDatos,
+    obtenerCatalogoParasitos
+);
+
+router.get(
+    "/:id",
+    verificarAuth,
+    validarGrupoDatos,
+    obtenerParasitologiaPorId
+);
+
+router.post(
+    "/",
+    verificarAuth,
+    validarGrupoDatos,
+    validarBodyParasitologia,
+    crearParasitologia
+);
+
+router.put(
+    "/:id",
+    verificarAuth,
+    validarGrupoDatos,
+    validarBodyParasitologia,
+    actualizarParasitologia
+);
+
+router.delete(
+    "/:id",
+    verificarAuth,
+    validarGrupoDatos,
+    eliminarParasitologia
+);
 
 /*
 //////////////////////////////////////////////////////////

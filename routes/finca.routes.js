@@ -47,10 +47,10 @@ RUTAS
 */
 
 router.get("/", verificarAuth, getFincas);
-router.get("/:idCBO", verificarAuth, getFincaById);
+router.get("/:id", verificarAuth, getFincaById);
 router.post("/", verificarAuth, validarMantFinca, createFinca);
-router.put("/:idCBO", verificarAuth, validarMantFinca, updateFinca);
-router.delete("/:idCBO", verificarAuth, deleteFinca);
+router.put("/:id", verificarAuth, validarMantFinca, updateFinca);
+router.delete("/:id", verificarAuth, deleteFinca);
 
 /*
 //////////////////////////////////////////////////////////
