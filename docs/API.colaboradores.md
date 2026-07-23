@@ -1,15 +1,11 @@
 # Colaboradores
 
 ## GET /api/v0/colaboradores
-Obtiene todos los colaboradores.
+Obtiene todos los colaboradores del grupo.
 
 Respuesta:
 200 OK
-{
-    "success": true,
-    "message": "Colaboradores obtenidos correctamente.",
-    "data": [ ... ]
-}
+{ "success": true, "message": "Colaboradores obtenidos correctamente.", "data": [...] }
 
 ---
 
@@ -19,21 +15,8 @@ Obtiene un colaborador por su ID.
 Parametros URL:
 - id: ID numerico del colaborador.
 
-Respuesta exitosa:
-200 OK
-{
-    "success": true,
-    "message": "Colaborador obtenido correctamente.",
-    "data": { ... }
-}
-
-Respuesta de error:
-404 Not Found
-{
-    "success": false,
-    "message": "Colaborador no encontrado.",
-    "error": null
-}
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
 
 ---
 
@@ -44,6 +27,7 @@ Body (JSON):
 {
     "nombre":          "Carlos",
     "apellidos":       "Jiménez",
+    "cedula":          "123456789",
     "telefono":        "66665555",
     "email":           "carlos@empresa.com",
     "rolId":           1,
@@ -53,23 +37,10 @@ Body (JSON):
 }
 
 Campos requeridos: nombre, apellidos, rolId, nombreUsuario, pinHash
-Campos opcionales: telefono, email, fincaId, tipoColaborador
+Campos opcionales: cedula, telefono, email, fincaId, tipoColaborador
 
-Respuesta exitosa:
-201 Created
-{
-    "success": true,
-    "message": "Colaborador creado correctamente.",
-    "data": { ... }
-}
-
-Respuesta de error:
-400 Bad Request
-{
-    "success": false,
-    "message": "Faltan campos requeridos: rolId.",
-    "error": null
-}
+Respuesta exitosa:   201 Created
+Respuesta de error:  400 Bad Request
 
 ---
 
@@ -82,7 +53,8 @@ Parametros URL:
 Body (JSON):
 {
     "nombre":          "Carlos",
-    "apellidos":       "Jiménez Corrected",
+    "apellidos":       "Jiménez Actualizado",
+    "cedula":          "123456789",
     "telefono":        "66665555",
     "email":           "carlos@empresa.com",
     "rolId":           1,
@@ -90,44 +62,15 @@ Body (JSON):
 }
 
 Campos requeridos: nombre, apellidos, rolId
-Campos opcionales: telefono, email, fincaId, tipoColaborador
+Campos opcionales: cedula, telefono, email, fincaId, tipoColaborador
 
-Respuesta exitosa:
-200 OK
-{
-    "success": true,
-    "message": "Colaborador actualizado correctamente.",
-    "data": { ... }
-}
-
-Respuesta de error:
-404 Not Found
-{
-    "success": false,
-    "message": "Colaborador no encontrado.",
-    "error": null
-}
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
 
 ---
 
 ## DELETE /api/v0/colaboradores/:id
 Elimina un colaborador por su ID (borrado logico).
 
-Parametros URL:
-- id: ID numerico del colaborador.
-
-Respuesta exitosa:
-200 OK
-{
-    "success": true,
-    "message": "Colaborador eliminado correctamente.",
-    "data": { ... }
-}
-
-Respuesta de error:
-404 Not Found
-{
-    "success": false,
-    "message": "Colaborador no encontrado.",
-    "error": null
-}
+Respuesta exitosa:   200 OK
+Respuesta de error:  404 Not Found
