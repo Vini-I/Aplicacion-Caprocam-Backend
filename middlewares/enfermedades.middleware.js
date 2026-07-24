@@ -3,13 +3,12 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: enfermedades.middleware.js
-Autor: Isaac
-Fecha: 03/07/2026
+Autor: Isaac Chaves
+Fecha: 18/07/2026
 Modulo: Enfermedades
 Descripcion:
-Middleware de validacion de body para enfermedades.
-Verifica que el body exista y contenga los campos minimos
-requeridos antes de llegar al controller.
+Valida el grupo de datos obtenido desde el JWT y los
+campos requeridos del body del modulo de enfermedades.
 //////////////////////////////////////////////////////////
 */
 
@@ -28,8 +27,9 @@ import { error } from '../common/respuestaJson.js';
 CONSTANTES
 //////////////////////////////////////////////////////////
 
-Campos minimos requeridos en el body para enfermedades.
-grupoDatos puede venir desde el usuario autenticado o desde el body.
+Campos requeridos enviados por el frontend.
+grupoDatos, responsable, colaboradorId y tipoRegistro
+no son recibidos desde el frontend.
 */
 
 const camposRequeridos = [
@@ -44,50 +44,127 @@ const camposRequeridos = [
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-
-Contiene los middlewares de validacion de body
-para el modulo de enfermedades.
 */
 
-export function validarBodyEnfermedad(req, res, next) {
+export function validarGrupoDatosEnfermedad(
+    req,
+    res,
+    next
+) {
     /*
     Descripcion:
-    Verifica que el body no este vacio y contenga
-    los campos minimos requeridos para MySQL.
+    Verifica que el JWT contenga un grupo de datos valido.
 
     Parametros:
-    - req:  Objeto request de Express.
-    - res:  Objeto response de Express.
-    - next: Funcion para pasar al siguiente middleware.
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
+    - next: Funcion para continuar con la solicitud.
 
     Retorna:
-    - next() si el body es valido.
+    - next() si el grupo de datos es valido.
+    - 403 si el JWT no contiene un grupo valido.
+    */
+
+    if (
+        req.user === undefined ||
+        req.user === null
+    ) {
+        return error(
+            res,
+            'No fue posible obtener el usuario autenticado.',
+            null,
+            403
+        );
+    }
+
+    const grupoDatos = Number(
+        req.user.grupoDatos
+    );
+
+    if (Number.isNaN(grupoDatos)) {
+        return error(
+            res,
+            'El usuario no tiene un grupo de datos valido.',
+            null,
+            403
+        );
+    }
+
+    if (!Number.isInteger(grupoDatos)) {
+        return error(
+            res,
+            'El usuario no tiene un grupo de datos valido.',
+            null,
+            403
+        );
+    }
+
+    if (grupoDatos <= 0) {
+        return error(
+            res,
+            'El usuario no tiene un grupo de datos valido.',
+            null,
+            403
+        );
+    }
+
+    next();
+}
+
+export function validarBodyEnfermedad(
+    req,
+    res,
+    next
+) {
+    /*
+    Descripcion:
+    Verifica que el body no este vacio y que incluya
+    los campos requeridos para registrar una enfermedad.
+
+    Parametros:
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
+    - next: Funcion para continuar con la solicitud.
+
+    Retorna:
+    - next() si el body contiene los campos requeridos.
     - 400 si el body esta vacio o faltan campos.
     */
 
-    if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, 'El body no puede estar vacio.', null, 400);
+    if (
+        !req.body ||
+        Object.keys(req.body).length === 0
+    ) {
+        return error(
+            res,
+            'El body no puede estar vacio.',
+            null,
+            400
+        );
     }
 
     const faltantes = [];
-    const grupoDatos = obtenerGrupoDatosRequest(req);
 
-    if (campoVacio(grupoDatos)) {
-        faltantes.push('grupoDatos');
-    }
-
-    for (let i = 0; i < camposRequeridos.length; i++) {
+    for (
+        let i = 0;
+        i < camposRequeridos.length;
+        i++
+    ) {
         const campo = camposRequeridos[i];
 
         if (campoVacio(req.body[campo])) {
-            faltantes.push(campo);
+            faltantes.push(
+                campo
+            );
         }
     }
 
     if (faltantes.length > 0) {
         return error(
             res,
-            'Faltan campos requeridos: ' + faltantes.join(', ') + '.',
+            'Faltan campos requeridos: ' +
+            faltantes.join(', ') +
+            '.',
             null,
             400
         );
@@ -100,67 +177,20 @@ export function validarBodyEnfermedad(req, res, next) {
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
-
-Funciones internas del middleware.
 */
-
-function obtenerGrupoDatosRequest(req) {
-    /*
-    Descripcion:
-    Obtiene grupoDatos desde el usuario autenticado o desde el body.
-
-    Parametros:
-    - req: Objeto request de Express.
-
-    Retorna:
-    - grupoDatos encontrado.
-    - null si no existe.
-    */
-
-    if (req.usuario !== undefined && req.usuario !== null) {
-        if (req.usuario.grupoDatos !== undefined) {
-            return req.usuario.grupoDatos;
-        }
-
-        if (req.usuario.grupo_datos !== undefined) {
-            return req.usuario.grupo_datos;
-        }
-    }
-
-    if (req.user !== undefined && req.user !== null) {
-        if (req.user.grupoDatos !== undefined) {
-            return req.user.grupoDatos;
-        }
-
-        if (req.user.grupo_datos !== undefined) {
-            return req.user.grupo_datos;
-        }
-    }
-
-    if (req.body !== undefined && req.body !== null) {
-        if (req.body.grupoDatos !== undefined) {
-            return req.body.grupoDatos;
-        }
-
-        if (req.body.grupo_datos !== undefined) {
-            return req.body.grupo_datos;
-        }
-    }
-
-    return null;
-}
 
 function campoVacio(valor) {
     /*
     Descripcion:
-    Verifica si un valor esta vacio.
+    Verifica si un valor no fue enviado o contiene
+    un texto vacio.
 
     Parametros:
-    - valor: Valor a revisar.
+    - valor: Valor recibido desde el body.
 
     Retorna:
-    - true si esta vacio.
-    - false si tiene contenido.
+    - true si el campo esta vacio.
+    - false si contiene un valor.
     */
 
     if (valor === undefined) {
@@ -171,7 +201,10 @@ function campoVacio(valor) {
         return true;
     }
 
-    if (String(valor).trim().length === 0) {
+    if (
+        typeof valor === 'string' &&
+        valor.trim().length === 0
+    ) {
         return true;
     }
 

@@ -2,12 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: tarea.routes.js
+Archivo: mantenimientoTarea.routes.js
 Autor: Marco Vásquez
 Fecha: 22/07/2026
-Modulo: Tareas
+Modulo: MantenimientoTareas
 Descripcion:
-Define las rutas HTTP del modulo de tareas.
+Define las rutas HTTP del modulo de tareas de mantenimiento.
 //////////////////////////////////////////////////////////
 */
 
@@ -22,18 +22,16 @@ Librerias externas
 import { Router } from 'express';
 
 // Middlewares
-import { verificarAuth }                                from '../middlewares/auth.middleware.js';
-import { validarBodyTareaPost, validarBodyTareaPut }    from '../middlewares/tarea.middleware.js';
+import { verificarAuth }                      from '../middlewares/auth.middleware.js';
+import { validarBodyMantenimientoTarea }       from '../middlewares/mantenimientoTarea.middleware.js';
 
 // Controladores
 import {
-    getTareas,
-    getTareaById,
-    getCatalogoTareas,
-    createTarea,
-    updateTarea,
-    deleteTarea,
-} from '../controllers/tarea.controller.js';
+    getTareasByMantenimiento,
+    agregarTarea,
+    actualizarEstadoTarea,
+    eliminarTarea,
+} from '../controllers/mantenimientoTarea.controller.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -49,12 +47,10 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get('/catalogo', verificarAuth,                      getCatalogoTareas);
-router.get('/',         verificarAuth,                      getTareas);
-router.get('/:id',      verificarAuth,                      getTareaById);
-router.post('/',        verificarAuth, validarBodyTareaPost, createTarea);
-router.put('/:id',      verificarAuth, validarBodyTareaPut,  updateTarea);
-router.delete('/:id',   verificarAuth,                      deleteTarea);
+router.get('/:mantenimientoId/tareas',  verificarAuth,                             getTareasByMantenimiento);
+router.post('/tareas',                  verificarAuth, validarBodyMantenimientoTarea, agregarTarea);
+router.put('/tareas/:id',               verificarAuth,                             actualizarEstadoTarea);
+router.delete('/tareas/:id',            verificarAuth,                             eliminarTarea);
 
 /*
 //////////////////////////////////////////////////////////

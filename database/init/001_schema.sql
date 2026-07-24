@@ -304,15 +304,16 @@ CREATE TABLE IF NOT EXISTS proveedores (
 CREATE TABLE IF NOT EXISTS productos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
-    grupo_datos INT NOT NULL,
-    proveedor_id INT NULL,
+    codigo VARCHAR(50) NOT NULL,
     nombre VARCHAR(150) NOT NULL,
     categoria VARCHAR(80) NOT NULL,
     unidad VARCHAR(30) NULL,
     precio_unidad DECIMAL(10,2) NULL,
+    proveedor_id INT NULL,
     fecha_ingreso DATE NULL,
     fecha_caducidad DATE NULL,
     estado ENUM('ACTIVO', 'INACTIVO') NOT NULL DEFAULT 'ACTIVO',
+    grupo_datos INT NOT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -323,7 +324,10 @@ CREATE TABLE IF NOT EXISTS productos (
     FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_productos_proveedores
-    FOREIGN KEY (proveedor_id) REFERENCES proveedores(id)
+    FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
+
+    CONSTRAINT uq_producto_codigo_grupo
+    UNIQUE (grupo_datos, codigo)
 );
 
 CREATE TABLE IF NOT EXISTS mantenimiento_equipo_productos (

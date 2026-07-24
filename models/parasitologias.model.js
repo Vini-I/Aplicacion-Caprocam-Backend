@@ -4,13 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: parasitologias.model.js
 Autor: Andres Gutierrez
-Fecha: 03/07/2026
+Fecha: 18/07/2026
 Modulo: Parasitologias
 Descripcion:
 Capa de datos del modulo de parasitologias.
-Trabaja con la base de datos principal MySQL.
-Contiene las consultas necesarias para obtener, crear,
-actualizar y eliminar logicamente registros de parasitologia.
+Todas las operaciones utilizan el grupo de datos obtenido
+desde el JWT para proteger los registros.
 //////////////////////////////////////////////////////////
 */
 
@@ -18,8 +17,6 @@ actualizar y eliminar logicamente registros de parasitologia.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
-
-Configuracion de base de datos
 */
 
 import pool from "../config/database.js";
@@ -28,28 +25,12 @@ import pool from "../config/database.js";
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-
-Contiene las funciones exportables que interactuan
-directamente con la base de datos MySQL.
 */
 
 export async function findAll(filtros) {
     /*
     Descripcion:
-    Obtiene todos los registros activos de parasitologias desde
-    la base de datos. Permite filtrar por grupo de datos, finca,
-    estanque, parasito y fecha de reporte.
-
-    Parametros:
-    - filtros: Objeto con filtros opcionales.
-        - grupoDatos: Codigo del grupo de datos.
-        - fincaId: Identificador de la finca.
-        - estanqueId: Identificador del estanque.
-        - parasito: Tipo de parasito.
-        - fechaReporte: Fecha del reporte.
-
-    Retorna:
-    - Lista de registros de parasitologias encontrados.
+    Obtiene registros activos del grupo autenticado.
     */
 
     let sql = `
@@ -75,58 +56,64 @@ export async function findAll(filtros) {
             deleted_at,
             version
         FROM parasitologias
-        WHERE deleted_at IS NULL
+        WHERE grupo_datos = ?
+        AND deleted_at IS NULL
         AND activo = TRUE
     `;
 
-    const params = [];
+    const params = [
+        filtros.grupoDatos
+    ];
 
-    if (filtros) {
-        if (filtros.grupoDatos) {
-            sql = sql + " AND grupo_datos = ?";
-            params.push(filtros.grupoDatos);
-        }
+    if (filtros.fincaId) {
+        sql = sql + " AND finca_id = ?";
+        params.push(
+            filtros.fincaId
+        );
+    }
 
-        if (filtros.fincaId) {
-            sql = sql + " AND finca_id = ?";
-            params.push(filtros.fincaId);
-        }
+    if (filtros.estanqueId) {
+        sql = sql + " AND estanque_id = ?";
+        params.push(
+            filtros.estanqueId
+        );
+    }
 
-        if (filtros.estanqueId) {
-            sql = sql + " AND estanque_id = ?";
-            params.push(filtros.estanqueId);
-        }
+    if (filtros.parasito) {
+        sql = sql + " AND parasito = ?";
+        params.push(
+            filtros.parasito
+        );
+    }
 
-        if (filtros.parasito) {
-            sql = sql + " AND parasito = ?";
-            params.push(filtros.parasito);
-        }
-
-        if (filtros.fechaReporte) {
-            sql = sql + " AND fecha_reporte = ?";
-            params.push(normalizarFechaMysql(filtros.fechaReporte));
-        }
+    if (filtros.fechaReporte) {
+        sql = sql + " AND fecha_reporte = ?";
+        params.push(
+            normalizarFechaMysql(
+                filtros.fechaReporte
+            )
+        );
     }
 
     sql = sql + " ORDER BY id DESC";
 
-    const [rows] = await pool.execute(sql, params);
+    const [rows] = await pool.execute(
+        sql,
+        params
+    );
 
-    return mapearLista(rows);
+    return mapearLista(
+        rows
+    );
 }
 
-export async function findById(id) {
+export async function findById(
+    id,
+    grupoDatos
+) {
     /*
     Descripcion:
-    Busca un registro activo de parasitologia por su identificador
-    numerico.
-
-    Parametros:
-    - id: Identificador del registro.
-
-    Retorna:
-    - El registro encontrado.
-    - null si no existe o si fue eliminado logicamente.
+    Busca un registro por ID y grupo de datos.
     */
 
     const [rows] = await pool.execute(
@@ -154,34 +141,78 @@ export async function findById(id) {
             version
         FROM parasitologias
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         LIMIT 1
         `,
-        [id]
+        [
+            id,
+            grupoDatos
+        ]
     );
 
     if (rows.length === 0) {
         return null;
     }
 
-    return mapearFila(rows[0]);
+    return mapearFila(
+        rows[0]
+    );
+}
+
+export async function fincaEstanquePertenecenGrupo(
+    fincaId,
+    estanqueId,
+    grupoDatos
+) {
+    /*
+    Descripcion:
+    Verifica que la finca y el estanque pertenezcan al grupo
+    y que el estanque se encuentre asociado a la finca.
+    */
+
+    const [rows] = await pool.execute(
+        `
+        SELECT e.id
+        FROM estanques e
+        INNER JOIN fincas f
+            ON f.id = e.finca_id
+        WHERE f.id = ?
+        AND e.id = ?
+        AND f.grupo_datos = ?
+        AND e.grupo_datos = ?
+        AND f.deleted_at IS NULL
+        AND e.deleted_at IS NULL
+        AND f.activo = TRUE
+        AND e.activo = TRUE
+        LIMIT 1
+        `,
+        [
+            fincaId,
+            estanqueId,
+            grupoDatos,
+            grupoDatos
+        ]
+    );
+
+    if (rows.length === 0) {
+        return false;
+    }
+
+    return true;
 }
 
 export async function create(dto) {
     /*
     Descripcion:
-    Inserta un nuevo registro de parasitologia en la base de datos.
-
-    Parametros:
-    - dto: Objeto ParasitologiaDTO con los datos normalizados.
-
-    Retorna:
-    - El registro creado consultado nuevamente desde la base de datos.
+    Inserta un nuevo registro utilizando datos controlados
+    por el backend.
     */
 
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
-    const fechaReporte = normalizarFechaMysql(dto.fechaReporte);
+    const fechaReporte = normalizarFechaMysql(
+        dto.fechaReporte
+    );
 
     const [result] = await pool.execute(
         `
@@ -203,7 +234,7 @@ export async function create(dto) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
-            grupoDatos,
+            dto.grupoDatos,
             dto.fincaId,
             dto.estanqueId,
             dto.colaboradorId,
@@ -219,39 +250,40 @@ export async function create(dto) {
         ]
     );
 
-    return await findById(result.insertId);
+    return await findById(
+        result.insertId,
+        dto.grupoDatos
+    );
 }
 
-export async function update(id, dto) {
+export async function update(
+    id,
+    dto,
+    grupoDatos
+) {
     /*
     Descripcion:
-    Actualiza un registro de parasitologia existente en la base
-    de datos. Tambien incrementa la version del registro para
-    control de cambios.
-
-    Parametros:
-    - id: Identificador del registro que se desea actualizar.
-    - dto: Objeto ParasitologiaDTO con los datos actualizados.
-
-    Retorna:
-    - El registro actualizado.
-    - null si el registro no existe o fue eliminado logicamente.
+    Actualiza un registro del grupo autenticado.
+    grupo_datos no puede modificarse.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(
+        id,
+        grupoDatos
+    );
 
     if (!actual) {
         return null;
     }
 
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
-    const fechaReporte = normalizarFechaMysql(dto.fechaReporte);
+    const fechaReporte = normalizarFechaMysql(
+        dto.fechaReporte
+    );
 
     await pool.execute(
         `
         UPDATE parasitologias
         SET
-            grupo_datos = ?,
             finca_id = ?,
             estanque_id = ?,
             colaborador_id = ?,
@@ -266,11 +298,11 @@ export async function update(id, dto) {
             observaciones = ?,
             version = version + 1
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         `,
         [
-            grupoDatos,
             dto.fincaId,
             dto.estanqueId,
             dto.colaboradorId,
@@ -283,29 +315,30 @@ export async function update(id, dto) {
             dto.porcentajeInfeccion,
             dto.gradoInfeccion,
             dto.observaciones,
-            id
+            id,
+            grupoDatos
         ]
     );
 
-    return await findById(id);
+    return await findById(
+        id,
+        grupoDatos
+    );
 }
 
-export async function remove(id) {
+export async function remove(
+    id,
+    grupoDatos
+) {
     /*
     Descripcion:
-    Elimina logicamente un registro de parasitologia.
-    No borra fisicamente el registro de la base de datos.
-    Cambia activo a false, llena deleted_at e incrementa version.
-
-    Parametros:
-    - id: Identificador del registro que se desea eliminar.
-
-    Retorna:
-    - El registro eliminado logicamente.
-    - null si el registro no existe o ya fue eliminado.
+    Elimina logicamente un registro del grupo autenticado.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(
+        id,
+        grupoDatos
+    );
 
     if (!actual) {
         return null;
@@ -319,10 +352,14 @@ export async function remove(id) {
             deleted_at = CURRENT_TIMESTAMP,
             version = version + 1
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         `,
-        [id]
+        [
+            id,
+            grupoDatos
+        ]
     );
 
     return actual;
@@ -332,46 +369,21 @@ export async function remove(id) {
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
-
-Contiene funciones internas usadas por el modelo para mapear,
-normalizar y convertir datos.
 */
 
 function mapearLista(rows) {
-    /*
-    Descripcion:
-    Convierte una lista de filas de MySQL al formato usado por
-    el backend y el frontend.
-
-    Parametros:
-    - rows: Lista de filas obtenidas desde MySQL.
-
-    Retorna:
-    - Lista de registros mapeados.
-    */
-
     const resultado = [];
 
     for (let i = 0; i < rows.length; i++) {
-        resultado.push(mapearFila(rows[i]));
+        resultado.push(
+            mapearFila(rows[i])
+        );
     }
 
     return resultado;
 }
 
 function mapearFila(row) {
-    /*
-    Descripcion:
-    Convierte una fila de MySQL en un objeto con formato camelCase.
-    Tambien convierte tipos de datos como numeros, fechas y booleanos.
-
-    Parametros:
-    - row: Fila obtenida desde MySQL.
-
-    Retorna:
-    - Objeto parasitologia en el formato esperado por el backend/frontend.
-    */
-
     return {
         id: row.id,
         uuid: row.uuid,
@@ -380,66 +392,44 @@ function mapearFila(row) {
         estanqueId: row.estanque_id,
         colaboradorId: row.colaborador_id,
         tipoRegistro: row.tipo_registro,
-        fechaReporte: formatearFecha(row.fecha_reporte),
+        fechaReporte: formatearFecha(
+            row.fecha_reporte
+        ),
         responsable: row.responsable,
         parasito: row.parasito,
-        camaronesMuestreados: Number(row.camarones_muestreados),
-        camaronesInfectados: Number(row.camarones_infectados),
-        porcentajeInfeccion: convertirNumero(row.porcentaje_infeccion),
-        gradoInfeccion: row.grado_infeccion,
-        observaciones: row.observaciones,
-        activo: Boolean(row.activo),
-        fechaCreacion: row.fecha_creacion,
-        fechaActualizacion: row.fecha_actualizacion,
-        deletedAt: row.deleted_at,
-        version: row.version
+        camaronesMuestreados: Number(
+            row.camarones_muestreados
+        ),
+        camaronesInfectados: Number(
+            row.camarones_infectados
+        ),
+        porcentajeInfeccion: convertirNumero(
+            row.porcentaje_infeccion
+        ),
+        gradoInfeccion:
+            row.grado_infeccion,
+        observaciones:
+            row.observaciones,
+        activo: Boolean(
+            row.activo
+        ),
+        fechaCreacion:
+            row.fecha_creacion,
+        fechaActualizacion:
+            row.fecha_actualizacion,
+        deletedAt:
+            row.deleted_at,
+        version:
+            row.version
     };
 }
 
-function obtenerGrupoDatos(valor) {
-    /*
-    Descripcion:
-    Obtiene el grupo de datos del registro.
-    Si no viene definido, utiliza el grupo 1 como valor temporal
-    para pruebas mientras se implementa la autenticacion.
-
-    Parametros:
-    - valor: Valor recibido como grupo de datos.
-
-    Retorna:
-    - Numero del grupo de datos.
-    */
-
-    if (valor === undefined) {
-        return 1;
-    }
-
-    if (valor === null) {
-        return 1;
-    }
-
-    if (String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
-}
-
 function normalizarFechaMysql(valor) {
-    /*
-    Descripcion:
-    Convierte una fecha al formato YYYY-MM-DD compatible con MySQL.
-    Acepta fechas tipo Date, YYYY-MM-DD o DD/MM/YYYY.
-
-    Parametros:
-    - valor: Fecha recibida.
-
-    Retorna:
-    - Fecha en formato YYYY-MM-DD.
-    */
-
     if (valor instanceof Date) {
-        return valor.toISOString().slice(0, 10);
+        return valor.toISOString().slice(
+            0,
+            10
+        );
     }
 
     const texto = String(valor).trim();
@@ -448,8 +438,16 @@ function normalizarFechaMysql(valor) {
         const partes = texto.split("/");
 
         if (partes.length === 3) {
-            const dia = partes[0].padStart(2, "0");
-            const mes = partes[1].padStart(2, "0");
+            const dia = partes[0].padStart(
+                2,
+                "0"
+            );
+
+            const mes = partes[1].padStart(
+                2,
+                "0"
+            );
+
             const anio = partes[2];
 
             return anio + "-" + mes + "-" + dia;
@@ -460,19 +458,6 @@ function normalizarFechaMysql(valor) {
 }
 
 function formatearFecha(valor) {
-    /*
-    Descripcion:
-    Formatea una fecha recibida desde MySQL para devolverla en
-    formato simple YYYY-MM-DD.
-
-    Parametros:
-    - valor: Fecha recibida desde MySQL.
-
-    Retorna:
-    - Fecha formateada.
-    - null si no existe valor.
-    */
-
     if (valor === undefined) {
         return null;
     }
@@ -482,26 +467,16 @@ function formatearFecha(valor) {
     }
 
     if (valor instanceof Date) {
-        return valor.toISOString().slice(0, 10);
+        return valor.toISOString().slice(
+            0,
+            10
+        );
     }
 
     return String(valor);
 }
 
 function convertirNumero(valor) {
-    /*
-    Descripcion:
-    Convierte un valor recibido desde MySQL a numero.
-    Si el valor no existe, retorna null.
-
-    Parametros:
-    - valor: Valor recibido.
-
-    Retorna:
-    - Numero convertido.
-    - null si no existe valor.
-    */
-
     if (valor === undefined) {
         return null;
     }
