@@ -14,42 +14,12 @@ Por ahora trabaja con datos mock en memoria.
 
 /*
 //////////////////////////////////////////////////////////
-MOCK DATA
+IMPORTS
 //////////////////////////////////////////////////////////
 */
 
-let proveedores = [
-    {
-        id: 1,
-        nombre: "Alimentos del Pacífico",
-        tipoProducto: "alimento",
-        telefono: "+506 2233-4455",
-        correo: "alimentos@pacifico.com",
-        direccion: "Puntarenas, Costa Rica",
-        notas: "Proveedor principal de camarina",
-        activo: true
-    },
-    {
-        id: 2,
-        nombre: "FarmaMar",
-        tipoProducto: "antibiotico",
-        telefono: "+506 2566-7788",
-        correo: "contacto@farmamar.com",
-        direccion: "San José, Costa Rica",
-        notes: "Antibióticos y probióticos aprobados",
-        activo: true
-    },
-    {
-        id: 3,
-        nombre: "Fertilizantes del Sur",
-        tipoProducto: "fertilizantes",
-        telefono: "+506 2788-9900",
-        correo: "ventas@fertisur.com",
-        direccion: "Limón, Costa Rica",
-        notas: "Fertilizantes orgánicos",
-        activo: true
-    }
-];
+import pool from '../config/database.js';
+
 
 /*
 //////////////////////////////////////////////////////////
@@ -57,7 +27,8 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export function findAll() {
+
+export async function findAll(grupoDatos) {
     /*
     Descripcion:
     Obtiene todos los proveedores que esten activos.
@@ -68,10 +39,19 @@ export function findAll() {
     Retorna:
     - Lista de proveedores activos.
     */
-    return proveedores.filter(p => p.activo === true);
+        const sql = `
+        SELECT *
+        FROM   proveedores
+        WHERE  grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        ORDER BY id ASC
+    `;
+    const [rows] = await pool.execute(sql, [grupoDatos]);
+    return rows;
 }
 
-export function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
     Busca un proveedor activo por su ID.
@@ -82,14 +62,19 @@ export function findById(id) {
     Retorna:
     - Proveedor encontrado o null.
     */
-    const proveedor = proveedores.find(p => p.id === Number(id));
-    if (!proveedor || proveedor.activo === false) {
-        return null;
-    }
-    return proveedor;
+    const sql = `
+        SELECT *
+        FROM   proveedores
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `;
+    const [rows] = await pool.execute(sql, [Number(id), grupoDatos]);
+    return rows[0] || null;
 }
 
-export function findByName(nombre) {
+export async function findByName(nombre, grupoDatos) {
     /*
     Descripcion:
     Busca un proveedor activo por su nombre exacto (case-insensitive).
@@ -100,13 +85,20 @@ export function findByName(nombre) {
     Retorna:
     - Proveedor encontrado o null.
     */
-    const nombreNormalizado = nombre.toLowerCase().trim();
-    return proveedores.find(p => 
-        p.nombre.toLowerCase().trim() === nombreNormalizado && p.activo === true
-    ) || null;
+    const sql = `
+        SELECT *
+        FROM   proveedores
+        WHERE  LOWER(TRIM(nombre_empresa)) = LOWER(TRIM(?))
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        LIMIT  1
+    `;
+    const [rows] = await pool.execute(sql, [nombre, grupoDatos]);
+    return rows[0] || null;
 }
 
-export function findByNameIgnorandoId(nombre, idIgnorado) {
+export async function findByNameIgnorandoId(nombre, idIgnorado, grupoDatos) {
     /*
     Descripcion:
     Busca un proveedor activo por nombre omitiendo un ID especifico.
@@ -118,16 +110,21 @@ export function findByNameIgnorandoId(nombre, idIgnorado) {
     Retorna:
     - Proveedor duplicado encontrado o null.
     */
-    const nombreNormalizado = nombre.toLowerCase().trim();
-    const numeroIgnorado = Number(idIgnorado);
-    return proveedores.find(p => 
-        p.nombre.toLowerCase().trim() === nombreNormalizado && 
-        p.activo === true && 
-        p.id !== numeroIgnorado
-    ) || null;
+    const sql = `
+        SELECT *
+        FROM   proveedores
+        WHERE  LOWER(TRIM(nombre_empresa)) = LOWER(TRIM(?))
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        AND    id != ?
+        LIMIT  1
+    `;
+    const [rows] = await pool.execute(sql, [nombre, Number(idIgnorado), grupoDatos]);
+    return rows[0] || null;
 }
 
-export function create(dto) {
+export async function create(dto, grupoDatos) {
     /*
     Descripcion:
     Crea un nuevo proveedor en la lista en memoria.
@@ -138,16 +135,30 @@ export function create(dto) {
     Retorna:
     - Proveedor creado con su ID.
     */
-    const nuevo = {
-        ...dto,
-        id: proveedores.length + 1,
-        activo: true
-    };
-    proveedores.push(nuevo);
-    return nuevo;
+    const sql = `
+        INSERT INTO proveedores (
+            grupo_datos,
+            nombre_empresa,
+            tipo_producto,
+            telefono,
+            correo_electronico,
+            direccion,
+            notas
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+    const [result] = await pool.execute(sql, [
+        grupoDatos,
+        dto.nombre_empresa,
+        dto.tipo_producto,
+        dto.telefono           || null,
+        dto.correo_electronico || null,
+        dto.direccion          || null,
+        dto.notas              || null,
+    ]);
+    return findById(result.insertId, grupoDatos);
 }
 
-export function update(id, dto) {
+export async function update(id, grupoDatos, dto) {
     /*
     Descripcion:
     Actualiza los datos de un proveedor activo por su ID.
@@ -159,18 +170,35 @@ export function update(id, dto) {
     Retorna:
     - Proveedor actualizado o null.
     */
-    const index = proveedores.findIndex(p => p.id === Number(id));
-    if (index === -1 || proveedores[index].activo === false) {
-        return null;
-    }
-    proveedores[index] = {
-        ...proveedores[index],
-        ...dto
-    };
-    return proveedores[index];
+    const sql = `
+        UPDATE proveedores
+        SET    nombre_empresa      = ?,
+               tipo_producto       = ?,
+               telefono            = ?,
+               correo_electronico  = ?,
+               direccion           = ?,
+               notas               = ?,
+               version             = version + 1
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `;
+    const [result] = await pool.execute(sql, [
+        dto.nombre_empresa,
+        dto.tipo_producto,
+        dto.telefono           || null,
+        dto.correo_electronico || null,
+        dto.direccion          || null,
+        dto.notas              || null,
+        Number(id),
+        grupoDatos,
+    ]);
+    if (result.affectedRows === 0) return null;
+    return findById(id, grupoDatos);
 }
 
-export function remove(id) {
+export async function remove(id, grupoDatos) {
     /*
     Descripcion:
     Realiza un borrado logico del proveedor asignando activo = false.
@@ -181,10 +209,21 @@ export function remove(id) {
     Retorna:
     - Proveedor desactivado o null.
     */
-    const index = proveedores.findIndex(p => p.id === Number(id));
-    if (index === -1 || proveedores[index].activo === false) {
-        return null;
-    }
-    proveedores[index].activo = false;
-    return proveedores[index];
+    const proveedor = await findById(id, grupoDatos);
+    if (!proveedor) return null;
+
+    const sql = `
+        UPDATE proveedores
+        SET    activo      = FALSE,
+               deleted_at  = NOW(),
+               version     = version + 1
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `;
+    const [result] = await pool.execute(sql, [Number(id), grupoDatos]);
+    if (result.affectedRows === 0) return null;
+
+    return { ...proveedor, activo: false };
 }

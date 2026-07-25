@@ -2,12 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: siembra.middleware.js
+Archivo: preCria.middleware.js
 Autor: Joan
 Fecha: 04/07/2026
-Modulo: Siembra
+Modulo: pre-cria
 Descripcion:
-Middleware de validacion de body para el modulo de siembra.
+Middleware de validacion de body para el modulo de pre-cria.
 //////////////////////////////////////////////////////////
 */
 
@@ -16,19 +16,18 @@ Middleware de validacion de body para el modulo de siembra.
 IMPORTS
 //////////////////////////////////////////////////////////
 */
-
 import { error } from "../common/respuestaJson.js";
-
+ 
 /*
 //////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
+funciones principales
 //////////////////////////////////////////////////////////
 */
 
-export function validarBodySiembra(req, res, next) {
+export function validarBodyPrecria(req, res, next) {
     /*
     Descripcion:
-    Middleware encargado de interceptar y validar el cuerpo (body) de la peticion HTTP para asegurar que los datos obligatorios de siembra esten presentes y cumplan con los formatos esperados antes de pasar al controlador.
+    Middleware encargado de interceptar y validar el cuerpo (body) de la peticion HTTP para asegurar que los datos obligatorios de preCria esten presentes y cumplan con los formatos esperados antes de pasar al controlador.
     Parametros:
     - req: Objeto Request de Express (contiene body, params y user autenticado).
     - res: Objeto Response de Express para envio estructurado de JSON.

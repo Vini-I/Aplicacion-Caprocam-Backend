@@ -42,6 +42,11 @@ import trazabilidadRoutes from './routes/trazabilidad.routes.js';
 import procedenciaRouter from './routes/procedencia.routes.js';
 import laboratorioRouter from './routes/laboratorio.routes.js';
 import proveedorLarvaRouter from './routes/proveedorLarva.routes.js';
+import siembraRouter from './routes/siembra.route.js';
+import loteLarvaRouter from './routes/loteLarva.routes.js';
+import precriaRouter from './routes/preCria.routes.js';
+import proveedorRouter from './routes/proveedor.route.js';
+import inventarioRouter from './routes/inventario.routes.js';
 import mantenimientoTareaRouter   from './routes/mantenimientoTarea.routes.js';
 import mantenimientoProductoRouter from './routes/mantenimientoProducto.routes.js';
 
@@ -93,6 +98,11 @@ app.use('/api/v0/registrosTrazabilidad', trazabilidadRoutes);
 app.use('/api/v0/procedencias', procedenciaRouter);
 app.use('/api/v0/laboratorios', laboratorioRouter);
 app.use('/api/v0/proveedores-larva', proveedorLarvaRouter);
+app.use('/api/v0/siembras', siembraRouter);
+app.use('/api/v0/lotes-larva', loteLarvaRouter);
+app.use('/api/v0/precrias', precriaRouter);
+app.use('/api/v0/proveedores', proveedorRouter);
+app.use('/api/v0/inventario', inventarioRouter);
 
 app.use('/api/v0/mantenimientos', mantenimientoTareaRouter);
 app.use('/api/v0/mantenimientos', mantenimientoProductoRouter);
