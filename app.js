@@ -42,6 +42,9 @@ import trazabilidadRoutes from './routes/trazabilidad.routes.js';
 import procedenciaRouter from './routes/procedencia.routes.js';
 import laboratorioRouter from './routes/laboratorio.routes.js';
 import proveedorLarvaRouter from './routes/proveedorLarva.routes.js';
+import mantenimientoTareaRouter   from './routes/mantenimientoTarea.routes.js';
+import mantenimientoProductoRouter from './routes/mantenimientoProducto.routes.js';
+
 
 /*
 //////////////////////////////////////////////////////////
@@ -90,6 +93,9 @@ app.use('/api/v0/registrosTrazabilidad', trazabilidadRoutes);
 app.use('/api/v0/procedencias', procedenciaRouter);
 app.use('/api/v0/laboratorios', laboratorioRouter);
 app.use('/api/v0/proveedores-larva', proveedorLarvaRouter);
+
+app.use('/api/v0/mantenimientos', mantenimientoTareaRouter);
+app.use('/api/v0/mantenimientos', mantenimientoProductoRouter);
 
 /*
 //////////////////////////////////////////////////////////

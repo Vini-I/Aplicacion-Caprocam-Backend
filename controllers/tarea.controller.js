@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: tarea.controller.js
 Autor: Marco Vásquez
-Fecha: 04/07/2026
+Fecha: 22/07/2026
 Modulo: Tareas
 Descripcion:
 Recibe las peticiones HTTP, delega al servicio y modelo,
@@ -131,7 +131,7 @@ export async function getCatalogoTareas(req, res) {
     try {
         const grupoDatos = req.user.grupoDatos;
         const tareas     = await TareaModel.findAll(grupoDatos);
-        const catalogo   = tareas.map(t => ({ id: t.id, nombre: t.nombre }));
+        const catalogo   = tareas.map(t => ({ id: t.id, codigoTarea: t.codigoTarea, nombre: t.nombre }));
         return exito(res, 'Catalogo de tareas obtenido correctamente.', catalogo);
     } catch (err) {
         return error(res, 'Error al obtener catalogo de tareas.', err);
@@ -153,14 +153,12 @@ export async function createTarea(req, res) {
     */
     try {
         const grupoDatos = req.user.grupoDatos;
-        const { nombre, descripcion, categoria, horas,
-                colaboradorId, equipoId, estado } = req.body;
+        const { codigoTarea, nombre, descripcion, categoria, horas, estado } = req.body;
 
         const err = validarCuerpo({ nombre, descripcion, categoria, horas }, res);
         if (err) return err;
 
-        const dto   = new TareaDTO({ nombre, descripcion, categoria, horas,
-                                     colaboradorId, equipoId, estado });
+        const dto   = new TareaDTO({ codigoTarea, nombre, descripcion, categoria, horas, estado });
         const nueva = await TareaModel.create(dto, grupoDatos);
 
         return exito(res, 'Tarea creada correctamente.', nueva, 201);
@@ -173,6 +171,7 @@ export async function updateTarea(req, res) {
     /*
     Descripcion:
     Actualiza una tarea existente por su ID.
+    codigoTarea no se puede modificar.
 
     Parametros:
     - req: Objeto request de Express (req.params.id, req.body)
@@ -185,14 +184,12 @@ export async function updateTarea(req, res) {
     */
     try {
         const grupoDatos = req.user.grupoDatos;
-        const { nombre, descripcion, categoria, horas,
-                colaboradorId, equipoId, estado } = req.body;
+        const { nombre, descripcion, categoria, horas, estado } = req.body;
 
         const err = validarCuerpo({ nombre, descripcion, categoria, horas }, res);
         if (err) return err;
 
-        const dto         = new TareaDTO({ nombre, descripcion, categoria, horas,
-                                           colaboradorId, equipoId, estado });
+        const dto         = new TareaDTO({ nombre, descripcion, categoria, horas, estado });
         const actualizada = await TareaModel.update(req.params.id, dto, grupoDatos);
 
         if (!actualizada)
