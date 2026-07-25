@@ -202,3 +202,42 @@ export function isOxigeno(oxigeno) {
 
     return isArrayValido(oxigeno);
 }
+
+export function isListaMedicionesValida(lista) {
+    /*
+    Descripcion:
+    Valida que cada elemento de un arreglo de mediciones
+    (ph, salinidad, temperatura u oxigenoDisuelto) tenga
+    un valor numerico mayor a cero y una etiqueta con
+    contenido (ej. "1"/"2" para dia/noche).
+
+    Parametros:
+    - lista: Arreglo de mediciones ({ valor, etiqueta }).
+
+    Retorna:
+    - true si es valido.
+    - false si no.
+    */
+
+    if (!isArrayValido(lista)) {
+        return false;
+    }
+
+    for (let i = 0; i < lista.length; i++) {
+        const medicion = lista[i];
+
+        if (!medicion || typeof medicion !== "object") {
+            return false;
+        }
+
+        if (!isNumeroMayorCero(medicion.valor)) {
+            return false;
+        }
+
+        if (isEmpty(medicion.etiqueta)) {
+            return false;
+        }
+    }
+
+    return true;
+}

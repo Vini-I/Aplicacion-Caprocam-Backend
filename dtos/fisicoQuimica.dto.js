@@ -48,10 +48,10 @@ export class FisicoQuimicaDTO {
         - fincaId: Identificador de la finca.
         - estanqueId: Identificador del estanque.
         - fecha: Fecha de la lectura.
-        - ph: Valor de pH.
-        - salinidad: Valor de salinidad.
-        - temperatura: Valor de temperatura.
-        - oxigenoDisuelto: Valor de oxigeno disuelto.
+        - ph: Arreglo de mediciones de pH ({ valor, etiqueta }).
+        - salinidad: Arreglo de mediciones de salinidad.
+        - temperatura: Arreglo de mediciones de temperatura.
+        - oxigenoDisuelto: Arreglo de mediciones de oxigeno disuelto.
         */
 
         this.id = id;

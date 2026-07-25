@@ -11,13 +11,6 @@ Define las rutas HTTP del modulo de fisico quimica.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Librerias externas
-*/
 import { Router } from 'express';
 
 // Middlewares
@@ -28,33 +21,17 @@ import { validarFisicoQuimica } from '../middlewares/fisicoQuimica.middleware.js
 import {
     obtenerTodasLasLecturas,
     obtenerLecturaPorId,
+    obtenerLecturaPorEstanqueYFecha,
     registrarLectura,
-    desactivarLectura,
+    actualizarLectura,
 } from '../controllers/fisicoQuimica.controller.js';
-
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
 
 const router = Router();
 
-/*
-//////////////////////////////////////////////////////////
-RUTAS
-//////////////////////////////////////////////////////////
-*/
-
-router.get('/',           verificarAuth,                        obtenerTodasLasLecturas);
-router.get('/:id',        verificarAuth,                        obtenerLecturaPorId);
-router.post('/',          verificarAuth, validarFisicoQuimica,  registrarLectura);
-router.put('/:id/activo', verificarAuth,                        desactivarLectura);
-
-/*
-//////////////////////////////////////////////////////////
-EXPORT
-//////////////////////////////////////////////////////////
-*/
+router.get('/',                            verificarAuth, obtenerTodasLasLecturas);
+router.get('/estanque/:estanqueId',        verificarAuth, obtenerLecturaPorEstanqueYFecha);
+router.get('/:id',                         verificarAuth, obtenerLecturaPorId);
+router.post('/',                    verificarAuth, validarFisicoQuimica, registrarLectura);
+router.put('/:id',                  verificarAuth, validarFisicoQuimica, actualizarLectura);
 
 export default router;
