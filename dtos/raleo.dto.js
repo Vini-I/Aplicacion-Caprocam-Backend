@@ -37,7 +37,7 @@ export class RaleoDTO {
         Parametros:
         - id: Identificador unico                                                (requerido)
         - uuid: Identificador global usado para futura sincronizacion offline
-        - grupoDatos: Codigo del grupo de datos al que pertenece el estanque        
+        - grupoDatos: Codigo del grupo de datos al que pertenece el raleo        
         - idFinca: Identificador de la finca                                     (requerido)
         - idEstanque: Identificador del estanque                                 (requerido)
         - idColaborador: Identificador del colaborador                           (requerido)
@@ -79,17 +79,7 @@ export class RaleoDTO {
     }) {
         this.id              = id;
         this.uuid            = uuid;
-
-         /*
-        Si grupoDatos no viene definido, se utiliza 1 como valor
-        temporal para pruebas mientras se implementa autenticacion.
-        */
-        if (grupoDatos === undefined || grupoDatos === null || String(grupoDatos).trim() === "") {
-            this.grupoDatos = 1;
-        } else {
-            this.grupoDatos = Number(grupoDatos);
-        }
-
+        this.grupoDatos      = grupoDatos;
         this.idFinca         = Number(idFinca);
         this.idEstanque      = Number(idEstanque);
         this.idColaborador   = Number(idColaborador);

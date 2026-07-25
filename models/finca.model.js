@@ -45,7 +45,7 @@ export async function findAll(grupoDatos) {
     const [rows] = await pool.execute(
         `SELECT
             id,
-            codigo_cbo AS idCBO,
+            codigo_cbo AS codigoCBO,
             nombre_finca AS nombreFinca,
             provincia,
             canton,
@@ -63,13 +63,13 @@ export async function findAll(grupoDatos) {
     return rows;
 }
 
-export async function findByIdCBO(idCBO, grupoDatos) {
+export async function findByIdCBO(codigo_cbo, grupoDatos) {
     /*
     Descripcion:
     Obtiene un registro de finca por su ID CBO.
 
     Parametros:
-    - idCBO: ID CBO de la finca a buscar.
+    - codigo_cbo: ID CBO de la finca a buscar.
 
     Retorna:
     - El registro de finca encontrado, o null si no se encuentra.
@@ -77,7 +77,7 @@ export async function findByIdCBO(idCBO, grupoDatos) {
     const [rows] = await pool.execute(
         `SELECT
             id,
-            codigo_cbo AS idCBO,
+            codigo_cbo AS codigoCBO,
             nombre_finca AS nombreFinca,
             provincia,
             canton,
@@ -91,7 +91,7 @@ export async function findByIdCBO(idCBO, grupoDatos) {
         WHERE codigo_cbo = ?
         AND grupo_datos = ?
         AND deleted_at IS NULL`,
-        [idCBO, grupoDatos]
+        [codigo_cbo, grupoDatos]
     );
     return rows[0] || null;
 }
@@ -122,7 +122,7 @@ export async function create(dto) {
             espejos_agua
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
         [
-            dto.idCBO,
+            dto.codigoCBO,
             dto.grupoDatos,
             dto.nombreFinca,
             dto.provincia,
@@ -135,16 +135,16 @@ export async function create(dto) {
             dto.espejosAgua
         ]
     );
-    return await findByIdCBO(dto.idCBO, dto.grupoDatos);
+    return await findByIdCBO(dto.codigoCBO, dto.grupoDatos);
 }
 
-export async function update(idCBO, grupoDatos, dto){
+export async function update(codigoCBO, grupoDatos, dto){
     /*
     Descripcion:
     Actualiza un registro de finca existente.
 
     Parametros:
-    - idCBO: ID CBO de la finca a actualizar.
+    - codigoCBO: ID CBO de la finca a actualizar.
     - dto: Objeto con los datos de la finca a actualizar.
 
     Retorna:
@@ -166,7 +166,7 @@ export async function update(idCBO, grupoDatos, dto){
             espejos_agua=?
         WHERE codigo_cbo=?`,
         [
-            dto.grupoDatos,
+            grupoDatos,
             dto.nombreFinca,
             dto.provincia,
             dto.canton,
@@ -176,25 +176,25 @@ export async function update(idCBO, grupoDatos, dto){
             dto.telefono,
             dto.areaTotal,
             dto.espejosAgua,
-            idCBO
+            codigoCBO
         ]
     );
-    return await findByIdCBO(dto.idCBO, dto.grupoDatos);
+    return await findByIdCBO(codigoCBO, grupoDatos);
 }
 
-export async function remove(idCBO, grupoDatos){
+export async function remove(codigoCBO, grupoDatos){
     /*
     Descripcion:
     Elimina un registro de finca existente.
 
     Parametros:
-    - idCBO: ID CBO de la finca a eliminar.
+    - codigoCBO: Codigo CBO de la finca a eliminar.
 
     Retorna:
     - El registro de finca eliminado, o null si no se encuentra.
     */
 
-    const finca=await findByIdCBO(idCBO, grupoDatos);
+    const finca=await findByIdCBO(codigoCBO, grupoDatos);
 
     if(!finca){
         return null;
@@ -205,7 +205,7 @@ export async function remove(idCBO, grupoDatos){
         SET deleted_at = NOW()
         WHERE codigo_cbo = ?
         AND grupo_datos = ?`,
-        [idCBO, grupoDatos]
+        [codigoCBO, grupoDatos]
     );
     return finca;
 }
