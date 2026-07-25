@@ -47,6 +47,10 @@ import loteLarvaRouter from './routes/loteLarva.routes.js';
 import precriaRouter from './routes/preCria.routes.js';
 import proveedorRouter from './routes/proveedor.route.js';
 import inventarioRouter from './routes/inventario.routes.js';
+import mantenimientoTareaRouter   from './routes/mantenimientoTarea.routes.js';
+import mantenimientoProductoRouter from './routes/mantenimientoProducto.routes.js';
+
+
 /*
 //////////////////////////////////////////////////////////
 CONSTANTES
@@ -99,6 +103,10 @@ app.use('/api/v0/lotes-larva', loteLarvaRouter);
 app.use('/api/v0/precrias', precriaRouter);
 app.use('/api/v0/proveedores', proveedorRouter);
 app.use('/api/v0/inventario', inventarioRouter);
+
+app.use('/api/v0/mantenimientos', mantenimientoTareaRouter);
+app.use('/api/v0/mantenimientos', mantenimientoProductoRouter);
+
 /*
 //////////////////////////////////////////////////////////
 ENDPOINT DE VERIFICACION

@@ -318,9 +318,11 @@ export async function createAlimentacion(req, res) {
     - 422 si hay errores de validacion.
     - 500 si ocurre un error en la base de datos.
     */
+    const grupoDatos = req.user.grupoDatos;
+    const idProveedor = req.user.idProveedor;
 
     try {
-        const grupoDatos = req.user.grupoDatos;
+        
 
         const err = validarCuerpo(req.body, res);
 
@@ -349,7 +351,7 @@ export async function createAlimentacion(req, res) {
 
         const dto = new AlimentacionDTO(req.body, grupoDatos);
 
-        const nuevo = await AlimentacionModel.create(dto);
+        const nuevo = await AlimentacionModel.create(dto, idProveedor );
 
         return exito(res, "Registro de alimentacion creado correctamente.", nuevo, 201);
     } catch (err) {
