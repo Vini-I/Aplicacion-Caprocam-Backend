@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.model.js
 Autor: Jose Espinoza
-Fecha: 21/07/2026
+Fecha: 24/07/2026
 Modulo: Productos
 Descripcion:
 Maneja las consultas SQL directas a la base de datos para Productos,
@@ -43,6 +43,7 @@ export async function findAll() {
 export async function findByName(nombre) {
     const [rows] = await pool.query(
         `SELECT 
+            p.id,
             p.nombre, 
             p.categoria, 
             p.precio_unidad AS precioUnidad, 
@@ -79,7 +80,8 @@ export async function findById(id) {
 }
 
 /**
- * Crea un producto procesando el DTO enviado por el Front (incluyendo entryDate y expirationDate).
+ * Crea un producto procesando el DTO enviado por el Front 
+ * (recibe codigo, cantidad, stockMinimo pero inserta en las columnas validas de la BD).
  */
 export async function create(dto) {
     const { 

@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.controller.js
 Autor: Jose Espinoza
-Fecha: 21/07/2026
+Fecha: 24/07/2026
 Modulo: Productos
 Descripcion:
 Controlador HTTP para Productos.
@@ -60,6 +60,8 @@ export async function crearProducto(req, res) {
     try {
         const dto = {
             ...req.body,
+            cantidad: req.body.cantidad ?? 0,
+            stockMinimo: req.body.stockMinimo ?? req.body.stock_minimo ?? 0,
             grupoDatos: req.grupoDatos ?? 1
         };
 
@@ -76,7 +78,13 @@ export async function crearProducto(req, res) {
 export async function actualizarProducto(req, res) {
     try {
         const { id } = req.params;
-        const productoActualizado = await productoModel.update(id, req.body);
+        const dto = {
+            ...req.body,
+            cantidad: req.body.cantidad ?? 0,
+            stockMinimo: req.body.stockMinimo ?? req.body.stock_minimo ?? 0
+        };
+
+        const productoActualizado = await productoModel.update(id, dto);
 
         if (!productoActualizado) {
             return res.status(404).json({ message: 'Producto no encontrado o inactivo' });
