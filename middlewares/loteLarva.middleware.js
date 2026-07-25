@@ -2,12 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: siembra.middleware.js
+Archivo: loteLarva.middleware.js
 Autor: Joan
 Fecha: 04/07/2026
-Modulo: Siembra
+Modulo: LoteLarva
 Descripcion:
-Middleware de validacion de body para el modulo de siembra.
+Middleware de validacion de body para el modulo de lote de larva.
 //////////////////////////////////////////////////////////
 */
 
@@ -17,18 +17,19 @@ IMPORTS
 //////////////////////////////////////////////////////////
 */
 
+ 
 import { error } from "../common/respuestaJson.js";
 
 /*
 //////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
+funciones principales
 //////////////////////////////////////////////////////////
 */
-
-export function validarBodySiembra(req, res, next) {
+ 
+export function validarBodyLote(req, res, next) {
     /*
     Descripcion:
-    Middleware encargado de interceptar y validar el cuerpo (body) de la peticion HTTP para asegurar que los datos obligatorios de siembra esten presentes y cumplan con los formatos esperados antes de pasar al controlador.
+    Middleware encargado de interceptar y validar el cuerpo (body) de la peticion HTTP para asegurar que los datos obligatorios de loteLarva esten presentes y cumplan con los formatos esperados antes de pasar al controlador.
     Parametros:
     - req: Objeto Request de Express (contiene body, params y user autenticado).
     - res: Objeto Response de Express para envio estructurado de JSON.
