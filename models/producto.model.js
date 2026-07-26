@@ -128,12 +128,12 @@ export async function create(dto) {
 
     const productoId = resultProducto.insertId;
 
-    // 2. Insertar automáticamente el saldo inicial en la tabla inventario
+    // 2. Insertar automáticamente el saldo inicial en la tabla inventario (incluyendo proveedor_id)
     try {
         await pool.query(
-            `INSERT INTO inventario (producto_id, cantidad, stock_minimo, grupo_datos) 
-             VALUES (?, ?, ?, ?)`,
-            [productoId, cantidad || 0, stockMinimo || 0, gd]
+            `INSERT INTO inventario (producto_id, proveedor_id, cantidad, stock_minimo, grupo_datos) 
+             VALUES (?, ?, ?, ?, ?)`,
+            [productoId, proveedorId || null, cantidad || 0, stockMinimo || 0, gd]
         );
     } catch (invError) {
         console.warn("Aviso: No se pudo insertar en la tabla inventario directamente:", invError.message);
@@ -182,11 +182,11 @@ export async function update(id, dto) {
 
     if (result.affectedRows === 0) return null;
 
-    // Actualizar inventario si existe
+    // Actualizar inventario si existe (sincronizando proveedor_id)
     try {
         await pool.query(
-            `UPDATE inventario SET cantidad = ?, stock_minimo = ? WHERE producto_id = ?`,
-            [cantidad || 0, stockMinimo || 0, id]
+            `UPDATE inventario SET proveedor_id = ?, cantidad = ?, stock_minimo = ? WHERE producto_id = ?`,
+            [proveedorId || null, cantidad || 0, stockMinimo || 0, id]
         );
     } catch (invError) {
         console.warn("Aviso: No se pudo actualizar en la tabla inventario:", invError.message);
