@@ -21,6 +21,7 @@ export async function findAll() {
     const [rows] = await pool.query(
         `SELECT 
             p.id, 
+            p.codigo,
             p.uuid, 
             p.grupo_datos AS grupoDatos, 
             p.proveedor_id AS proveedorId, 
@@ -47,6 +48,7 @@ export async function findByName(nombre) {
     const [rows] = await pool.query(
         `SELECT 
             p.id,
+            p.codigo,
             p.nombre, 
             p.categoria, 
             p.precio_unidad AS precioUnidad, 
@@ -65,6 +67,7 @@ export async function findById(id) {
     const [rows] = await pool.query(
         `SELECT 
             p.id, 
+            p.codigo,
             p.uuid, 
             p.grupo_datos AS grupoDatos, 
             p.proveedor_id AS proveedorId, 
@@ -90,6 +93,7 @@ export async function findById(id) {
  */
 export async function create(dto) {
     const { 
+        codigo,
         proveedorId, 
         nombre, 
         categoria, 
@@ -104,12 +108,13 @@ export async function create(dto) {
     
     const gd = grupoDatos ?? 1;
 
-    // 1. Insertar en la tabla productos
+    // 1. Insertar en la tabla productos incluyendo el campo codigo
     const [resultProducto] = await pool.query(
         `INSERT INTO productos 
-            (grupo_datos, proveedor_id, nombre, categoria, unidad, precio_unidad, fecha_ingreso, fecha_caducidad, estado) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, "ACTIVO")`,
+            (codigo, grupo_datos, proveedor_id, nombre, categoria, unidad, precio_unidad, fecha_ingreso, fecha_caducidad, estado) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "ACTIVO")`,
         [
+            codigo || null,
             gd, 
             proveedorId || null, 
             nombre, 
@@ -146,6 +151,7 @@ export async function create(dto) {
  */
 export async function update(id, dto) {
     const { 
+        codigo,
         proveedorId, 
         nombre, 
         categoria, 
@@ -159,9 +165,10 @@ export async function update(id, dto) {
 
     const [result] = await pool.query(
         `UPDATE productos 
-         SET proveedor_id = ?, nombre = ?, categoria = ?, unidad = ?, precio_unidad = ?, fecha_ingreso = ?, fecha_caducidad = ? 
+         SET codigo = ?, proveedor_id = ?, nombre = ?, categoria = ?, unidad = ?, precio_unidad = ?, fecha_ingreso = ?, fecha_caducidad = ? 
          WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
         [
+            codigo || null,
             proveedorId || null, 
             nombre, 
             categoria || null, 
