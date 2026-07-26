@@ -115,15 +115,13 @@ export class ParasitologiaDTO {
         this.id = id;
         this.uuid = uuid;
 
-        /*
-        Si grupoDatos no viene definido, se utiliza 1 como valor
-        temporal para pruebas mientras se implementa autenticacion.
+       /*
+        El grupoDatos es proporcionado por el controller
+        desde la informacion obtenida del JWT.
         */
-        if (grupoDatos === undefined || grupoDatos === null || String(grupoDatos).trim() === "") {
-            this.grupoDatos = 1;
-        } else {
-            this.grupoDatos = Number(grupoDatos);
-        }
+
+        this.grupoDatos = Number(
+         grupoDatos);
 
         /*
         Se permite recibir fincaId o idFinca para mantener compatibilidad

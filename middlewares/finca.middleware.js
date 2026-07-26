@@ -47,7 +47,7 @@ export function validarMantFinca(req, res, next) {
 
   const {
     grupoDatos,
-    idCBO,
+    codigoCBO,
     nombreFinca,
     provincia,
     canton,
@@ -63,7 +63,7 @@ export function validarMantFinca(req, res, next) {
     return error(res, "El grupo de datos es obligatorio.", null, 400);
   }
 
-  if (!idCBO || String(idCBO).trim() === "") {
+  if (!codigoCBO || String(codigoCBO).trim() === "") {
     return error(res, "El ID CBO es obligatorio.", null, 400);
   }
 
@@ -104,12 +104,7 @@ export function validarMantFinca(req, res, next) {
     isNaN(espejosAgua) ||
     Number(espejosAgua) <= 0
   ) {
-    return error(
-      res,
-      "El área de espejos de agua debe ser mayor que cero.",
-      null,
-      400,
-    );
+    return error(res, "El área de espejos de agua debe ser mayor que cero.", null, 400,);
   }
 
   next();

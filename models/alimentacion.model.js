@@ -103,7 +103,7 @@ export async function findAll(filtros) {
     return mapearLista(rows);
 }
 
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
     Busca un registro de alimentacion activo por su identificador
@@ -144,9 +144,10 @@ export async function findById(id) {
         WHERE id = ?
         AND deleted_at IS NULL
         AND activo = TRUE
+        AND grupo_datos = ?
         LIMIT 1
         `,
-        [id]
+        [id, grupoDatos]
     );
 
     if (rows.length === 0) {
@@ -156,7 +157,7 @@ export async function findById(id) {
     return mapearFila(rows[0]);
 }
 
-export async function findByFechaHoraEstanque(fecha, hora, idEstanque, idIgnorado) {
+export async function findByFechaHoraEstanque(fecha, hora, idEstanque, idIgnorado, grupoDatos) {
     /*
     Descripcion:
     Busca un registro de alimentacion por fecha, hora y estanque.
@@ -200,11 +201,12 @@ export async function findByFechaHoraEstanque(fecha, hora, idEstanque, idIgnorad
         FROM alimentaciones
         WHERE fecha = ?
         AND estanque_id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
     `;
 
-    const params = [fecha, idEstanque];
+    const params = [fecha, idEstanque, grupoDatos];
 
     if (hora !== null) {
         if (hora !== undefined) {
@@ -231,7 +233,7 @@ export async function findByFechaHoraEstanque(fecha, hora, idEstanque, idIgnorad
     return mapearFila(rows[0]);
 }
 
-export async function create(dto) {
+export async function create(dto, idProveedor) {
     /*
     Descripcion:
     Inserta un nuevo registro de alimentacion en la base de datos.
@@ -269,7 +271,7 @@ export async function create(dto) {
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
-            dto.idProveedor,
+            idProveedor,
             dto.idProducto,
             fecha,
             dto.hora,
@@ -282,10 +284,10 @@ export async function create(dto) {
         ]
     );
 
-    return await findById(result.insertId);
+    return await findById(result.insertId, grupoDatos);
 }
 
-export async function update(id, dto) {
+export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
     Actualiza un registro de alimentacion existente en la base de datos.
@@ -300,13 +302,12 @@ export async function update(id, dto) {
     - null si el registro no existe o fue eliminado logicamente.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(id, grupoDatos);
 
     if (!actual) {
         return null;
     }
 
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
     const fecha = normalizarFechaMysql(dto.fecha);
 
     await pool.execute(
@@ -349,10 +350,10 @@ export async function update(id, dto) {
         ]
     );
 
-    return await findById(id);
+    return await findById(id, grupoDatos);
 }
 
-export async function remove(id) {
+export async function remove(id, grupoDatos) {
     /*
     Descripcion:
     Elimina logicamente un registro de alimentacion.
@@ -361,13 +362,14 @@ export async function remove(id) {
 
     Parametros:
     - id: Identificador del registro que se desea eliminar.
+    - grupoDatos: Grupo de datos del usuario.
 
     Retorna:
     - El registro eliminado logicamente.
     - null si el registro no existe o ya fue eliminado.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(id, grupoDatos);
 
     if (!actual) {
         return null;
@@ -381,10 +383,11 @@ export async function remove(id) {
             deleted_at = CURRENT_TIMESTAMP,
             version = version + 1
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         `,
-        [id]
+        [id, grupoDatos]
     );
 
     return actual;
