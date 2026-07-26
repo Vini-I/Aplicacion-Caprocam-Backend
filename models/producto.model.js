@@ -7,8 +7,8 @@ Autor: Jose Espinoza
 Fecha: 24/07/2026
 Modulo: Productos
 Descripcion:
-Maneja las consultas SQL directas a la base de datos para Productos,
-mapeando los campos del frontend con el esquema real de MySQL.
+Maneja las consultas SQL directas a la base de datos para Productos e
+inserta la entrada inicial de inventario en la tabla correspondiente.
 //////////////////////////////////////////////////////////
 */
 
@@ -20,19 +20,23 @@ import pool from '../config/database.js';
 export async function findAll() {
     const [rows] = await pool.query(
         `SELECT 
-            id, 
-            uuid, 
-            grupo_datos AS grupoDatos, 
-            proveedor_id AS proveedorId, 
-            nombre, 
-            categoria, 
-            unidad, 
-            precio_unidad AS precioUnidad, 
-            fecha_ingreso AS entryDate, 
-            fecha_caducidad AS expirationDate, 
-            estado 
-         FROM productos 
-         WHERE estado = "ACTIVO" AND deleted_at IS NULL`
+            p.id, 
+            p.codigo,
+            p.uuid, 
+            p.grupo_datos AS grupoDatos, 
+            p.proveedor_id AS proveedorId, 
+            p.nombre, 
+            p.categoria, 
+            p.unidad, 
+            p.precio_unidad AS precioUnidad, 
+            COALESCE(i.cantidad, 0) AS cantidad,
+            COALESCE(i.stock_minimo, 0) AS stockMinimo,
+            p.fecha_ingreso AS entryDate, 
+            p.fecha_caducidad AS expirationDate, 
+            p.estado 
+         FROM productos p
+         LEFT JOIN inventario i ON p.id = i.producto_id
+         WHERE p.estado = "ACTIVO" AND p.deleted_at IS NULL`
     );
     return rows;
 }
@@ -44,6 +48,7 @@ export async function findByName(nombre) {
     const [rows] = await pool.query(
         `SELECT 
             p.id,
+            p.codigo,
             p.nombre, 
             p.categoria, 
             p.precio_unidad AS precioUnidad, 
@@ -56,40 +61,46 @@ export async function findByName(nombre) {
 }
 
 /**
- * Busca un producto por ID con el mapeo completo de campos.
+ * Busca un producto por ID con el mapeo completo de campos e información de inventario.
  */
 export async function findById(id) {
     const [rows] = await pool.query(
         `SELECT 
-            id, 
-            uuid, 
-            grupo_datos AS grupoDatos, 
-            proveedor_id AS proveedorId, 
-            nombre, 
-            categoria, 
-            unidad, 
-            precio_unidad AS precioUnidad, 
-            fecha_ingreso AS entryDate, 
-            fecha_caducidad AS expirationDate, 
-            estado 
-         FROM productos 
-         WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
+            p.id, 
+            p.codigo,
+            p.uuid, 
+            p.grupo_datos AS grupoDatos, 
+            p.proveedor_id AS proveedorId, 
+            p.nombre, 
+            p.categoria, 
+            p.unidad, 
+            p.precio_unidad AS precioUnidad, 
+            COALESCE(i.cantidad, 0) AS cantidad,
+            COALESCE(i.stock_minimo, 0) AS stockMinimo,
+            p.fecha_ingreso AS entryDate, 
+            p.fecha_caducidad AS expirationDate, 
+            p.estado 
+         FROM productos p
+         LEFT JOIN inventario i ON p.id = i.producto_id
+         WHERE p.id = ? AND p.estado = "ACTIVO" AND p.deleted_at IS NULL`,
         [id]
     );
     return rows.length > 0 ? rows[0] : null;
 }
 
 /**
- * Crea un producto procesando el DTO enviado por el Front 
- * (recibe codigo, cantidad, stockMinimo pero inserta en las columnas validas de la BD).
+ * Crea un producto y automáticamente registra el saldo inicial en la tabla inventario.
  */
 export async function create(dto) {
     const { 
+        codigo,
         proveedorId, 
         nombre, 
         categoria, 
         unidad, 
         precioUnidad, 
+        cantidad,
+        stockMinimo,
         entryDate, 
         expirationDate, 
         grupoDatos 
@@ -97,11 +108,13 @@ export async function create(dto) {
     
     const gd = grupoDatos ?? 1;
 
-    const [result] = await pool.query(
+    // 1. Insertar en la tabla productos incluyendo el campo codigo
+    const [resultProducto] = await pool.query(
         `INSERT INTO productos 
-            (grupo_datos, proveedor_id, nombre, categoria, unidad, precio_unidad, fecha_ingreso, fecha_caducidad, estado) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, "ACTIVO")`,
+            (codigo, grupo_datos, proveedor_id, nombre, categoria, unidad, precio_unidad, fecha_ingreso, fecha_caducidad, estado) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "ACTIVO")`,
         [
+            codigo || null,
             gd, 
             proveedorId || null, 
             nombre, 
@@ -113,32 +126,49 @@ export async function create(dto) {
         ]
     );
 
+    const productoId = resultProducto.insertId;
+
+    // 2. Insertar automáticamente el saldo inicial en la tabla inventario (incluyendo proveedor_id)
+    try {
+        await pool.query(
+            `INSERT INTO inventario (producto_id, proveedor_id, cantidad, stock_minimo, grupo_datos) 
+             VALUES (?, ?, ?, ?, ?)`,
+            [productoId, proveedorId || null, cantidad || 0, stockMinimo || 0, gd]
+        );
+    } catch (invError) {
+        console.warn("Aviso: No se pudo insertar en la tabla inventario directamente:", invError.message);
+    }
+
     return {
-        id: result.insertId,
+        id: productoId,
         ...dto,
         estado: 'ACTIVO'
     };
 }
 
 /**
- * Actualiza un producto por su ID.
+ * Actualiza un producto por su ID y actualiza su registro en inventario.
  */
 export async function update(id, dto) {
     const { 
+        codigo,
         proveedorId, 
         nombre, 
         categoria, 
         unidad, 
         precioUnidad, 
+        cantidad,
+        stockMinimo,
         entryDate, 
         expirationDate 
     } = dto;
 
     const [result] = await pool.query(
         `UPDATE productos 
-         SET proveedor_id = ?, nombre = ?, categoria = ?, unidad = ?, precio_unidad = ?, fecha_ingreso = ?, fecha_caducidad = ? 
+         SET codigo = ?, proveedor_id = ?, nombre = ?, categoria = ?, unidad = ?, precio_unidad = ?, fecha_ingreso = ?, fecha_caducidad = ? 
          WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
         [
+            codigo || null,
             proveedorId || null, 
             nombre, 
             categoria || null, 
@@ -151,6 +181,16 @@ export async function update(id, dto) {
     );
 
     if (result.affectedRows === 0) return null;
+
+    // Actualizar inventario si existe (sincronizando proveedor_id)
+    try {
+        await pool.query(
+            `UPDATE inventario SET proveedor_id = ?, cantidad = ?, stock_minimo = ? WHERE producto_id = ?`,
+            [proveedorId || null, cantidad || 0, stockMinimo || 0, id]
+        );
+    } catch (invError) {
+        console.warn("Aviso: No se pudo actualizar en la tabla inventario:", invError.message);
+    }
 
     return {
         id: Number(id),
