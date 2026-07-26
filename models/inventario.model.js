@@ -42,7 +42,7 @@ const SELECT_JOIN = `
         i.cantidad,
         i.stock_minimo,
         i.proveedor_id,
-        prov.nombre      AS nombre_proveedor,
+        prov.nombre_empresa      AS nombre_proveedor,
         i.version,
         i.fecha_creacion,
         i.fecha_actualizacion,
