@@ -47,6 +47,7 @@ const SELECT_JOIN = `
         i.fecha_creacion,
         i.fecha_actualizacion,
         p.id             AS prod_id,
+        p.codigo, 
         p.nombre,
         p.categoria,
         p.unidad,
