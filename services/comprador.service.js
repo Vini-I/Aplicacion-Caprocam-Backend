@@ -13,19 +13,31 @@ Reglas de negocio y funciones de validacion para compradores.
 
 const phoneRegex = /^\d{8}$/;
 
+/**
+ * Descripcion:
+ * Valida si el valor ingresado es un numero telefonico de 8 digitos.
+ *
+ * Parametros:
+ * - phone: Cadena o numero a evaluar.
+ *
+ * Retorna:
+ * - Boolean indicando si es valido o no.
+ */
 export function isPhone(phone) {
-    /*
-    Descripcion:
-    Valida si el valor ingresado es un numero telefonico de 8 digitos.
-    */
     if (phone === undefined || phone === null) return false;
     return phoneRegex.test(String(phone).trim());
 }
 
+/**
+ * Descripcion:
+ * Verifica si una cadena de texto esta vacia.
+ *
+ * Parametros:
+ * - string: Texto a evaluar.
+ *
+ * Retorna:
+ * - Boolean indicando si esta vacia.
+ */
 export function isEmpty(string) {
-    /*
-    Descripcion:
-    Verifica si una cadena de texto esta vacia.
-    */
     return !string || String(string).trim().length === 0;
 }

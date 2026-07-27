@@ -19,6 +19,17 @@ export const CategoriasProducto = Object.freeze({
 });
 
 export class ProductoDTO {
+    /**
+     * Descripcion:
+     * Construye un objeto ProductoDTO alineado con el frontend.
+     * Acepta tanto nomenclaturas en ingles como en espanol.
+     *
+     * Parametros:
+     * - data: Objeto con las propiedades del producto.
+     *
+     * Retorna:
+     * - Instancia normalizada de ProductoDTO.
+     */
     constructor({
         id,
         codigo,
@@ -36,12 +47,7 @@ export class ProductoDTO {
         fechaCaducidad,
         fechaVencimiento,
         estado,
-    }) {
-        /*
-        Descripcion:
-        Construye un objeto ProductoDTO alineado con el frontend.
-        Acepta tanto nomenclaturas en ingles como en espanol.
-        */
+    } = {}) {
         this.id             = id;
         this.codigo         = codigo         ?? null;
         this.grupoDatos     = grupoDatos;

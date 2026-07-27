@@ -12,22 +12,38 @@ Archivo de transferencia de datos para compradores.
 */
 
 export class CompradorDTO {
-    constructor({ id, grupoDatos, nombre, contacto, estado }) {
-        /*
-        Descripcion:
-        Construye un objeto CompradorDTO con los datos recibidos.
-
-        Parametros:
-        - id:         ID unico (opcional)
-        - grupoDatos: Grupo de datos del usuario
-        - nombre:     Nombre del comprador (requerido)
-        - contacto:   Datos de contacto/telefono (opcional)
-        - estado:     Estado del comprador (default ACTIVO)
-        */
+    /**
+     * Descripcion:
+     * Construye un objeto CompradorDTO mapeando campos del frontend.
+     *
+     * Parametros:
+     * - data: Objeto con los datos recibidos del request.
+     *
+     * Retorna:
+     * - Instancia limpia de CompradorDTO.
+     */
+    constructor({
+        id,
+        grupoDatos,
+        nombre,
+        cedula,
+        contacto,
+        identificacion,
+        telefono,
+        email,
+        correo,
+        direccion,
+        notas,
+        estado,
+    } = {}) {
         this.id         = id;
         this.grupoDatos = grupoDatos;
         this.nombre     = nombre;
-        this.contacto   = contacto ?? null;
-        this.estado     = estado   ?? 'ACTIVO';
+        this.contacto   = cedula ?? contacto ?? identificacion ?? null;
+        this.telefono   = telefono ?? null;
+        this.correo     = email ?? correo ?? null;
+        this.direccion  = direccion ?? null;
+        this.notas      = notas ?? null;
+        this.estado     = estado ?? 'ACTIVO';
     }
 }

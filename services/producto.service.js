@@ -11,26 +11,44 @@ Reglas de negocio y utilidades de validacion de productos.
 //////////////////////////////////////////////////////////
 */
 
+/**
+ * Descripcion:
+ * Verifica si un texto esta vacio o solo contiene espacios.
+ *
+ * Parametros:
+ * - string: Texto a evaluar.
+ *
+ * Retorna:
+ * - Boolean indicando si esta vacio.
+ */
 export function isEmpty(string) {
-    /*
-    Descripcion:
-    Verifica si un texto esta vacio o solo contiene espacios.
-    */
     return !string || string.trim().length === 0;
 }
 
+/**
+ * Descripcion:
+ * Verifica si un valor es un numero negativo.
+ *
+ * Parametros:
+ * - value: Valor numerico a evaluar.
+ *
+ * Retorna:
+ * - Boolean indicando si es negativo.
+ */
 export function isNumericNegative(value) {
-    /*
-    Descripcion:
-    Verifica si un valor es un numero negativo.
-    */
     return value !== undefined && Number(value) < 0;
 }
 
+/**
+ * Descripcion:
+ * Verifica si el precio unitario es menor o igual a cero.
+ *
+ * Parametros:
+ * - value: Precio a evaluar.
+ *
+ * Retorna:
+ * - Boolean indicando si es invalido.
+ */
 export function isPrecioInvalido(value) {
-    /*
-    Descripcion:
-    Verifica si el precio unitario es menor o igual a cero.
-    */
     return value !== undefined && Number(value) <= 0;
 }
