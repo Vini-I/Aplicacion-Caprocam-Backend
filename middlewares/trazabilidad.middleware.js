@@ -70,6 +70,24 @@ function estaVacio(valor) {
     return false;
 }
 
+function esNumeroMayorCero(valor) {
+    /*
+    Descripcion:
+    Verifica que un valor sea numerico y mayor a
+    cero. Centraliza aqui la validacion de formato
+    que antes se repetia en el controller.
+
+    Parametros:
+    - valor: Valor a revisar.
+
+    Retorna:
+    - true si es un numero valido mayor a cero.
+    - false en cualquier otro caso.
+    */
+    const numero = Number(valor);
+    return !Number.isNaN(numero) && numero > 0;
+}
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
@@ -124,6 +142,25 @@ export function validarTrazabilidad(req, res, next) {
 
     if (fechaIngresada > hoy)
         return error(res, 'La fecha no puede ser futura.', null, 400);
+
+    const camposNumericos = {
+        fincaId: req.body.fincaId,
+        estanqueOrigenId: req.body.estanqueOrigenId,
+        estanqueDestinoId: req.body.estanqueDestinoId,
+        tamano: req.body.tamano,
+        dias: req.body.dias,
+        pl: req.body.pl,
+    };
+
+    for (const [campo, valor] of Object.entries(camposNumericos)) {
+        if (!esNumeroMayorCero(valor))
+            return error(
+                res,
+                `El campo ${campo} debe ser numerico y mayor a cero.`,
+                null,
+                400
+            );
+    }
 
     next();
 }

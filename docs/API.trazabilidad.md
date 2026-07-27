@@ -92,16 +92,17 @@ Body (JSON):
     "estanqueOrigenId":  1,
     "estanqueDestinoId": 2,
     "fecha":             "2026-07-19",
-    "colaboradorId":     1,
     "tamano":            0.5,
     "dias":              30,
     "pl":                15000
 }
 
 Notas:
-- `fincaId`, `estanqueOrigenId`, `estanqueDestinoId` y `colaboradorId` son numericos (IDs reales de la base de datos, no slugs de texto).
+- `colaboradorId` **no se envia en el body**: se toma del JWT (`req.user.colaboradorId`) del usuario autenticado. Si el token no trae ese campo, el endpoint responde `401`.
+- `fincaId`, `estanqueOrigenId` y `estanqueDestinoId` son numericos (IDs reales de la base de datos, no slugs de texto).
 - `estanqueOrigenId` y `estanqueDestinoId` no pueden ser el mismo valor.
 - `fecha` no puede ser una fecha futura.
+- `estanqueDestinoId` no puede estar ocupado: si su ultimo movimiento activo lo dejo como destino (sin un movimiento posterior que lo libere como origen), el endpoint responde `400`.
 - `tipoMovimiento` no se envia en el body: el backend siempre lo guarda como `"SIEMBRA"`.
 
 Respuesta exitosa:
@@ -138,27 +139,20 @@ Respuesta de error:
     "error": null
 }
 
----
-
-## PUT /api/v0/registrosTrazabilidad/:id/activo
-Realiza el borrado logico de un registro de trazabilidad.
-Invierte el estado activo del registro.
-
-Parametros URL:
-- id: ID numerico del registro.
-
-Respuesta exitosa:
-200 OK
-{
-    "success": true,
-    "message": "Estado actualizado correctamente.",
-    "data": { ... }
-}
-
-Respuesta de error:
-404 Not Found
+400 Bad Request (estanque destino ocupado)
 {
     "success": false,
-    "message": "Registro no encontrado.",
+    "message": "El estanque destino ya tiene un movimiento activo. Debe liberarse antes de recibir un nuevo movimiento.",
     "error": null
 }
+
+401 Unauthorized (token sin colaboradorId)
+{
+    "success": false,
+    "message": "No se pudo identificar al colaborador desde la sesion (token sin colaboradorId).",
+    "error": null
+}
+
+---
+
+Trazabilidad es un historico de movimientos: no existe edicion ni borrado (ni fisico ni logico). Si un movimiento se registro mal, se corrige registrando un movimiento nuevo, no editando ni ocultando el original.

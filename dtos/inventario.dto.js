@@ -87,6 +87,22 @@ export class InventarioUpdateDTO {
     }
 }
  
+
+ 
+
+function formatearFechaDDMMAAAA(valor) {
+    if (!valor) return null;
+
+    const fecha = valor instanceof Date ? valor : new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return null;
+
+    const dia = String(fecha.getDate()).padStart(2, "0");
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const anio = fecha.getFullYear();
+
+    return `${dia}/${mes}/${anio}`;
+}
+
 /*
 //////////////////////////////////////////////////////////
 MAPPER DE SALIDA — fila JOIN (inventario + productos) -> camelCase
@@ -96,7 +112,7 @@ Se sigue usando JOIN solo para enriquecer la respuesta con el
 nombre/categoria del producto; el modulo de productos sigue
 siendo el dueño de esos datos.
 */
- 
+
 export function mapearInventario(row) {
     /*
     Descripcion:
@@ -116,6 +132,7 @@ export function mapearInventario(row) {
         id:                 row.inv_id,
         uuid:               row.inv_uuid,
         productoId:         row.prod_id,
+        codigo:             row.codigo, 
         nombre:             row.nombre,
         categoria:          row.categoria,
         unidad:             row.unidad,
@@ -125,6 +142,7 @@ export function mapearInventario(row) {
         nombreProveedor:    row.nombre_proveedor,
         cantidad:           Number(row.cantidad),
         stockMinimo:        Number(row.stock_minimo),
+        fechaCaducidad:     formatearFechaDDMMAAAA(row.fecha_caducidad),  
         estado:             row.estado,
         activo:             Boolean(row.inv_activo),
         version:            row.version,
