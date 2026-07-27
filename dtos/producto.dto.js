@@ -31,12 +31,16 @@ export class ProductoDTO {
         cantidad,
         stockMinimo,
         entryDate,
+        fechaIngreso,
         expirationDate,
+        fechaCaducidad,
+        fechaVencimiento,
         estado,
     }) {
         /*
         Descripcion:
         Construye un objeto ProductoDTO alineado con el frontend.
+        Acepta tanto nomenclaturas en ingles como en espanol.
         */
         this.id             = id;
         this.codigo         = codigo         ?? null;
@@ -48,8 +52,8 @@ export class ProductoDTO {
         this.precioUnidad   = precioUnidad   ?? 0;
         this.cantidad       = cantidad       ?? 0;
         this.stockMinimo    = stockMinimo    ?? 0;
-        this.entryDate      = entryDate      ?? null;
-        this.expirationDate = expirationDate ?? null;
+        this.entryDate      = entryDate      ?? fechaIngreso   ?? null;
+        this.expirationDate = expirationDate ?? fechaCaducidad ?? fechaVencimiento ?? null;
         this.estado         = estado         ?? 'ACTIVO';
     }
 }

@@ -17,10 +17,11 @@ y devuelve la respuesta al cliente.
 IMPORTS
 //////////////////////////////////////////////////////////
 
-Modelos
+Modelos y DTOs
 */
 
 import * as ProductoModel from '../models/producto.model.js';
+import { ProductoDTO } from '../dtos/producto.dto.js';
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
@@ -92,7 +93,8 @@ export async function createProducto(req, res) {
     */
     try {
         const grupoDatos = req.user.grupoDatos;
-        const nuevo      = await ProductoModel.create(req.body, grupoDatos);
+        const dto        = new ProductoDTO({ ...req.body, grupoDatos });
+        const nuevo      = await ProductoModel.create(dto, grupoDatos);
 
         return exito(res, 'Producto creado correctamente.', nuevo, 201);
     } catch (err) {
@@ -115,9 +117,10 @@ export async function updateProducto(req, res) {
     */
     try {
         const grupoDatos  = req.user.grupoDatos;
+        const dto         = new ProductoDTO({ ...req.body, grupoDatos });
         const actualizado = await ProductoModel.update(
             req.params.id, 
-            req.body, 
+            dto, 
             grupoDatos
         );
 
