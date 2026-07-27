@@ -34,6 +34,7 @@ function normalizarFecha(fecha) {
     /*
     Descripcion:
     Parsea una fecha a formato YYYY-MM-DD para MySQL.
+    Soporta formato ISO (YYYY-MM-DD) y formato latino (DD/MM/YYYY).
 
     Parametros:
     - fecha: String o Date a formatear.
@@ -42,6 +43,17 @@ function normalizarFecha(fecha) {
     - Fecha en YYYY-MM-DD o null.
     */
     if (!fecha) return null;
+
+    // Si la fecha viene como string "DD/MM/YYYY"
+    if (typeof fecha === 'string' && fecha.includes('/')) {
+        const partes = fecha.split('/');
+        if (partes.length === 3) {
+            const [dia, mes, anio] = partes;
+            // Convertimos a YYYY-MM-DD para que Date() y MySQL lo entiendan
+            fecha = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+        }
+    }
+
     const d = new Date(fecha);
     if (isNaN(d.getTime())) return null;
     return d.toISOString().split('T')[0];
