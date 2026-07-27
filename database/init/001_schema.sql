@@ -552,6 +552,7 @@ CREATE TABLE IF NOT EXISTS siembras (
     densidad_poblacional DECIMAL(10,2) NULL,
     cantidad_sembrada INT NOT NULL,
     pl_siembra INT NULL,
+    duracion_ciclo INT NULL,
     estado ENUM('Activa', 'Finalizada') NOT NULL DEFAULT 'Activa',
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
