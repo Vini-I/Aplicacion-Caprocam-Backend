@@ -207,7 +207,7 @@ export function isPlValido(pl) {
 
     Retorna:
     - true si es valido.
-    - false si no.
+    - false si no
     */
 
     return isNumeroMayorCero(pl);

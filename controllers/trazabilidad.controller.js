@@ -181,5 +181,5 @@ desactivarRegistro ni borrado logico. Si se necesita corregir
 un registro capturado mal, se hace un registro correctivo
 nuevo, no se oculta el original. (Se quito el 19/07 -- no
 estaba en lo que pidio la companera: Registrar, GetAll,
-GetPorId.)
+GetPorId)
 */

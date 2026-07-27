@@ -55,7 +55,7 @@ export class TrazabilidadDTO {
         - tamano: Tamaño promedio.
         - dias: Dias de cultivo.
         - pl: Cantidad de post larvas.
-        - tipoMovimiento: Tipo de movimiento realizado.
+        - tipoMovimiento: Tipo de movimiento realizado
         */
 
         this.id = id;

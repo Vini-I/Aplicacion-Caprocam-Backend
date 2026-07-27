@@ -396,7 +396,7 @@ function formatearFecha(valor) {
     al formato YYYY-MM-DD.
 
     Parametros:
-    - valor: Fecha recibida desde MySQL.
+    - valor: Fecha recibida desde MySQL
 
     Retorna:
     Fecha formateada.

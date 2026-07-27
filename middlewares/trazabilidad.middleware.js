@@ -102,7 +102,7 @@ export function validarTrazabilidad(req, res, next) {
     Descripcion:
     Verifica que el body no este vacio y contenga
     los campos minimos requeridos para un registro
-    de trazabilidad.
+    de trazabilidad
 
     Parametros:
     - req:  Objeto request de Express
