@@ -4,10 +4,10 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.routes.js
 Autor: Jose Espinoza
-Fecha: 17/07/2026
+Fecha: 26/07/2026
 Modulo: Productos
 Descripcion:
-Define las rutas HTTP del modulo de productos bajo el nuevo estandar.
+Define las rutas HTTP del modulo de productos.
 //////////////////////////////////////////////////////////
 */
 
@@ -22,16 +22,16 @@ Librerias externas
 import { Router } from 'express';
 
 // Middlewares
-import { verificarAuth } from '../middlewares/auth.middleware.js';
+import { verificarAuth }      from '../middlewares/auth.middleware.js';
 import { validarBodyProducto } from '../middlewares/producto.middleware.js';
 
 // Controladores
 import {
     getProductos,
-    getProductoPorId,
-    crearProducto,
-    actualizarProducto,
-    desactivarProducto
+    getProductoById,
+    createProducto,
+    updateProducto,
+    deleteProducto,
 } from '../controllers/producto.controller.js';
 
 /*
@@ -48,13 +48,11 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get('/',           verificarAuth,                       getProductos);
-router.get('/:id',        verificarAuth,                       getProductoPorId);
-router.post('/',          verificarAuth, validarBodyProducto,  crearProducto);
-
-// Ruta especifica de borrado logico arriba de la generica de actualizacion
-router.put('/:id/activo', verificarAuth,                       desactivarProducto);
-router.put('/:id',        verificarAuth, validarBodyProducto,  actualizarProducto);
+router.get('/',       verificarAuth,                       getProductos);
+router.get('/:id',    verificarAuth,                       getProductoById);
+router.post('/',      verificarAuth, validarBodyProducto,  createProducto);
+router.put('/:id',    verificarAuth, validarBodyProducto,  updateProducto);
+router.delete('/:id', verificarAuth,                       deleteProducto);
 
 /*
 //////////////////////////////////////////////////////////

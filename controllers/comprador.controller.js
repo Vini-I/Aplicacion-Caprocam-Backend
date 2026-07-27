@@ -4,145 +4,154 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: comprador.controller.js
 Autor: Jose Espinoza
-Fecha: 20/07/2026
+Fecha: 26/07/2026
 Modulo: Compradores
 Descripcion:
-Maneja las peticiones HTTP para la entidad de Compradores, validando datos de entrada y encapsulando respuestas.
+Recibe las peticiones HTTP de compradores, delega al modelo
+y devuelve la respuesta al cliente.
 //////////////////////////////////////////////////////////
 */
 
-import * as compradorModel from '../models/comprador.model.js';
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
 
-/**
- * Obtiene todos los compradores activos.
- */
+Modelos
+*/
+
+import * as CompradorModel from '../models/comprador.model.js';
+
+// Common
+import { exito, error } from '../common/respuestaJson.js';
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES PRINCIPALES
+//////////////////////////////////////////////////////////
+*/
+
 export async function getCompradores(req, res) {
+    /*
+    Descripcion:
+    Obtiene todos los compradores del grupo.
+
+    Parametros:
+    - req: Objeto request de Express
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con lista de compradores
+    */
     try {
-        const compradores = await compradorModel.findAll();
-        return res.status(200).json({ data: compradores });
-    } catch (error) {
-        return res.status(500).json({
-            message: "Error al obtener los compradores",
-            error: error.message
-        });
+        const grupoDatos = req.user.grupoDatos;
+        const data       = await CompradorModel.findAll(grupoDatos);
+        return exito(res, 'Compradores obtenidos correctamente.', data);
+    } catch (err) {
+        return error(res, 'Error al obtener compradores.', err);
     }
 }
 
-/**
- * Obtiene un comprador activo por ID.
- */
-export async function getCompradorPorId(req, res) {
+export async function getCompradorById(req, res) {
+    /*
+    Descripcion:
+    Obtiene un comprador por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el comprador encontrado
+    - 404 si no existe
+    */
     try {
-        const { id } = req.params;
-        const comprador = await compradorModel.findById(id);
+        const grupoDatos = req.user.grupoDatos;
+        const comprador  = await CompradorModel.findById(req.params.id, grupoDatos);
 
-        if (!comprador) {
-            return res.status(404).json({ message: "Comprador no encontrado" });
-        }
+        if (!comprador)
+            return error(res, 'Comprador no encontrado.', null, 404);
 
-        return res.status(200).json({ data: comprador });
-    } catch (error) {
-        return res.status(500).json({
-            message: "Error al obtener el comprador",
-            error: error.message
-        });
+        return exito(res, 'Comprador obtenido correctamente.', comprador);
+    } catch (err) {
+        return error(res, 'Error al obtener comprador.', err);
     }
 }
 
-/**
- * Crea un nuevo comprador aceptando 'cedula' o 'contacto'.
- */
-export async function crearComprador(req, res) {
+export async function createComprador(req, res) {
+    /*
+    Descripcion:
+    Crea un nuevo comprador.
+
+    Parametros:
+    - req: Objeto request de Express (req.body)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 201 con el comprador creado
+    */
     try {
-        const { nombre, cedula, contacto, telefono, correo, notas } = req.body;
-        const valorCedula = cedula || contacto;
+        const grupoDatos = req.user.grupoDatos;
+        const nuevo      = await CompradorModel.create(req.body, grupoDatos);
 
-        // Validacion flexible: requiere nombre y al menos uno de los dos campos de identificacion
-        if (!nombre || !valorCedula) {
-            return res.status(400).json({
-                success: false,
-                message: "Faltan campos requeridos: nombre y cedula (o contacto)."
-            });
-        }
-
-        const dto = {
-            nombre,
-            cedula: valorCedula,
-            telefono: telefono || null,
-            correo: correo || null,
-            notas: notas || null,
-            grupoDatos: req.user?.grupoDatos ?? 1
-        };
-
-        const nuevoComprador = await compradorModel.create(dto);
-        return res.status(201).json({ data: nuevoComprador });
-    } catch (error) {
-        return res.status(500).json({
-            message: "Error al crear el comprador",
-            error: error.message
-        });
+        return exito(res, 'Comprador creado correctamente.', nuevo, 201);
+    } catch (err) {
+        return error(res, 'Error al crear comprador.', err);
     }
 }
 
-/**
- * Actualiza la información de un comprador existente.
- */
-export async function actualizarComprador(req, res) {
+export async function updateComprador(req, res) {
+    /*
+    Descripcion:
+    Actualiza un comprador existente por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id, req.body)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el comprador actualizado
+    - 404 si no existe
+    */
     try {
-        const { id } = req.params;
-        const { nombre, cedula, contacto, telefono, correo, notas } = req.body;
-        const valorCedula = cedula || contacto;
+        const grupoDatos  = req.user.grupoDatos;
+        const actualizado = await CompradorModel.update(
+            req.params.id, 
+            req.body, 
+            grupoDatos
+        );
 
-        if (!nombre || !valorCedula) {
-            return res.status(400).json({
-                success: false,
-                message: "Faltan campos requeridos: nombre y cedula (o contacto)."
-            });
-        }
+        if (!actualizado)
+            return error(res, 'Comprador no encontrado.', null, 404);
 
-        const dto = {
-            nombre,
-            cedula: valorCedula,
-            telefono: telefono || null,
-            correo: correo || null,
-            notas: notas || null
-        };
-
-        const compradorActualizado = await compradorModel.update(id, dto);
-
-        if (!compradorActualizado) {
-            return res.status(404).json({ message: "Comprador no encontrado o inactivo" });
-        }
-
-        return res.status(200).json({ data: compradorActualizado });
-    } catch (error) {
-        return res.status(500).json({
-            message: "Error al actualizar el comprador",
-            error: error.message
-        });
+        return exito(res, 'Comprador actualizado correctamente.', actualizado);
+    } catch (err) {
+        return error(res, 'Error al actualizar comprador.', err);
     }
 }
 
-/**
- * Realiza la desactivacion (borrado logico) del comprador.
- */
-export async function desactivarComprador(req, res) {
+export async function deleteComprador(req, res) {
+    /*
+    Descripcion:
+    Borrado logico de un comprador por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el comprador desactivado
+    - 404 si no existe
+    */
     try {
-        const { id } = req.params;
-        const compradorEliminado = await compradorModel.removeLogicamente(id);
+        const grupoDatos = req.user.grupoDatos;
+        const eliminado  = await CompradorModel.remove(req.params.id, grupoDatos);
 
-        if (!compradorEliminado) {
-            return res.status(404).json({ message: "Comprador no encontrado o ya inactivo" });
-        }
+        if (!eliminado)
+            return error(res, 'Comprador no encontrado.', null, 404);
 
-        return res.status(200).json({
-            message: "Comprador desactivado correctamente",
-            data: compradorEliminado
-        });
-    } catch (error) {
-        return res.status(500).json({
-            message: "Error al desactivar el comprador",
-            error: error.message
-        });
+        return exito(res, 'Comprador eliminado correctamente.', eliminado);
+    } catch (err) {
+        return error(res, 'Error al eliminar comprador.', err);
     }
 }

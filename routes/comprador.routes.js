@@ -4,10 +4,10 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: comprador.routes.js
 Autor: Jose Espinoza
-Fecha: 17/07/2026
+Fecha: 26/07/2026
 Modulo: Compradores
 Descripcion:
-Define las rutas HTTP del modulo de compradores bajo el nuevo estandar.
+Define las rutas HTTP del modulo de compradores.
 //////////////////////////////////////////////////////////
 */
 
@@ -22,16 +22,16 @@ Librerias externas
 import { Router } from 'express';
 
 // Middlewares
-import { verificarAuth } from '../middlewares/auth.middleware.js';
+import { verificarAuth }       from '../middlewares/auth.middleware.js';
 import { validarBodyComprador } from '../middlewares/comprador.middleware.js';
 
 // Controladores
 import {
     getCompradores,
-    getCompradorPorId,
-    crearComprador,
-    actualizarComprador,
-    desactivarComprador
+    getCompradorById,
+    createComprador,
+    updateComprador,
+    deleteComprador,
 } from '../controllers/comprador.controller.js';
 
 /*
@@ -48,13 +48,11 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get('/',           verificarAuth,                        getCompradores);
-router.get('/:id',        verificarAuth,                        getCompradorPorId);
-router.post('/',          verificarAuth, validarBodyComprador,  crearComprador);
-
-// Ruta especifica de borrado logico arriba de la generica de actualizacion
-router.put('/:id/activo', verificarAuth,                        desactivarComprador);
-router.put('/:id',        verificarAuth, validarBodyComprador,  actualizarComprador);
+router.get('/',       verificarAuth,                        getCompradores);
+router.get('/:id',    verificarAuth,                        getCompradorById);
+router.post('/',      verificarAuth, validarBodyComprador,  createComprador);
+router.put('/:id',    verificarAuth, validarBodyComprador,  updateComprador);
+router.delete('/:id', verificarAuth,                        deleteComprador);
 
 /*
 //////////////////////////////////////////////////////////

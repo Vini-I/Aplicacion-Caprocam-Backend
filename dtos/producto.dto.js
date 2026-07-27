@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.dto.js
 Autor: Jose Espinoza
-Fecha: 29/06/2026
+Fecha: 26/07/2026
 Modulo: Productos
 Descripcion:
 Archivo de transferencia de datos para productos.
@@ -19,13 +19,37 @@ export const CategoriasProducto = Object.freeze({
 });
 
 export class ProductoDTO {
-    constructor({ id, nombre, categoria, cantidad, stockMinimo, precioUnidad, estado }) {
-        this.id           = id;
-        this.nombre       = nombre;
-        this.categoria    = categoria;
-        this.cantidad     = cantidad;
-        this.stockMinimo  = stockMinimo;
-        this.precioUnidad = precioUnidad;
-        this.estado       = estado;
+    constructor({
+        id,
+        codigo,
+        grupoDatos,
+        proveedorId,
+        nombre,
+        categoria,
+        unidad,
+        precioUnidad,
+        cantidad,
+        stockMinimo,
+        entryDate,
+        expirationDate,
+        estado,
+    }) {
+        /*
+        Descripcion:
+        Construye un objeto ProductoDTO alineado con el frontend.
+        */
+        this.id             = id;
+        this.codigo         = codigo         ?? null;
+        this.grupoDatos     = grupoDatos;
+        this.proveedorId    = proveedorId    ?? null;
+        this.nombre         = nombre;
+        this.categoria      = categoria      ?? null;
+        this.unidad         = unidad         ?? 'unidades';
+        this.precioUnidad   = precioUnidad   ?? 0;
+        this.cantidad       = cantidad       ?? 0;
+        this.stockMinimo    = stockMinimo    ?? 0;
+        this.entryDate      = entryDate      ?? null;
+        this.expirationDate = expirationDate ?? null;
+        this.estado         = estado         ?? 'ACTIVO';
     }
 }
