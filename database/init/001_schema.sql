@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS estanques (
     fecha_inicio_engorde DATE NULL,
     fecha_mantenimiento DATE NULL,
     densidad_siembra DECIMAL(10,2) NULL,
-    usa_precria BOOLEAN NOT NULL DEFAULT FALSE,
+    precria BOOLEAN NOT NULL DEFAULT FALSE,
     metodo_alimentacion VARCHAR(100) NULL,
     proveedor_alimento VARCHAR(100) NULL,
     numero_aireadores INT NOT NULL DEFAULT 0,
