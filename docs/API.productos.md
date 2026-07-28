@@ -1,19 +1,35 @@
 # Productos
 
-## GET /api/v0/productos
-Obtiene todos los productos en estado ACTIVO.
+## GET /api/productos
+Obtiene todos los productos en estado ACTIVO del grupo de datos.
 
-Respuesta:
+Respuesta exitosa:
 200 OK
 {
     "success": true,
     "message": "Productos obtenidos correctamente.",
-    "data": [ ... ]
+    "data": [
+        {
+            "id": 10,
+            "codigo": "PRD-1001",
+            "grupoDatos": 2,
+            "proveedorId": 3,
+            "nombre": "Fertilizante Foliar H2",
+            "categoria": "Fertilizante",
+            "unidad": "Sacos",
+            "precioUnidad": 3500,
+            "cantidad": 50,
+            "stockMinimo": 10,
+            "entryDate": "2026-07-01",
+            "expirationDate": "2027-07-01",
+            "estado": "ACTIVO"
+        }
+    ]
 }
 
 ---
 
-## GET /api/v0/productos/:id
+## GET /api/productos/:id
 Obtiene un producto activo por su ID.
 
 Parametros URL:
@@ -24,7 +40,21 @@ Respuesta exitosa:
 {
     "success": true,
     "message": "Producto obtenido correctamente.",
-    "data": { ... }
+    "data": {
+        "id": 10,
+        "codigo": "PRD-1001",
+        "grupoDatos": 2,
+        "proveedorId": 3,
+        "nombre": "Fertilizante Foliar H2",
+        "categoria": "Fertilizante",
+        "unidad": "Sacos",
+        "precioUnidad": 3500,
+        "cantidad": 50,
+        "stockMinimo": 10,
+        "entryDate": "2026-07-01",
+        "expirationDate": "2027-07-01",
+        "estado": "ACTIVO"
+    }
 }
 
 Respuesta de error:
@@ -37,39 +67,58 @@ Respuesta de error:
 
 ---
 
-## POST /api/v0/productos
+## POST /api/productos
 Crea un nuevo producto.
 
 Body (JSON):
 {
-    "nombre":      "Fertilizante Foliar H2",
-    "categoria":   "Fertilizante",
-    "cantidad":    50,
-    "stockMinimo": 10,
-    "precioUnidad": 3500
+    "codigo":         "PRD-1001",
+    "proveedorId":    3,
+    "nombre":         "Fertilizante Foliar H2",
+    "categoria":      "Fertilizante",
+    "unidad":         "Sacos",
+    "precioUnidad":   3500,
+    "cantidad":       50,
+    "stockMinimo":    10,
+    "entryDate":      "2026-07-01",
+    "expirationDate": "2027-07-01"
 }
 
-Campos requeridos: nombre, categoria
+Campos requeridos: nombre
 
 Respuesta exitosa:
 201 Created
 {
     "success": true,
     "message": "Producto creado correctamente.",
-    "data": { ... }
+    "data": {
+        "id": 10,
+        "codigo": "PRD-1001",
+        "grupoDatos": 2,
+        "proveedorId": 3,
+        "nombre": "Fertilizante Foliar H2",
+        "categoria": "Fertilizante",
+        "unidad": "Sacos",
+        "precioUnidad": 3500,
+        "cantidad": 50,
+        "stockMinimo": 10,
+        "entryDate": "2026-07-01",
+        "expirationDate": "2027-07-01",
+        "estado": "ACTIVO"
+    }
 }
 
 Respuesta de error:
 400 Bad Request
 {
     "success": false,
-    "message": "Nombre y categoria son requeridos.",
+    "message": "El nombre del producto es requerido.",
     "error": null
 }
 
 ---
 
-## PUT /api/v0/productos/:id
+## PUT /api/productos/:id
 Actualiza un producto existente.
 
 Parametros URL:
@@ -77,11 +126,16 @@ Parametros URL:
 
 Body (JSON):
 {
-    "nombre":      "Fertilizante Foliar Premium",
-    "categoria":   "Fertilizante",
-    "cantidad":    45,
-    "stockMinimo": 10,
-    "precioUnidad": 3800
+    "codigo":         "PRD-1001",
+    "proveedorId":    3,
+    "nombre":         "Fertilizante Foliar Premium",
+    "categoria":      "Fertilizante",
+    "unidad":         "Sacos",
+    "precioUnidad":   3800,
+    "cantidad":       45,
+    "stockMinimo":    10,
+    "entryDate":      "2026-07-01",
+    "expirationDate": "2027-07-01"
 }
 
 Respuesta exitosa:
@@ -89,7 +143,21 @@ Respuesta exitosa:
 {
     "success": true,
     "message": "Producto actualizado correctamente.",
-    "data": { ... }
+    "data": {
+        "id": 10,
+        "codigo": "PRD-1001",
+        "grupoDatos": 2,
+        "proveedorId": 3,
+        "nombre": "Fertilizante Foliar Premium",
+        "categoria": "Fertilizante",
+        "unidad": "Sacos",
+        "precioUnidad": 3800,
+        "cantidad": 45,
+        "stockMinimo": 10,
+        "entryDate": "2026-07-01",
+        "expirationDate": "2027-07-01",
+        "estado": "ACTIVO"
+    }
 }
 
 Respuesta de error:
@@ -102,7 +170,7 @@ Respuesta de error:
 
 ---
 
-## PUT /api/v0/productos/:id/activos
+## DELETE /api/productos/:id
 Desactiva un producto (borrado logico).
 
 Parametros URL:
@@ -113,7 +181,12 @@ Respuesta exitosa:
 {
     "success": true,
     "message": "Producto desactivado correctamente.",
-    "data": { ... }
+    "data": {
+        "id": 10,
+        "codigo": "PRD-1001",
+        "nombre": "Fertilizante Foliar Premium",
+        "estado": "INACTIVO"
+    }
 }
 
 Respuesta de error:
