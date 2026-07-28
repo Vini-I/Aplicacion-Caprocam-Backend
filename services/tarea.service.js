@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: tarea.service.js
 Autor: Marco Vásquez
-Fecha: 04/07/2026
+Fecha: 22/07/2026
 Modulo: Tareas
 Descripcion:
 Define las reglas de negocio y validaciones del
@@ -26,9 +26,6 @@ import { CategoriasTarea } from '../dtos/tarea.dto.js';
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-
-Contiene las funciones exportables de validacion
-que utiliza el controller para verificar los datos.
 */
 
 export function isCategoriaValida(categoria) {

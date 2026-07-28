@@ -82,6 +82,9 @@ function validarCuerpo(body, res) {
     ) {
         errores.push("El campo densidad_poblacional debe ser un numero positivo.");
     }
+    if (!isEmpty(body.duracion_ciclo) && !isEnteroPositivo(body.duracion_ciclo)) {
+        errores.push("El campo duracion_ciclo debe ser un entero positivo.");
+    }
     if (!isEmpty(body.estado) && !isEstadoValido(body.estado)) {
         errores.push("El campo estado debe ser Activa o Finalizada.");
     }
@@ -172,11 +175,6 @@ export async function listarSiembra(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-
-/*
-    Descripcion:
-    Obtiene todas las siembras activas del grupo de datos.
-    */
     try {
         const grupoDatos = req.user.grupoDatos;
         const siembras = await siembraModel.findAll(grupoDatos);
@@ -196,11 +194,6 @@ export async function obtenerSiembra(req, res) {
 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
-
-/*
-    Descripcion:
-    Obtiene una siembra activa por su ID.
     */
     try {
         const grupoDatos = req.user.grupoDatos;
@@ -223,12 +216,6 @@ export async function crearSiembra(req, res) {
 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
-
-/*
-    Descripcion:
-    Crea una nueva siembra validando que el lote, finca, estanque
-    y pre-cria (si aplica) existan. Transiciona el lote a 'Sembrado'.
     */
     const errBody = validarCuerpo(req.body, res);
     if (errBody) return errBody;
@@ -256,11 +243,6 @@ export async function actualizarSiembra(req, res) {
 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
-
-/*
-    Descripcion:
-    Actualiza una siembra existente validando referencias.
     */
     const { id } = req.params;
     const errBody = validarCuerpo(req.body, res);
@@ -292,12 +274,6 @@ export async function finalizarSiembra(req, res) {
 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
-
-/*
-    Descripcion:
-    Finaliza una siembra en estado Activa cambiando su estado
-    a Finalizada.
     */
     const { id } = req.params;
     try {
@@ -331,11 +307,6 @@ export async function eliminarSiembra(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-
-/*
-    Descripcion:
-    Realiza el borrado logico de una siembra.
-    */
     const { id } = req.params;
     try {
         const grupoDatos = req.user.grupoDatos;
@@ -357,12 +328,6 @@ export async function obtenerSiembraActiva(req, res) {
 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
-
-/*
-    Descripcion:
-    Obtiene la siembra activa mas reciente de un estanque especifico
-    y calcula la duracion en dias actual.
     */
     try {
         const grupoDatos = req.user.grupoDatos;
@@ -389,6 +354,7 @@ export async function obtenerSiembraActiva(req, res) {
             fecha_siembra: siembra.fecha_siembra,
             pl_siembra: siembra.pl_siembra,
             cantidad_sembrada: siembra.cantidad_sembrada,
+            duracion_ciclo: siembra.duracion_ciclo,
             dias,
             estado: siembra.estado
         });
