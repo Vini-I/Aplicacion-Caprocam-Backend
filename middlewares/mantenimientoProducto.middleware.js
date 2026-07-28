@@ -2,12 +2,12 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: mantenimiento.middleware.js
+Archivo: mantenimientoProducto.middleware.js
 Autor: Marco Vásquez
 Fecha: 22/07/2026
-Modulo: Mantenimientos
+Modulo: MantenimientoProductos
 Descripcion:
-Middleware de validacion de body para mantenimientos.
+Middleware de validacion de body para mantenimiento-productos.
 //////////////////////////////////////////////////////////
 */
 
@@ -25,14 +25,10 @@ import { error } from '../common/respuestaJson.js';
 //////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
-
-codigoTicket y fechaMantenimiento son nuevos campos requeridos.
-estadoEquipo removido — ya no existe en la tabla.
-creadoPor removido — viene del JWT.
 */
 
-const camposPost = ['codigoTicket', 'equipoId', 'fechaMantenimiento', 'tituloTicket', 'descripcionTicket'];
-const camposPut  = ['equipoId', 'tituloTicket', 'descripcionTicket'];
+const camposPost = ['mantenimientoEquipoId', 'productoId', 'cantidad', 'costoUnitario', 'subtotal'];
+const camposPut  = ['cantidad', 'costoUnitario', 'subtotal'];
 
 /*
 //////////////////////////////////////////////////////////
@@ -40,10 +36,10 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export function validarBodyMantenimientoPost(req, res, next) {
+export function validarBodyMantenimientoProductoPost(req, res, next) {
     /*
     Descripcion:
-    Verifica campos requeridos para creacion de ticket.
+    Verifica campos requeridos para vincular un producto a un mantenimiento.
 
     Parametros:
     - req:  Objeto request de Express
@@ -57,7 +53,7 @@ export function validarBodyMantenimientoPost(req, res, next) {
     if (!req.body || Object.keys(req.body).length === 0)
         return error(res, 'El body no puede estar vacío.', null, 400);
 
-    const faltantes = camposPost.filter(campo => !req.body[campo]);
+    const faltantes = camposPost.filter(campo => req.body[campo] === undefined || req.body[campo] === null || req.body[campo] === '');
 
     if (faltantes.length > 0)
         return error(res, `Faltan campos requeridos: ${faltantes.join(', ')}.`, null, 400);
@@ -65,11 +61,10 @@ export function validarBodyMantenimientoPost(req, res, next) {
     next();
 }
 
-export function validarBodyMantenimientoPut(req, res, next) {
+export function validarBodyMantenimientoProductoPut(req, res, next) {
     /*
     Descripcion:
-    Verifica campos requeridos para actualizacion de ticket.
-    codigoTicket no se puede cambiar en update.
+    Verifica campos requeridos para actualizar un producto en un mantenimiento.
 
     Parametros:
     - req:  Objeto request de Express
@@ -83,7 +78,7 @@ export function validarBodyMantenimientoPut(req, res, next) {
     if (!req.body || Object.keys(req.body).length === 0)
         return error(res, 'El body no puede estar vacío.', null, 400);
 
-    const faltantes = camposPut.filter(campo => !req.body[campo]);
+    const faltantes = camposPut.filter(campo => req.body[campo] === undefined || req.body[campo] === null || req.body[campo] === '');
 
     if (faltantes.length > 0)
         return error(res, `Faltan campos requeridos: ${faltantes.join(', ')}.`, null, 400);

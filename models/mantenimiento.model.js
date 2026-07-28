@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantenimiento.model.js
 Autor: Marco Vásquez
-Fecha: 04/07/2026
+Fecha: 22/07/2026
 Modulo: Mantenimientos
 Descripcion:
 Capa de datos del modulo de mantenimientos.
@@ -45,12 +45,18 @@ function mapearMantenimiento(fila) {
         id:                     fila.id,
         uuid:                   fila.uuid,
         grupoDatos:             fila.grupo_datos,
+        codigoTicket:           fila.codigo_ticket,
         equipoId:               fila.equipo_id,
+        creadoPorUsuarioId:     fila.creado_por_usuario_id,
         creadoPorColaboradorId: fila.creado_por_colaborador_id,
+        fechaMantenimiento:     fila.fecha_mantenimiento,
         tituloTicket:           fila.titulo_ticket,
         descripcionTicket:      fila.descripcion_ticket,
+        tipoPersonal:           fila.tipo_personal,
+        costoManoObra:          fila.costo_mano_obra,
+        costoProductos:         fila.costo_productos,
+        costoTotalEstimado:     fila.costo_total_estimado,
         estadoTicket:           fila.estado_ticket,
-        estadoEquipo:           fila.estado_equipo,
         fechaCreacion:          fila.fecha_creacion,
         fechaActualizacion:     fila.fecha_actualizacion,
     };
@@ -87,8 +93,8 @@ export async function findById(id, grupoDatos) {
     Busca un ticket de mantenimiento por ID dentro del grupo.
 
     Parametros:
-    - id:          ID del ticket.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID del ticket.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El ticket encontrado o null.
@@ -107,25 +113,33 @@ export async function create(dto, grupoDatos) {
     Inserta un nuevo ticket de mantenimiento en la DB.
 
     Parametros:
-    - dto:         Objeto MantenimientoDTO con los datos.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - dto:        Objeto MantenimientoDTO con los datos.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El ticket recien creado.
     */
     const [result] = await pool.query(
         `INSERT INTO mantenimiento_equipo
-         (grupo_datos, equipo_id, creado_por_colaborador_id, titulo_ticket,
-          descripcion_ticket, estado_ticket, estado_equipo)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         (grupo_datos, codigo_ticket, equipo_id, creado_por_usuario_id,
+          creado_por_colaborador_id, fecha_mantenimiento, titulo_ticket,
+          descripcion_ticket, tipo_personal, costo_mano_obra,
+          costo_productos, costo_total_estimado, estado_ticket)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             grupoDatos,
+            dto.codigoTicket,
             dto.equipoId,
+            dto.creadoPorUsuarioId,
             dto.creadoPorColaboradorId,
+            dto.fechaMantenimiento,
             dto.tituloTicket,
             dto.descripcionTicket,
+            dto.tipoPersonal,
+            dto.costoManoObra,
+            dto.costoProductos,
+            dto.costoTotalEstimado,
             dto.estadoTicket,
-            dto.estadoEquipo,
         ]
     );
     return findById(result.insertId, grupoDatos);
@@ -135,26 +149,33 @@ export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
     Actualiza un ticket de mantenimiento e incrementa version.
+    codigoTicket no se puede modificar.
 
     Parametros:
-    - id:          ID del ticket.
-    - dto:         Objeto MantenimientoDTO con los nuevos datos.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID del ticket.
+    - dto:        Objeto MantenimientoDTO con los nuevos datos.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El ticket actualizado o null si no existe.
     */
     const [result] = await pool.query(
         `UPDATE mantenimiento_equipo
-         SET equipo_id = ?, titulo_ticket = ?, descripcion_ticket = ?,
-             estado_ticket = ?, estado_equipo = ?, version = version + 1
+         SET equipo_id = ?, fecha_mantenimiento = ?, titulo_ticket = ?,
+             descripcion_ticket = ?, tipo_personal = ?, costo_mano_obra = ?,
+             costo_productos = ?, costo_total_estimado = ?, estado_ticket = ?,
+             version = version + 1
          WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
         [
             dto.equipoId,
+            dto.fechaMantenimiento,
             dto.tituloTicket,
             dto.descripcionTicket,
+            dto.tipoPersonal,
+            dto.costoManoObra,
+            dto.costoProductos,
+            dto.costoTotalEstimado,
             dto.estadoTicket,
-            dto.estadoEquipo,
             id,
             grupoDatos,
         ]
@@ -166,11 +187,11 @@ export async function update(id, dto, grupoDatos) {
 export async function remove(id, grupoDatos) {
     /*
     Descripcion:
-    Borrado logico del ticket. No elimina el registro.
+    Borrado logico del ticket.
 
     Parametros:
-    - id:          ID del ticket.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID del ticket.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El ticket antes de ser desactivado, o null si no existe.
