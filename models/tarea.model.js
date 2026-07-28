@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: tarea.model.js
 Autor: Marco Vásquez
-Fecha: 04/07/2026
+Fecha: 22/07/2026
 Modulo: Tareas
 Descripcion:
 Capa de datos del modulo de tareas.
@@ -45,14 +45,13 @@ function mapearTarea(fila) {
         id:            fila.id,
         uuid:          fila.uuid,
         grupoDatos:    fila.grupo_datos,
-        colaboradorId: fila.colaborador_id,
-        equipoId:      fila.equipo_id,
+        codigoTarea:   fila.codigo_tarea,
         nombre:        fila.nombre,
         descripcion:   fila.descripcion,
         categoria:     fila.categoria,
         horas:         fila.horas,
         estado:        fila.estado,
-        fechaCreacion: fila.fecha_creacion,
+        fechaCreacion:      fila.fecha_creacion,
         fechaActualizacion: fila.fecha_actualizacion,
     };
 }
@@ -88,8 +87,8 @@ export async function findById(id, grupoDatos) {
     Busca una tarea por ID dentro del grupo.
 
     Parametros:
-    - id:          ID de la tarea.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID de la tarea.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - La tarea encontrada o null.
@@ -108,20 +107,19 @@ export async function create(dto, grupoDatos) {
     Inserta una nueva tarea en la DB.
 
     Parametros:
-    - dto:         Objeto TareaDTO con los datos.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - dto:        Objeto TareaDTO con los datos.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - La tarea recien creada.
     */
     const [result] = await pool.query(
         `INSERT INTO tareas
-         (grupo_datos, colaborador_id, equipo_id, nombre, descripcion, categoria, horas, estado)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (grupo_datos, codigo_tarea, nombre, descripcion, categoria, horas, estado)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
             grupoDatos,
-            dto.colaboradorId,
-            dto.equipoId,
+            dto.codigoTarea,
             dto.nombre,
             dto.descripcion,
             dto.categoria,
@@ -136,23 +134,22 @@ export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
     Actualiza una tarea existente e incrementa version.
+    codigoTarea no se puede modificar.
 
     Parametros:
-    - id:          ID de la tarea.
-    - dto:         Objeto TareaDTO con los nuevos datos.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID de la tarea.
+    - dto:        Objeto TareaDTO con los nuevos datos.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - La tarea actualizada o null si no existe.
     */
     const [result] = await pool.query(
         `UPDATE tareas
-         SET colaborador_id = ?, equipo_id = ?, nombre = ?, descripcion = ?,
-             categoria = ?, horas = ?, estado = ?, version = version + 1
+         SET nombre = ?, descripcion = ?, categoria = ?,
+             horas = ?, estado = ?, version = version + 1
          WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
         [
-            dto.colaboradorId,
-            dto.equipoId,
             dto.nombre,
             dto.descripcion,
             dto.categoria,
@@ -169,11 +166,11 @@ export async function update(id, dto, grupoDatos) {
 export async function remove(id, grupoDatos) {
     /*
     Descripcion:
-    Borrado logico de la tarea. No elimina el registro.
+    Borrado logico de la tarea.
 
     Parametros:
-    - id:          ID de la tarea.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID de la tarea.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - La tarea antes de ser desactivada, o null si no existe.

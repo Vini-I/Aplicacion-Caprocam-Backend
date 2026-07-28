@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.controller.js
 Autor: Marco Vásquez
-Fecha: 06/07/2026
+Fecha: 20/07/2026
 Modulo: Colaboradores
 Descripcion:
 Recibe las peticiones HTTP, delega al servicio y modelo,
@@ -30,14 +30,6 @@ import * as ColaboradorModel from '../models/colaborador.model.js';
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
-
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
 
 /*
 //////////////////////////////////////////////////////////
@@ -93,7 +85,8 @@ export async function getColaboradores(req, res) {
     - 200 con lista de colaboradores
     */
     try {
-        const data = await ColaboradorModel.findAll(GRUPO_DATOS_PROVISIONAL);
+        const grupoDatos = req.user.grupoDatos;
+        const data       = await ColaboradorModel.findAll(grupoDatos);
         return exito(res, 'Colaboradores obtenidos correctamente.', data);
     } catch (err) {
         return error(res, 'Error al obtener colaboradores.', err);
@@ -114,7 +107,8 @@ export async function getColaboradorById(req, res) {
     - 404 si no existe
     */
     try {
-        const colaborador = await ColaboradorModel.findById(req.params.id, GRUPO_DATOS_PROVISIONAL);
+        const grupoDatos  = req.user.grupoDatos;
+        const colaborador = await ColaboradorModel.findById(req.params.id, grupoDatos);
 
         if (!colaborador)
             return error(res, 'Colaborador no encontrado.', null, 404);
@@ -139,15 +133,16 @@ export async function createColaborador(req, res) {
     - 400/422 si hay errores de validacion
     */
     try {
-        const { nombre, apellidos, telefono, email, rolId, fincaId,
-                nombreUsuario, pinHash, tipoColaborador } = req.body;
+        const grupoDatos = req.user.grupoDatos;
+        const { nombre, apellidos, telefono, email, rolId,
+                fincaId, nombreUsuario, pinHash, tipoColaborador } = req.body;
 
         const err = validarCuerpo({ nombre, apellidos, telefono, email, rolId }, res);
         if (err) return err;
 
         const dto   = new ColaboradorDTO({ nombre, apellidos, telefono, email, rolId,
                                            fincaId, nombreUsuario, pinHash, tipoColaborador });
-        const nuevo = await ColaboradorModel.create(dto, GRUPO_DATOS_PROVISIONAL);
+        const nuevo = await ColaboradorModel.create(dto, grupoDatos);
 
         return exito(res, 'Colaborador creado correctamente.', nuevo, 201);
     } catch (err) {
@@ -170,6 +165,7 @@ export async function updateColaborador(req, res) {
     - 404 si no existe
     */
     try {
+        const grupoDatos = req.user.grupoDatos;
         const { nombre, apellidos, telefono, email, rolId,
                 fincaId, tipoColaborador } = req.body;
 
@@ -178,7 +174,7 @@ export async function updateColaborador(req, res) {
 
         const dto         = new ColaboradorDTO({ nombre, apellidos, telefono, email,
                                                  rolId, fincaId, tipoColaborador });
-        const actualizado = await ColaboradorModel.update(req.params.id, dto, GRUPO_DATOS_PROVISIONAL);
+        const actualizado = await ColaboradorModel.update(req.params.id, dto, grupoDatos);
 
         if (!actualizado)
             return error(res, 'Colaborador no encontrado.', null, 404);
@@ -203,7 +199,8 @@ export async function deleteColaborador(req, res) {
     - 404 si no existe
     */
     try {
-        const eliminado = await ColaboradorModel.remove(req.params.id, GRUPO_DATOS_PROVISIONAL);
+        const grupoDatos = req.user.grupoDatos;
+        const eliminado  = await ColaboradorModel.remove(req.params.id, grupoDatos);
 
         if (!eliminado)
             return error(res, 'Colaborador no encontrado.', null, 404);

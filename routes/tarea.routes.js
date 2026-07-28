@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: tarea.routes.js
 Autor: Marco Vásquez
-Fecha: 04/07/2026
+Fecha: 22/07/2026
 Modulo: Tareas
 Descripcion:
 Define las rutas HTTP del modulo de tareas.
@@ -22,17 +22,17 @@ Librerias externas
 import { Router } from 'express';
 
 // Middlewares
-import { verificarAuth } from '../middlewares/auth.middleware.js';
-import { validarBodyTarea } from '../middlewares/tarea.middleware.js';
+import { verificarAuth }                                from '../middlewares/auth.middleware.js';
+import { validarBodyTareaPost, validarBodyTareaPut }    from '../middlewares/tarea.middleware.js';
 
 // Controladores
 import {
     getTareas,
     getTareaById,
+    getCatalogoTareas,
     createTarea,
     updateTarea,
     deleteTarea,
-    getCatalogoTareas,
 } from '../controllers/tarea.controller.js';
 
 /*
@@ -49,12 +49,12 @@ RUTAS
 //////////////////////////////////////////////////////////
 */
 
-router.get('/', verificarAuth, getTareas);
-router.get('/catalogo', verificarAuth, getCatalogoTareas);
-router.get('/:id', verificarAuth, getTareaById);
-router.post('/', verificarAuth, validarBodyTarea, createTarea);
-router.put('/:id', verificarAuth, validarBodyTarea, updateTarea);
-router.delete('/:id', verificarAuth, deleteTarea);
+router.get('/catalogo', verificarAuth,                      getCatalogoTareas);
+router.get('/',         verificarAuth,                      getTareas);
+router.get('/:id',      verificarAuth,                      getTareaById);
+router.post('/',        verificarAuth, validarBodyTareaPost, createTarea);
+router.put('/:id',      verificarAuth, validarBodyTareaPut,  updateTarea);
+router.delete('/:id',   verificarAuth,                      deleteTarea);
 
 /*
 //////////////////////////////////////////////////////////

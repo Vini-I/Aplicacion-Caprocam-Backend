@@ -50,7 +50,6 @@ INSERT INTO usuarios (
     email,
     nombre_usuario,
     password_hash,
-    telefono
 )
 SELECT
     1,
@@ -88,7 +87,6 @@ SELECT
     'Cañas',
     'Ubicacion demo',
     'Usuario Demo',
-    '88888888',
     100.00,
     25.00
 FROM usuarios u

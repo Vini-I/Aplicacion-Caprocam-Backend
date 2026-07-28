@@ -4,11 +4,13 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: equipo.model.js
 Autor: Rodolfo Chaves
-Fecha: 04/07/2026
+Fecha: 20/07/2026
 Modulo: Equipo
 Descripcion:
 Capa de datos del modulo de equipos.
 Trabaja con la base de datos principal MySQL.
+Todas las operaciones utilizan el grupo de datos obtenido
+desde el JWT para proteger los registros.
 //////////////////////////////////////////////////////////
 */
 
@@ -16,10 +18,9 @@ Trabaja con la base de datos principal MySQL.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
- 
+
 Configuracion de base de datos
 */
-
 
 import pool from "../config/database.js";
 
@@ -27,25 +28,23 @@ import pool from "../config/database.js";
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
- 
+
 Contiene las funciones exportables que interactuan
 directamente con la base de datos MySQL.
 */
 
-
-export async function findAll(filtros = {}) {
-
-        /*
+export async function findAll(filtros) {
+    /*
     Descripcion:
-    Obtiene todos los equipos activos desde la base de datos.
-    Permite filtrar por grupo de datos.
- 
+    Obtiene los equipos activos que pertenecen al grupo
+    de datos del usuario autenticado.
+    Permite filtrar opcionalmente por estanque.
+
     Parametros:
-    - filtros: Objeto con filtros opcionales.
-        - grupoDatos: Codigo del grupo de datos.
- 
+    - filtros: Objeto con grupoDatos y estanqueId opcional.
+
     Retorna:
-    - Lista de equipos mapeados a camelCase.
+    - Lista de equipos encontrados.
     */
 
     let sql = `
@@ -53,48 +52,55 @@ export async function findAll(filtros = {}) {
             id,
             uuid,
             grupo_datos,
-            nombre AS identificador,
+            identificador,
+            nombre_equipo,
             descripcion,
+            tipo_equipo,
             fecha_instalacion,
-            tipo,
+            funcion_equipo,
+            estanque_id,
+            horas_mantenimiento,
+            horas_actuales,
+            estado_operativo,
             estado,
-            funcion,
             activo,
             fecha_creacion,
             fecha_actualizacion,
             deleted_at,
             version
         FROM equipos
-        WHERE deleted_at IS NULL
-          AND activo = TRUE
+        WHERE grupo_datos = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
     `;
 
-    const params = [];
+    const params = [filtros.grupoDatos];
 
-    if (filtros.grupoDatos !== undefined && filtros.grupoDatos !== null) {
-        sql += " AND grupo_datos = ?";
-        params.push(Number(filtros.grupoDatos));
+    if (filtros.estanqueId) {
+        sql = sql + " AND estanque_id = ?";
+        params.push(filtros.estanqueId);
     }
 
-    sql += " ORDER BY id DESC";
+    sql = sql + " ORDER BY id DESC";
 
     const [rows] = await pool.execute(sql, params);
 
-    return rows.map(mapearFila);
+    return mapearLista(rows);
 }
 
-export async function findById(id) {
-
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
-    Busca un equipo activo por su identificador numerico.
- 
+    Busca un equipo activo por su identificador numerico
+    y por el grupo de datos del usuario autenticado.
+
     Parametros:
     - id: Identificador del equipo.
- 
+    - grupoDatos: Grupo obtenido desde el JWT.
+
     Retorna:
-    - El equipo encontrado mapeado a camelCase.
-    - null si no existe o fue eliminado logicamente.
+    - El equipo encontrado.
+    - null si no existe, fue eliminado o pertenece a otro grupo.
     */
 
     const [rows] = await pool.execute(
@@ -103,12 +109,17 @@ export async function findById(id) {
             id,
             uuid,
             grupo_datos,
-            nombre AS identificador,
+            identificador,
+            nombre_equipo,
             descripcion,
+            tipo_equipo,
             fecha_instalacion,
-            tipo,
+            funcion_equipo,
+            estanque_id,
+            horas_mantenimiento,
+            horas_actuales,
+            estado_operativo,
             estado,
-            funcion,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -116,11 +127,12 @@ export async function findById(id) {
             version
         FROM equipos
         WHERE id = ?
-          AND deleted_at IS NULL
-          AND activo = TRUE
+        AND grupo_datos = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
         LIMIT 1
         `,
-        [id]
+        [id, grupoDatos]
     );
 
     if (rows.length === 0) {
@@ -130,36 +142,40 @@ export async function findById(id) {
     return mapearFila(rows[0]);
 }
 
-export async function findByIdentificador(identificador, idIgnorado) {
-        /*
+export async function findByIdentificador(identificador, idIgnorado, grupoDatos) {
+    /*
     Descripcion:
-    Busca un equipo por nombre para validar unicidad.
-    Permite ignorar un id especifico al actualizar.
- 
+    Busca un equipo por identificador y grupo de datos
+    para validar unicidad. Permite ignorar un id especifico
+    al actualizar.
+
     Parametros:
-    - nombre:     Nombre del equipo a buscar.
-    - idIgnorado: ID a excluir de la busqueda (update).
- 
+    - identificador: Identificador del equipo a buscar.
+    - idIgnorado: Identificador que se debe ignorar (update).
+    - grupoDatos: Grupo obtenido desde el JWT.
+
     Retorna:
-    - El equipo encontrado o null.
+    - El equipo encontrado.
+    - null si no existe coincidencia.
     */
 
     let sql = `
-        SELECT id, nombre AS identificador
+        SELECT id, identificador
         FROM equipos
-        WHERE LOWER(TRIM(nombre)) = LOWER(TRIM(?))
-          AND deleted_at IS NULL
-          AND activo = TRUE
+        WHERE LOWER(TRIM(identificador)) = LOWER(TRIM(?))
+        AND grupo_datos = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
     `;
 
-    const params = [identificador];
+    const params = [identificador, grupoDatos];
 
     if (idIgnorado !== null && idIgnorado !== undefined) {
-        sql += " AND id <> ?";
+        sql = sql + " AND id <> ?";
         params.push(idIgnorado);
     }
 
-    sql += " LIMIT 1";
+    sql = sql + " LIMIT 1";
 
     const [rows] = await pool.execute(sql, params);
 
@@ -167,63 +183,75 @@ export async function findByIdentificador(identificador, idIgnorado) {
 }
 
 export async function create(dto) {
-        /*
+    /*
     Descripcion:
-    Inserta un nuevo equipo en la base de datos.
- 
+    Inserta un nuevo equipo utilizando el grupo de datos
+    recibido desde el controller.
+
     Parametros:
     - dto: Objeto EquipoDTO con los datos normalizados.
- 
+
     Retorna:
     - El equipo recien creado consultado desde la base de datos.
     */
 
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
     const fechaInstalacion = normalizarFechaMysql(dto.fechaInstalacion);
 
     const [result] = await pool.execute(
         `
         INSERT INTO equipos (
             grupo_datos,
-            nombre,
+            identificador,
+            nombre_equipo,
             descripcion,
+            tipo_equipo,
             fecha_instalacion,
-            tipo,
-            estado,
-            funcion
+            funcion_equipo,
+            estanque_id,
+            horas_mantenimiento,
+            horas_actuales,
+            estado_operativo,
+            estado
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
-            grupoDatos,
+            dto.grupoDatos,
             dto.identificador,
+            dto.nombreEquipo,
             dto.descripcion,
+            dto.tipoEquipo,
             fechaInstalacion,
-            dto.tipo,
-            dto.estado,
-            dto.funcionEquipo
+            dto.funcionEquipo,
+            dto.estanqueId,
+            dto.horasMantenimiento,
+            dto.horasActuales,
+            dto.estadoOperativo,
+            dto.estado
         ]
     );
 
-    return await findById(result.insertId);
+    return await findById(result.insertId, dto.grupoDatos);
 }
 
-export async function update(id, dto) {
-        /*
+export async function update(id, dto, grupoDatos) {
+    /*
     Descripcion:
-    Actualiza un equipo existente en la base de datos.
+    Actualiza un equipo que pertenece al grupo del usuario.
     Incrementa version para control de cambios.
- 
+    El campo grupo_datos no se modifica.
+
     Parametros:
-    - id:  Identificador del equipo a actualizar.
+    - id: Identificador del equipo a actualizar.
     - dto: Objeto EquipoDTO con los datos actualizados.
- 
+    - grupoDatos: Grupo obtenido desde el JWT.
+
     Retorna:
     - El equipo actualizado.
-    - null si no existe o fue eliminado logicamente.
+    - null si no existe o pertenece a otro grupo.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(id, grupoDatos);
 
     if (!actual) {
         return null;
@@ -235,47 +263,61 @@ export async function update(id, dto) {
         `
         UPDATE equipos
         SET
-            nombre = ?,
+            identificador = ?,
+            nombre_equipo = ?,
             descripcion = ?,
+            tipo_equipo = ?,
             fecha_instalacion = ?,
-            tipo = ?,
+            funcion_equipo = ?,
+            estanque_id = ?,
+            horas_mantenimiento = ?,
+            horas_actuales = ?,
+            estado_operativo = ?,
             estado = ?,
-            funcion = ?,
             version = version + 1
         WHERE id = ?
-          AND deleted_at IS NULL
-          AND activo = TRUE
+        AND grupo_datos = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
         `,
         [
             dto.identificador,
+            dto.nombreEquipo,
             dto.descripcion,
+            dto.tipoEquipo,
             fechaInstalacion,
-            dto.tipo,
-            dto.estado,
             dto.funcionEquipo,
-            id
+            dto.estanqueId,
+            dto.horasMantenimiento,
+            dto.horasActuales,
+            dto.estadoOperativo,
+            dto.estado,
+            id,
+            grupoDatos
         ]
     );
 
-    return await findById(id);
+    return await findById(id, grupoDatos);
 }
 
-export async function remove(id) {
-        /*
+export async function remove(id, grupoDatos) {
+    /*
     Descripcion:
-    Elimina logicamente un equipo.
-    No borra fisicamente el registro.
-    Cambia activo a FALSE, llena deleted_at e incrementa version.
- 
+    Elimina logicamente un equipo que pertenece al grupo
+    del usuario. No borra fisicamente el registro.
+    Cambia activo a FALSE, llena deleted_at e incrementa
+    version.
+
     Parametros:
     - id: Identificador del equipo a eliminar.
- 
+    - grupoDatos: Grupo obtenido desde el JWT.
+
     Retorna:
     - El equipo antes de ser eliminado.
-    - null si no existe o ya fue eliminado.
+    - null si no existe, ya fue eliminado o pertenece a otro grupo.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(id, grupoDatos);
 
     if (!actual) {
         return null;
@@ -289,10 +331,11 @@ export async function remove(id) {
             deleted_at = CURRENT_TIMESTAMP,
             version = version + 1
         WHERE id = ?
-          AND deleted_at IS NULL
-          AND activo = TRUE
+        AND grupo_datos = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
         `,
-        [id]
+        [id, grupoDatos]
     );
 
     return actual;
@@ -302,24 +345,44 @@ export async function remove(id) {
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
- 
+
 Contiene funciones internas de mapeo y normalizacion.
 Las funciones findAll(), findById(), create(), update()
 y remove() dependen de estas funciones para trabajar.
 */
 
-
-function mapearFila(row) {
-        /*
+function mapearLista(rows) {
+    /*
     Descripcion:
     Convierte una lista de filas de MySQL al formato
     camelCase esperado por el frontend.
- 
+
     Parametros:
     - rows: Lista de filas obtenidas desde MySQL.
- 
+
     Retorna:
     - Lista de equipos mapeados.
+    */
+
+    const resultado = [];
+
+    for (let i = 0; i < rows.length; i++) {
+        resultado.push(mapearFila(rows[i]));
+    }
+
+    return resultado;
+}
+
+function mapearFila(row) {
+    /*
+    Descripcion:
+    Convierte una fila de MySQL en un objeto camelCase.
+
+    Parametros:
+    - row: Fila obtenida desde MySQL.
+
+    Retorna:
+    - Objeto equipo en el formato esperado por el frontend.
     */
 
     return {
@@ -327,11 +390,16 @@ function mapearFila(row) {
         uuid: row.uuid,
         grupoDatos: row.grupo_datos,
         identificador: row.identificador,
+        nombreEquipo: row.nombre_equipo,
         descripcion: row.descripcion,
+        tipoEquipo: row.tipo_equipo,
         fechaInstalacion: formatearFecha(row.fecha_instalacion),
-        tipo: row.tipo,
+        funcionEquipo: row.funcion_equipo,
+        estanqueId: row.estanque_id,
+        horasMantenimiento: row.horas_mantenimiento,
+        horasActuales: Number(row.horas_actuales),
+        estadoOperativo: row.estado_operativo,
         estado: row.estado,
-        funcionEquipo: row.funcion,
         activo: Boolean(row.activo),
         fechaCreacion: row.fecha_creacion,
         fechaActualizacion: row.fecha_actualizacion,
@@ -340,34 +408,15 @@ function mapearFila(row) {
     };
 }
 
-function obtenerGrupoDatos(valor) {
-        /*
-    Descripcion:
-    Convierte una fila de MySQL en un objeto camelCase.
- 
-    Parametros:
-    - row: Fila obtenida desde MySQL.
- 
-    Retorna:
-    - Objeto equipo en el formato esperado por el frontend.
-    */
-
-    if (valor === undefined || valor === null || String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
-}
-
 function normalizarFechaMysql(valor) {
-        /*
+    /*
     Descripcion:
     Convierte una fecha al formato YYYY-MM-DD compatible
     con MySQL. Acepta formato dd/mm/aaaa o YYYY-MM-DD.
- 
+
     Parametros:
     - valor: Fecha recibida desde el body.
- 
+
     Retorna:
     - Fecha en formato YYYY-MM-DD o null si no existe.
     */
@@ -390,7 +439,7 @@ function normalizarFechaMysql(valor) {
             const mes = partes[1].padStart(2, "0");
             const anio = partes[2];
 
-            return `${anio}-${mes}-${dia}`;
+            return anio + "-" + mes + "-" + dia;
         }
     }
 
@@ -398,14 +447,14 @@ function normalizarFechaMysql(valor) {
 }
 
 function formatearFecha(valor) {
-        /*
+    /*
     Descripcion:
     Formatea una fecha recibida desde MySQL para devolverla
     en formato YYYY-MM-DD al frontend.
- 
+
     Parametros:
     - valor: Fecha recibida desde MySQL.
- 
+
     Retorna:
     - Fecha formateada o null si no existe.
     */

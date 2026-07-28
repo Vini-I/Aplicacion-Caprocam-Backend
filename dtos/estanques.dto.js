@@ -56,7 +56,7 @@ export class EstanqueDTO {
         fechaInicioEngorde,
         fechaMantenimiento,
         densidadSiembra,
-        usaPrecria,
+        precria,
         metodoAlimentacion,
         proveedorAlimento,
         numeroAireadores,
@@ -144,8 +144,8 @@ export class EstanqueDTO {
             densidadSiembra
         );
 
-        this.usaPrecria = normalizarBooleano(
-            usaPrecria
+        this.precria = normalizarBooleano(
+            precria
         );
 
         this.metodoAlimentacion = normalizarTextoOpcional(

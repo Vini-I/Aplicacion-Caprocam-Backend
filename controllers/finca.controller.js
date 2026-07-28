@@ -49,13 +49,13 @@ export async function getFincaById(req, res) {
     Obtiene un registro de finca por su ID CBO.
 
     Parametros:
-    - req.params.idCBO: ID CBO de la finca a buscar.
+    - req.params.id: ID CBO de la finca a buscar.
 
     Retorna:
     - Una respuesta JSON con el registro de finca correspondiente al ID CBO proporcionado.
     */
   const grupoDatos = req.user.grupoDatos;
-  const registro = await FincaModel.findByIdCBO(req.params.idCBO, grupoDatos);
+  const registro = await FincaModel.findByIdCBO(req.params.id, grupoDatos);
 
   if (!registro) {
     return error(res, "Finca no encontrada.", null, 404);
@@ -77,7 +77,7 @@ export async function createFinca(req, res) {
     */
   const grupoDatos = req.user.grupoDatos;
   const {
-    idCBO,
+    codigoCBO,
     nombreFinca,
     provincia,
     canton,
@@ -90,7 +90,7 @@ export async function createFinca(req, res) {
   } = req.body;
   const dto = new FincaDTO(
     grupoDatos,
-    idCBO,
+    codigoCBO,
     nombreFinca,
     provincia,
     canton,
@@ -112,7 +112,7 @@ export async function updateFinca(req, res) {
     Actualiza un registro de finca existente.
 
     Parametros:
-    - req.params.idCBO: ID CBO de la finca a actualizar.
+    - req.params.codigoCBO: ID CBO de la finca a actualizar.
     - req.body: Objeto con los datos de la finca a actualizar.
 
     Retorna:
@@ -120,7 +120,7 @@ export async function updateFinca(req, res) {
     */
   const grupoDatos = req.user.grupoDatos;
   const {
-    idCBO,
+    codigoCBO,
     nombreFinca,
     provincia,
     canton,
@@ -133,7 +133,7 @@ export async function updateFinca(req, res) {
   } = req.body;
   const dto = new FincaDTO(
     grupoDatos,
-    idCBO,
+    codigoCBO,
     nombreFinca,
     provincia,
     canton,
@@ -145,7 +145,7 @@ export async function updateFinca(req, res) {
     espejosAgua,
   );
 
-  const actualizado = await FincaModel.update(req.params.idCBO, grupoDatos, dto);
+  const actualizado = await FincaModel.update(req.params.id, grupoDatos, dto);
   if (!actualizado) {
     return error(res, "Finca no encontrada.", null, 404);
   }
@@ -158,13 +158,13 @@ export async function deleteFinca(req, res) {
     Elimina un registro de finca existente.
 
     Parametros:
-    - req.params.idCBO: ID CBO de la finca a eliminar.
+    - req.params.codigoCBO: ID CBO de la finca a eliminar.
 
     Retorna:
     - Una respuesta JSON indicando si la eliminación fue exitosa o no.
     */
   const grupoDatos = req.user.grupoDatos;
-  const eliminado = await FincaModel.remove(req.params.idCBO, grupoDatos);
+  const eliminado = await FincaModel.remove(req.params.id, grupoDatos);
   if (!eliminado) {
     return error(res, "Finca no encontrada.", null, 404);
   }
