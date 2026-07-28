@@ -4,112 +4,157 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.controller.js
 Autor: Jose Espinoza
-Fecha: 24/07/2026
+Fecha: 26/07/2026
 Modulo: Productos
 Descripcion:
-Controlador HTTP para Productos.
+Recibe las peticiones HTTP de productos, delega al modelo
+y devuelve la respuesta al cliente.
 //////////////////////////////////////////////////////////
 */
 
-import * as productoModel from '../models/producto.model.js';
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
 
-/**
- * Obtiene todos los productos o ejecuta búsqueda recortada por query param ?nombre=...
- */
+Modelos y DTOs
+*/
+
+import * as ProductoModel from '../models/producto.model.js';
+import { ProductoDTO } from '../dtos/producto.dto.js';
+
+// Common
+import { exito, error } from '../common/respuestaJson.js';
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES PRINCIPALES
+//////////////////////////////////////////////////////////
+*/
+
 export async function getProductos(req, res) {
+    /*
+    Descripcion:
+    Obtiene todos los productos del grupo.
+
+    Parametros:
+    - req: Objeto request de Express
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con lista de productos
+    */
     try {
-        const { nombre } = req.query;
-
-        if (nombre) {
-            const productos = await productoModel.findByName(nombre);
-            return res.status(200).json({ data: productos });
-        }
-
-        const productos = await productoModel.findAll();
-        return res.status(200).json({ data: productos });
-    } catch (error) {
-        return res.status(500).json({
-            message: "Error al obtener los productos",
-            error: error.message
-        });
+        const grupoDatos = req.user.grupoDatos;
+        const data       = await ProductoModel.findAll(grupoDatos);
+        return exito(res, 'Productos obtenidos correctamente.', data);
+    } catch (err) {
+        return error(res, 'Error al obtener productos.', err);
     }
 }
 
-/**
- * Obtiene un producto por ID.
- */
-export async function getProductoPorId(req, res) {
+export async function getProductoById(req, res) {
+    /*
+    Descripcion:
+    Obtiene un producto por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el producto encontrado
+    - 404 si no existe
+    */
     try {
-        const { id } = req.params;
-        const producto = await productoModel.findById(id);
+        const grupoDatos = req.user.grupoDatos;
+        const producto   = await ProductoModel.findById(req.params.id, grupoDatos);
 
-        if (!producto) {
-            return res.status(404).json({ message: 'Producto no encontrado' });
-        }
+        if (!producto)
+            return error(res, 'Producto no encontrado.', null, 404);
 
-        return res.status(200).json({ data: producto });
-    } catch (error) {
-        return res.status(500).json({ message: 'Error interno del servidor', error: error.message });
+        return exito(res, 'Producto obtenido correctamente.', producto);
+    } catch (err) {
+        return error(res, 'Error al obtener producto.', err);
     }
 }
 
-/**
- * Crea un producto recibiendo la estructura enviada por el Frontend.
- */
-export async function crearProducto(req, res) {
-    try {
-        const dto = {
-            ...req.body,
-            cantidad: req.body.cantidad ?? 0,
-            stockMinimo: req.body.stockMinimo ?? req.body.stock_minimo ?? 0,
-            grupoDatos: req.grupoDatos ?? 1
-        };
+export async function createProducto(req, res) {
+    /*
+    Descripcion:
+    Crea un nuevo producto.
 
-        const nuevoProducto = await productoModel.create(dto);
-        return res.status(201).json({ data: nuevoProducto });
-    } catch (error) {
-        return res.status(500).json({ message: 'Error al crear el producto', error: error.message });
+    Parametros:
+    - req: Objeto request de Express (req.body)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 201 con el producto creado
+    */
+    try {
+        const grupoDatos = req.user.grupoDatos;
+        const dto        = new ProductoDTO({ ...req.body, grupoDatos });
+        const nuevo      = await ProductoModel.create(dto, grupoDatos);
+
+        return exito(res, 'Producto creado correctamente.', nuevo, 201);
+    } catch (err) {
+        return error(res, 'Error al crear producto.', err);
     }
 }
 
-/**
- * Actualiza un producto por ID.
- */
-export async function actualizarProducto(req, res) {
+export async function updateProducto(req, res) {
+    /*
+    Descripcion:
+    Actualiza un producto existente por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id, req.body)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el producto actualizado
+    - 404 si no existe
+    */
     try {
-        const { id } = req.params;
-        const dto = {
-            ...req.body,
-            cantidad: req.body.cantidad ?? 0,
-            stockMinimo: req.body.stockMinimo ?? req.body.stock_minimo ?? 0
-        };
+        const grupoDatos  = req.user.grupoDatos;
+        const dto         = new ProductoDTO({ ...req.body, grupoDatos });
+        const actualizado = await ProductoModel.update(
+            req.params.id, 
+            dto, 
+            grupoDatos
+        );
 
-        const productoActualizado = await productoModel.update(id, dto);
+        if (!actualizado)
+            return error(res, 'Producto no encontrado.', null, 404);
 
-        if (!productoActualizado) {
-            return res.status(404).json({ message: 'Producto no encontrado o inactivo' });
-        }
-
-        return res.status(200).json({ data: productoActualizado });
-    } catch (error) {
-        return res.status(500).json({ message: 'Error al actualizar el producto', error: error.message });
+        return exito(res, 'Producto actualizado correctamente.', actualizado);
+    } catch (err) {
+        return error(res, 'Error al actualizar producto.', err);
     }
 }
 
-/**
- * Desactiva un producto (borrado lógico).
- */
-export async function desactivarProducto(req, res) {
+export async function deleteProducto(req, res) {
+    /*
+    Descripcion:
+    Borrado logico de un producto por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el producto desactivado
+    - 404 si no existe
+    */
     try {
-        const { id } = req.params;
-        const productoEliminado = await productoModel.removeLogicamente(id);
+        const grupoDatos = req.user.grupoDatos;
+        const eliminado  = await ProductoModel.remove(req.params.id, grupoDatos);
 
-        if (!productoEliminado) {
-            return res.status(404).json({ message: 'Producto no encontrado o inactivo' });
-        }
+        if (!eliminado)
+            return error(res, 'Producto no encontrado.', null, 404);
 
-        return res.status(200).json({ data: productoEliminado });
-    } catch (error) {
-        return res.status(500).json({ message: 'Error al desactivar el producto', error: error.message });
+        return exito(res, 'Producto eliminado correctamente.', eliminado);
+    } catch (err) {
+        return error(res, 'Error al eliminar producto.', err);
     }
 }

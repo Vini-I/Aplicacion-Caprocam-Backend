@@ -4,215 +4,275 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.model.js
 Autor: Jose Espinoza
-Fecha: 24/07/2026
+Fecha: 26/07/2026
 Modulo: Productos
 Descripcion:
-Maneja las consultas SQL directas a la base de datos para Productos e
-inserta la entrada inicial de inventario en la tabla correspondiente.
+Capa de datos del modulo de productos e inventario.
+Conectado a MySQL via pool. Usa borrado logico.
 //////////////////////////////////////////////////////////
+*/
+
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+
+Config
 */
 
 import pool from '../config/database.js';
 
-/**
- * Obtiene todos los productos activos mapeados con los nombres de propiedad que espera el Front.
- */
-export async function findAll() {
-    const [rows] = await pool.query(
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+
+Todas las funciones principales dependen de mapearProducto().
+*/
+
+function normalizarFecha(fecha) {
+    /*
+    Descripcion:
+    Parsea una fecha a formato YYYY-MM-DD para MySQL.
+    Soporta formato ISO (YYYY-MM-DD) y formato latino (DD/MM/YYYY).
+
+    Parametros:
+    - fecha: String o Date a formatear.
+
+    Retorna:
+    - Fecha en YYYY-MM-DD o null.
+    */
+    if (!fecha) return null;
+
+    // Si la fecha viene como string "DD/MM/YYYY"
+    if (typeof fecha === 'string' && fecha.includes('/')) {
+        const partes = fecha.split('/');
+        if (partes.length === 3) {
+            const [dia, mes, anio] = partes;
+            // Convertimos a YYYY-MM-DD para que Date() y MySQL lo entiendan
+            fecha = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+        }
+    }
+
+    const d = new Date(fecha);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[0];
+}
+
+function mapearProducto(fila) {
+    /*
+    Descripcion:
+    Convierte una fila MySQL (snake_case) a camelCase
+    para el frontend.
+
+    Parametros:
+    - fila: Objeto crudo de MySQL.
+
+    Retorna:
+    - Objeto producto en camelCase.
+    */
+    if (!fila) return null;
+    return {
+        id:             fila.id,
+        codigo:         fila.codigo || null,
+        uuid:           fila.uuid || null,
+        grupoDatos:     fila.grupo_datos,
+        proveedorId:    fila.proveedor_id || null,
+        nombre:         fila.nombre,
+        categoria:      fila.categoria || null,
+        unidad:         fila.unidad || 'unidades',
+        precioUnidad:   fila.precio_unidad ? Number(fila.precio_unidad) : 0,
+        cantidad:       fila.cantidad ? Number(fila.cantidad) : 0,
+        stockMinimo:    fila.stock_minimo ? Number(fila.stock_minimo) : 0,
+        entryDate:      normalizarFecha(fila.fecha_ingreso),
+        expirationDate: normalizarFecha(fila.fecha_caducidad),
+        estado:         fila.estado,
+    };
+}
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES PRINCIPALES
+//////////////////////////////////////////////////////////
+*/
+
+export async function findAll(grupoDatos) {
+    /*
+    Descripcion:
+    Obtiene todos los productos activos del grupo con stock.
+
+    Parametros:
+    - grupoDatos: Grupo de datos del usuario en sesion.
+
+    Retorna:
+    - Lista de productos mapeados a camelCase.
+    */
+    const [filas] = await pool.query(
         `SELECT 
-            p.id, 
-            p.codigo,
-            p.uuid, 
-            p.grupo_datos AS grupoDatos, 
-            p.proveedor_id AS proveedorId, 
-            p.nombre, 
-            p.categoria, 
-            p.unidad, 
-            p.precio_unidad AS precioUnidad, 
+            p.id, p.codigo, p.uuid, p.grupo_datos, p.proveedor_id,
+            p.nombre, p.categoria, p.unidad, p.precio_unidad,
+            p.fecha_ingreso, p.fecha_caducidad, p.estado,
             COALESCE(i.cantidad, 0) AS cantidad,
-            COALESCE(i.stock_minimo, 0) AS stockMinimo,
-            p.fecha_ingreso AS entryDate, 
-            p.fecha_caducidad AS expirationDate, 
-            p.estado 
+            COALESCE(i.stock_minimo, 0) AS stock_minimo
          FROM productos p
-         LEFT JOIN inventario i ON p.id = i.producto_id
-         WHERE p.estado = "ACTIVO" AND p.deleted_at IS NULL`
+         LEFT JOIN inventario i 
+           ON p.id = i.producto_id AND i.grupo_datos = ?
+         WHERE p.grupo_datos = ? AND p.estado = "ACTIVO" AND p.deleted_at IS NULL`,
+        [grupoDatos, grupoDatos]
     );
-    return rows;
+    return filas.map(mapearProducto);
 }
 
-/**
- * Búsqueda recortada por nombre limpia para el combo box/autocompletado.
- */
-export async function findByName(nombre) {
-    const [rows] = await pool.query(
-        `SELECT 
-            p.id,
-            p.codigo,
-            p.nombre, 
-            p.categoria, 
-            p.precio_unidad AS precioUnidad, 
-            p.proveedor_id AS proveedorId
-         FROM productos p 
-         WHERE p.nombre LIKE ? AND p.estado = "ACTIVO" AND p.deleted_at IS NULL`,
-        [`%${nombre}%`]
-    );
-    return rows;
-}
+export async function findById(id, grupoDatos) {
+    /*
+    Descripcion:
+    Busca un producto por ID dentro del grupo.
 
-/**
- * Busca un producto por ID con el mapeo completo de campos e información de inventario.
- */
-export async function findById(id) {
-    const [rows] = await pool.query(
+    Parametros:
+    - id:          ID del producto.
+    - grupoDatos:  Grupo de datos del usuario en sesion.
+
+    Retorna:
+    - El producto encontrado o null.
+    */
+    const [filas] = await pool.query(
         `SELECT 
-            p.id, 
-            p.codigo,
-            p.uuid, 
-            p.grupo_datos AS grupoDatos, 
-            p.proveedor_id AS proveedorId, 
-            p.nombre, 
-            p.categoria, 
-            p.unidad, 
-            p.precio_unidad AS precioUnidad, 
+            p.id, p.codigo, p.uuid, p.grupo_datos, p.proveedor_id,
+            p.nombre, p.categoria, p.unidad, p.precio_unidad,
+            p.fecha_ingreso, p.fecha_caducidad, p.estado,
             COALESCE(i.cantidad, 0) AS cantidad,
-            COALESCE(i.stock_minimo, 0) AS stockMinimo,
-            p.fecha_ingreso AS entryDate, 
-            p.fecha_caducidad AS expirationDate, 
-            p.estado 
+            COALESCE(i.stock_minimo, 0) AS stock_minimo
          FROM productos p
-         LEFT JOIN inventario i ON p.id = i.producto_id
-         WHERE p.id = ? AND p.estado = "ACTIVO" AND p.deleted_at IS NULL`,
-        [id]
+         LEFT JOIN inventario i 
+           ON p.id = i.producto_id AND i.grupo_datos = ?
+         WHERE p.id = ? AND p.grupo_datos = ? AND p.estado = "ACTIVO" AND p.deleted_at IS NULL`,
+        [grupoDatos, id, grupoDatos]
     );
-    return rows.length > 0 ? rows[0] : null;
+    return filas.length > 0 ? mapearProducto(filas[0]) : null;
 }
 
-/**
- * Crea un producto y automáticamente registra el saldo inicial en la tabla inventario.
- */
-export async function create(dto) {
-    const { 
-        codigo,
-        proveedorId, 
-        nombre, 
-        categoria, 
-        unidad, 
-        precioUnidad, 
-        cantidad,
-        stockMinimo,
-        entryDate, 
-        expirationDate, 
-        grupoDatos 
-    } = dto;
-    
-    const gd = grupoDatos ?? 1;
+export async function create(dto, grupoDatos) {
+    /*
+    Descripcion:
+    Inserta un nuevo producto y su saldo en inventario.
 
-    // 1. Insertar en la tabla productos incluyendo el campo codigo
+    Parametros:
+    - dto:         Objeto DTO con los datos.
+    - grupoDatos:  Grupo de datos del usuario en sesion.
+
+    Retorna:
+    - El producto recien creado.
+    */
+    const { codigo, proveedorId, nombre, categoria, unidad,
+            precioUnidad, cantidad, stockMinimo, entryDate,
+            expirationDate } = dto;
+
+    const fechaIng = normalizarFecha(entryDate);
+    const fechaExp = normalizarFecha(expirationDate);
+
     const [resultProducto] = await pool.query(
         `INSERT INTO productos 
-            (codigo, grupo_datos, proveedor_id, nombre, categoria, unidad, precio_unidad, fecha_ingreso, fecha_caducidad, estado) 
+            (codigo, grupo_datos, proveedor_id, nombre, categoria,
+             unidad, precio_unidad, fecha_ingreso, fecha_caducidad, estado)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "ACTIVO")`,
         [
-            codigo || null,
-            gd, 
-            proveedorId || null, 
-            nombre, 
-            categoria || null, 
-            unidad || 'unidades', 
-            precioUnidad || 0, 
-            entryDate || null, 
-            expirationDate || null
+            codigo || null, grupoDatos, proveedorId || null,
+            nombre, categoria || null, unidad || 'unidades',
+            precioUnidad || 0, fechaIng, fechaExp
         ]
     );
 
     const productoId = resultProducto.insertId;
 
-    // 2. Insertar automáticamente el saldo inicial en la tabla inventario (incluyendo proveedor_id)
     try {
         await pool.query(
-            `INSERT INTO inventario (producto_id, proveedor_id, cantidad, stock_minimo, grupo_datos) 
+            `INSERT INTO inventario 
+                (producto_id, proveedor_id, cantidad, stock_minimo, grupo_datos)
              VALUES (?, ?, ?, ?, ?)`,
-            [productoId, proveedorId || null, cantidad || 0, stockMinimo || 0, gd]
+            [
+                productoId, proveedorId || null,
+                cantidad || 0, stockMinimo || 0, grupoDatos
+            ]
         );
     } catch (invError) {
-        console.warn("Aviso: No se pudo insertar en la tabla inventario directamente:", invError.message);
+        console.warn("Aviso al insertar inventario:", invError.message);
     }
 
-    return {
-        id: productoId,
-        ...dto,
-        estado: 'ACTIVO'
-    };
+    return findById(productoId, grupoDatos);
 }
 
-/**
- * Actualiza un producto por su ID y actualiza su registro en inventario.
- */
-export async function update(id, dto) {
-    const { 
-        codigo,
-        proveedorId, 
-        nombre, 
-        categoria, 
-        unidad, 
-        precioUnidad, 
-        cantidad,
-        stockMinimo,
-        entryDate, 
-        expirationDate 
-    } = dto;
+export async function update(id, dto, grupoDatos) {
+    /*
+    Descripcion:
+    Actualiza un producto existente y sincroniza inventario.
+
+    Parametros:
+    - id:          ID del producto.
+    - dto:         Objeto DTO con los nuevos datos.
+    - grupoDatos:  Grupo de datos del usuario en sesion.
+
+    Retorna:
+    - El producto actualizado o null si no existe.
+    */
+    const { codigo, proveedorId, nombre, categoria, unidad,
+            precioUnidad, cantidad, stockMinimo, entryDate,
+            expirationDate } = dto;
+
+    const fechaIng = normalizarFecha(entryDate);
+    const fechaExp = normalizarFecha(expirationDate);
 
     const [result] = await pool.query(
         `UPDATE productos 
-         SET codigo = ?, proveedor_id = ?, nombre = ?, categoria = ?, unidad = ?, precio_unidad = ?, fecha_ingreso = ?, fecha_caducidad = ? 
-         WHERE id = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
+         SET codigo = ?, proveedor_id = ?, nombre = ?,
+             categoria = ?, unidad = ?, precio_unidad = ?,
+             fecha_ingreso = ?, fecha_caducidad = ?
+         WHERE id = ? AND grupo_datos = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
         [
-            codigo || null,
-            proveedorId || null, 
-            nombre, 
-            categoria || null, 
-            unidad || 'unidades', 
-            precioUnidad || 0, 
-            entryDate || null, 
-            expirationDate || null, 
-            id
+            codigo || null, proveedorId || null, nombre,
+            categoria || null, unidad || 'unidades',
+            precioUnidad || 0, fechaIng, fechaExp, id, grupoDatos
         ]
     );
 
     if (result.affectedRows === 0) return null;
 
-    // Actualizar inventario si existe (sincronizando proveedor_id)
     try {
         await pool.query(
-            `UPDATE inventario SET proveedor_id = ?, cantidad = ?, stock_minimo = ? WHERE producto_id = ?`,
-            [proveedorId || null, cantidad || 0, stockMinimo || 0, id]
+            `UPDATE inventario 
+             SET proveedor_id = ?, cantidad = ?, stock_minimo = ?
+             WHERE producto_id = ? AND grupo_datos = ?`,
+            [
+                proveedorId || null, cantidad || 0,
+                stockMinimo || 0, id, grupoDatos
+            ]
         );
     } catch (invError) {
-        console.warn("Aviso: No se pudo actualizar en la tabla inventario:", invError.message);
+        console.warn("Aviso al actualizar inventario:", invError.message);
     }
 
-    return {
-        id: Number(id),
-        ...dto,
-        estado: 'ACTIVO'
-    };
+    return findById(id, grupoDatos);
 }
 
-/**
- * Borrado lógico (estado INACTIVO).
- */
-export async function removeLogicamente(id) {
-    const producto = await findById(id);
+export async function remove(id, grupoDatos) {
+    /*
+    Descripcion:
+    Borrado logico del producto. No elimina el registro.
+
+    Parametros:
+    - id:          ID del producto.
+    - grupoDatos:  Grupo de datos del usuario en sesion.
+
+    Retorna:
+    - El producto antes de ser desactivado, o null si no existe.
+    */
+    const producto = await findById(id, grupoDatos);
     if (!producto) return null;
 
-    const [result] = await pool.query(
-        'UPDATE productos SET estado = "INACTIVO", deleted_at = NOW() WHERE id = ?',
-        [id]
+    await pool.query(
+        `UPDATE productos 
+         SET estado = "INACTIVO", deleted_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND grupo_datos = ?`,
+        [id, grupoDatos]
     );
-
-    if (result.affectedRows === 0) return null;
-
-    producto.estado = 'INACTIVO';
     return producto;
 }
