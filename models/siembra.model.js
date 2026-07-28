@@ -95,8 +95,8 @@ export async function create(dto, grupoDatos) {
             INSERT INTO siembras (
                 grupo_datos, lote_larva_id, precria_id, finca_id, estanque_id,
                 fecha_siembra, tecnica_cultivo, densidad_poblacional,
-                cantidad_sembrada, pl_siembra, estado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                cantidad_sembrada, pl_siembra, duracion_ciclo, estado
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             grupoDatos,
             dto.lote_larva_id,
@@ -108,6 +108,7 @@ export async function create(dto, grupoDatos) {
             dto.densidad_poblacional,
             dto.cantidad_sembrada,
             dto.pl_siembra,
+            dto.duracion_ciclo,
             dto.estado || 'Activa',
         ]);
  
@@ -159,6 +160,7 @@ export async function update(id, grupoDatos, datos) {
         densidad_poblacional:  'densidad_poblacional',
         cantidad_sembrada:     'cantidad_sembrada',
         pl_siembra:            'pl_siembra',
+        duracion_ciclo:        'duracion_ciclo',
         estado:                'estado',
     };
  
