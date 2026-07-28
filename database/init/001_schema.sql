@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS estanques (
     fecha_inicio_engorde DATE NULL,
     fecha_mantenimiento DATE NULL,
     densidad_siembra DECIMAL(10,2) NULL,
-    usa_precria BOOLEAN NOT NULL DEFAULT FALSE,
+    precria BOOLEAN NOT NULL DEFAULT FALSE,
     metodo_alimentacion VARCHAR(100) NULL,
     proveedor_alimento VARCHAR(100) NULL,
     numero_aireadores INT NOT NULL DEFAULT 0,
@@ -233,6 +233,7 @@ CREATE TABLE IF NOT EXISTS mantenimiento_equipo (
     costo_productos DECIMAL(12,2) NOT NULL DEFAULT 0,
     costo_total_estimado DECIMAL(12,2) NOT NULL DEFAULT 0,
     estado_ticket ENUM('En espera', 'En mantenimiento', 'Terminado') NOT NULL DEFAULT 'En espera',
+    estado_equipo ENUM('Activo', 'Inactivo', 'Mantenimiento') NOT NULL DEFAULT 'Mantenimiento',
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -551,6 +552,7 @@ CREATE TABLE IF NOT EXISTS siembras (
     densidad_poblacional DECIMAL(10,2) NULL,
     cantidad_sembrada INT NOT NULL,
     pl_siembra INT NULL,
+    duracion_ciclo INT NULL,
     estado ENUM('Activa', 'Finalizada') NOT NULL DEFAULT 'Activa',
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -610,6 +612,8 @@ CREATE TABLE IF NOT EXISTS compradores (
     contacto VARCHAR(120) NULL,
     telefono VARCHAR(25) NULL,
     correo VARCHAR(150) NULL,
+    direccion VARCHAR(255) NULL,
+    notas TEXT NULL,
     estado ENUM('ACTIVO', 'INACTIVO') NOT NULL DEFAULT 'ACTIVO',
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -731,6 +735,7 @@ CREATE TABLE IF NOT EXISTS alimentaciones (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
+    colaborador_id INT NULL,
     proveedor_id INT NULL,
     producto_id INT NULL,
     fecha DATE NOT NULL,
@@ -755,6 +760,9 @@ CREATE TABLE IF NOT EXISTS alimentaciones (
 
     CONSTRAINT fk_alimentaciones_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
+
+    CONSTRAINT fk_alimentaciones_colaboradores
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
 
     CONSTRAINT fk_alimentaciones_proveedores
     FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
@@ -1033,3 +1041,6 @@ CREATE INDEX idx_mant_tareas_grupo ON mantenimiento_equipo_tareas(grupo_datos);
 CREATE INDEX idx_mant_tareas_ticket ON mantenimiento_equipo_tareas(mantenimiento_equipo_id);
 
 CREATE INDEX idx_densidad_colaborador ON densidad_poblacional(colaborador_id);
+
+CREATE INDEX idx_mantenimiento_estado_equipo ON mantenimiento_equipo(estado_equipo);
+CREATE INDEX idx_alimentaciones_colaborador ON alimentaciones(colaborador_id);

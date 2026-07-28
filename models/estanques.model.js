@@ -65,7 +65,7 @@ export async function findAll(filtros) {
             fecha_inicio_engorde,
             fecha_mantenimiento,
             densidad_siembra,
-            usa_precria,
+            precria,
             metodo_alimentacion,
             proveedor_alimento,
             numero_aireadores,
@@ -138,7 +138,7 @@ export async function findById(id, grupoDatos) {
             fecha_inicio_engorde,
             fecha_mantenimiento,
             densidad_siembra,
-            usa_precria,
+            precria,
             metodo_alimentacion,
             proveedor_alimento,
             numero_aireadores,
@@ -210,7 +210,7 @@ export async function findByCodigoAndFinca(
             fecha_inicio_engorde,
             fecha_mantenimiento,
             densidad_siembra,
-            usa_precria,
+            precria,
             metodo_alimentacion,
             proveedor_alimento,
             numero_aireadores,
@@ -342,7 +342,7 @@ export async function create(dto) {
             fecha_inicio_engorde,
             fecha_mantenimiento,
             densidad_siembra,
-            usa_precria,
+            precria,
             metodo_alimentacion,
             proveedor_alimento,
             numero_aireadores,
@@ -365,7 +365,7 @@ export async function create(dto) {
             fechaInicioEngorde,
             fechaMantenimiento,
             dto.densidadSiembra,
-            dto.usaPrecria,
+            dto.precria,
             dto.metodoAlimentacion,
             dto.proveedorAlimento,
             dto.numeroAireadores,
@@ -437,7 +437,7 @@ export async function update(
             fecha_inicio_engorde = ?,
             fecha_mantenimiento = ?,
             densidad_siembra = ?,
-            usa_precria = ?,
+            precria = ?,
             metodo_alimentacion = ?,
             proveedor_alimento = ?,
             numero_aireadores = ?,
@@ -462,7 +462,7 @@ export async function update(
             fechaInicioEngorde,
             fechaMantenimiento,
             dto.densidadSiembra,
-            dto.usaPrecria,
+            dto.precria,
             dto.metodoAlimentacion,
             dto.proveedorAlimento,
             dto.numeroAireadores,
@@ -596,8 +596,8 @@ function mapearFila(row) {
         densidadSiembra: convertirNumero(
             row.densidad_siembra
         ),
-        usaPrecria: Boolean(
-            row.usa_precria
+        precria: Boolean(
+            row.precria
         ),
         metodoAlimentacion: row.metodo_alimentacion,
         proveedorAlimento: row.proveedor_alimento,
