@@ -2,15 +2,15 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: fisicoQuimico.model.js
-Autor: Samuel
-Fecha: 05/07/2026
-Modulo: Fisico Quimico
+Archivo: fisicoQuimica.model.js
+Autor: Samuel Cerdas
+Fecha: 27/07/2026
+Modulo: Fisico Quimica
 Descripcion:
 Capa de datos del modulo de fisico quimica.
 Trabaja con la base de datos principal MySQL.
 Contiene las consultas necesarias para obtener,
-crear y eliminar logicamente las lecturas
+crear, actualizar y eliminar logicamente las lecturas
 fisico quimicas.
 //////////////////////////////////////////////////////////
 */
@@ -23,7 +23,7 @@ IMPORTS
 Configuracion de base de datos.
 */
 
-import pool from "../config/database.js";
+import pool from '../config/database.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -34,23 +34,21 @@ Contiene las funciones exportables que interactuan
 directamente con la base de datos MySQL.
 */
 
-export async function findAll() {
-
-     /*
+export async function findAll(grupoDatos) {
+    /*
     Descripcion:
     Obtiene todas las lecturas fisico quimicas activas
-    registradas en la base de datos.
+    pertenecientes al grupo de datos recibido.
 
     Parametros:
-    No posee.
+    - grupoDatos: Grupo de datos del usuario autenticado.
 
     Retorna:
     - Lista de lecturas fisico quimicas.
     */
-
-    const [rows] = await pool.execute (
-
-         `
+    const grupoNormalizado = normalizarGrupoDatos(grupoDatos);
+    const [rows] = await pool.execute(
+        `
         SELECT
             id,
             uuid,
@@ -68,30 +66,32 @@ export async function findAll() {
             deleted_at,
             version
         FROM fisico_quimico
-        WHERE deleted_at IS NULL
+        WHERE grupo_datos = ?
+        AND deleted_at IS NULL
         AND activo = TRUE
         ORDER BY id DESC
-        `
-
+        `,
+        [grupoNormalizado]
     );
 
-     return mapearLista(rows);
+    return mapearLista(rows);
 }
 
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
-    Busca una lectura fisico quimica activa por su
-    identificador numerico.
+    Busca una lectura fisico quimica activa por su ID y
+    grupo de datos.
 
     Parametros:
     - id: Identificador de la lectura.
+    - grupoDatos: Grupo de datos del usuario autenticado.
 
     Retorna:
     - La lectura encontrada.
     - null si no existe o fue eliminada logicamente.
     */
-
+    const grupoNormalizado = normalizarGrupoDatos(grupoDatos);
     const [rows] = await pool.execute(
         `
         SELECT
@@ -112,11 +112,12 @@ export async function findById(id) {
             version
         FROM fisico_quimico
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         LIMIT 1
         `,
-        [id]
+        [id, grupoNormalizado]
     );
 
     if (rows.length === 0) {
@@ -126,25 +127,23 @@ export async function findById(id) {
     return mapearFila(rows[0]);
 }
 
-
-export async function create(dto) {
+export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Inserta una nueva lectura fisico quimica en la
-    base de datos.
+    Inserta una nueva lectura fisico quimica dentro del
+    grupo de datos recibido.
 
     Parametros:
     - dto: Objeto FisicoQuimicaDTO.
+    - grupoDatos: Grupo de datos del usuario autenticado.
 
     Retorna:
     - La lectura creada.
     */
-
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
-
+    const grupoNormalizado = normalizarGrupoDatos(grupoDatos);
     const [result] = await pool.execute(
         `
-        INSERT INTO fisico_quimico(
+        INSERT INTO fisico_quimico (
             grupo_datos,
             finca_id,
             estanque_id,
@@ -157,35 +156,37 @@ export async function create(dto) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
-            grupoDatos,
+            grupoNormalizado,
             dto.fincaId,
             dto.estanqueId,
             dto.fecha,
-            dto.ph,
-            dto.salinidad,
-            dto.temperatura,
-            dto.oxigenoDisuelto
+            serializarMediciones(dto.ph),
+            serializarMediciones(dto.salinidad),
+            serializarMediciones(dto.temperatura),
+            serializarMediciones(dto.oxigenoDisuelto)
         ]
     );
 
-    return await findById(result.insertId);
+    return findById(result.insertId, grupoNormalizado);
 }
 
-
-export async function remove(id) {
+export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
-    Elimina logicamente una lectura fisico quimica.
+    Actualiza una lectura fisico quimica por su ID y grupo
+    de datos.
 
     Parametros:
     - id: Identificador de la lectura.
+    - dto: Objeto FisicoQuimicaDTO.
+    - grupoDatos: Grupo de datos del usuario autenticado.
 
     Retorna:
-    - La lectura eliminada logicamente.
+    - La lectura actualizada.
     - null si no existe.
     */
-
-    const actual = await findById(id);
+    const grupoNormalizado = normalizarGrupoDatos(grupoDatos);
+    const actual = await findById(id, grupoNormalizado);
 
     if (!actual) {
         return null;
@@ -195,19 +196,82 @@ export async function remove(id) {
         `
         UPDATE fisico_quimico
         SET
-        activo = FALSE,
-        deleted_at = CURRENT_TIMESTAMP,
-        version = version + 1
+            finca_id = ?,
+            estanque_id = ?,
+            fecha_registro = ?,
+            ph = ?,
+            salinidad = ?,
+            temperatura = ?,
+            oxigeno = ?,
+            version = version + 1
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         `,
-        [id]
+        [
+            dto.fincaId,
+            dto.estanqueId,
+            dto.fecha,
+            serializarMediciones(dto.ph),
+            serializarMediciones(dto.salinidad),
+            serializarMediciones(dto.temperatura),
+            serializarMediciones(dto.oxigenoDisuelto),
+            id,
+            grupoNormalizado
+        ]
+    );
+
+    return findById(id, grupoNormalizado);
+}
+
+export async function remove(id, grupoDatos) {
+    /*
+    Descripcion:
+    Elimina logicamente una lectura fisico quimica por su
+    ID y grupo de datos.
+
+    Parametros:
+    - id: Identificador de la lectura.
+    - grupoDatos: Grupo de datos del usuario autenticado.
+
+    Retorna:
+    - La lectura eliminada logicamente.
+    - null si no existe.
+    */
+    const grupoNormalizado = normalizarGrupoDatos(grupoDatos);
+    const actual = await findById(id, grupoNormalizado);
+
+    if (!actual) {
+        return null;
+    }
+
+    await pool.execute(
+        `
+        UPDATE fisico_quimico
+        SET
+            activo = FALSE,
+            deleted_at = CURRENT_TIMESTAMP,
+            version = version + 1
+        WHERE id = ?
+        AND grupo_datos = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        `,
+        [id, grupoNormalizado]
     );
 
     return actual;
 }
 
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+
+Contiene las funciones internas de mapeo, normalizacion
+y serializacion utilizadas por el modelo.
+*/
 
 function mapearLista(rows) {
     /*
@@ -221,7 +285,6 @@ function mapearLista(rows) {
     Retorna:
     - Lista de lecturas.
     */
-
     const resultado = [];
 
     for (let i = 0; i < rows.length; i++) {
@@ -231,31 +294,29 @@ function mapearLista(rows) {
     return resultado;
 }
 
-
 function mapearFila(row) {
     /*
     Descripcion:
-    Convierte una fila de MySQL al formato utilizado
-    por el backend.
+    Convierte una fila de MySQL al formato camelCase
+    utilizado por el backend y el frontend.
 
     Parametros:
     - row: Fila obtenida desde MySQL.
 
     Retorna:
-    - Objeto lectura.
+    - Objeto de lectura fisico quimica.
     */
-
     return {
         id: row.id,
         uuid: row.uuid,
         grupoDatos: row.grupo_datos,
         fincaId: row.finca_id,
         estanqueId: row.estanque_id,
-        fecha: formatearFecha(row.fecha_registro),
-        ph: Number(row.ph),
-        salinidad: Number(row.salinidad),
-        temperatura: Number(row.temperatura),
-        oxigenoDisuelto: Number(row.oxigeno),
+        fecha: normalizarFecha(row.fecha_registro),
+        ph: normalizarMediciones(row.ph),
+        salinidad: normalizarMediciones(row.salinidad),
+        temperatura: normalizarMediciones(row.temperatura),
+        oxigenoDisuelto: normalizarMediciones(row.oxigeno),
         activo: Boolean(row.activo),
         creadoEn: row.fecha_creacion,
         actualizadoEn: row.fecha_actualizacion,
@@ -264,41 +325,34 @@ function mapearFila(row) {
     };
 }
 
-
-function obtenerGrupoDatos(valor) {
+function normalizarGrupoDatos(valor) {
     /*
     Descripcion:
-    Obtiene el grupo de datos del registro.
-    Mientras no exista autenticacion utiliza el grupo 1.
+    Valida y convierte el grupo de datos recibido desde
+    el token JWT.
 
     Parametros:
-    - valor: Grupo recibido.
+    - valor: Grupo de datos recibido.
 
     Retorna:
-    - Numero del grupo.
+    - Numero entero correspondiente al grupo de datos.
+
+    Excepciones:
+    - Error si el grupo de datos no es valido.
     */
+    const grupoDatos = Number(valor);
 
-    if (valor === undefined) {
-        return 1;
+    if (!Number.isInteger(grupoDatos) || grupoDatos <= 0) {
+        throw new Error('El grupoDatos del usuario es obligatorio.');
     }
 
-    if (valor === null) {
-        return 1;
-    }
-
-    if (String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
+    return grupoDatos;
 }
 
-
-function formatearFecha(valor) {
+function normalizarFecha(valor) {
     /*
     Descripcion:
-    Convierte una fecha de MySQL al formato
-    YYYY-MM-DD.
+    Convierte una fecha de MySQL al formato YYYY-MM-DD.
 
     Parametros:
     - valor: Fecha recibida.
@@ -306,7 +360,6 @@ function formatearFecha(valor) {
     Retorna:
     - Fecha formateada.
     */
-
     if (!valor) {
         return null;
     }
@@ -315,5 +368,47 @@ function formatearFecha(valor) {
         return valor.toISOString().slice(0, 10);
     }
 
-    return String(valor);
+    return String(valor).slice(0, 10);
+}
+
+function normalizarMediciones(valor) {
+    /*
+    Descripcion:
+    Convierte el contenido JSON de MySQL en un arreglo de
+    mediciones utilizado por el frontend.
+
+    Parametros:
+    - valor: Valor recibido desde MySQL.
+
+    Retorna:
+    - Arreglo de mediciones.
+    */
+    if (Array.isArray(valor)) {
+        return valor;
+    }
+
+    if (typeof valor === 'string') {
+        const mediciones = JSON.parse(valor);
+
+        if (Array.isArray(mediciones)) {
+            return mediciones;
+        }
+    }
+
+    return [];
+}
+
+function serializarMediciones(mediciones) {
+    /*
+    Descripcion:
+    Convierte un arreglo de mediciones al formato JSON
+    requerido para almacenarlo en MySQL.
+
+    Parametros:
+    - mediciones: Arreglo de mediciones.
+
+    Retorna:
+    - Cadena JSON con las mediciones.
+    */
+    return JSON.stringify(mediciones);
 }
