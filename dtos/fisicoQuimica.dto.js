@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: fisicoQuimica.dto.js
-Autor: Samuel
-Fecha: 29/06/2026
+Autor: Samuel Cerdas
+Fecha: 27/07/2026
 Modulo: Fisico Quimica
 Descripcion:
 Archivo de transferencia de datos para el
@@ -36,7 +36,6 @@ export class FisicoQuimicaDTO {
         temperatura,
         oxigenoDisuelto
     }) {
-
         /*
         Descripcion:
         Construye un objeto FisicoQuimicaDTO
@@ -48,10 +47,13 @@ export class FisicoQuimicaDTO {
         - fincaId: Identificador de la finca.
         - estanqueId: Identificador del estanque.
         - fecha: Fecha de la lectura.
-        - ph: Arreglo de mediciones de pH ({ valor, etiqueta }).
+        - ph: Arreglo de mediciones de pH.
         - salinidad: Arreglo de mediciones de salinidad.
         - temperatura: Arreglo de mediciones de temperatura.
-        - oxigenoDisuelto: Arreglo de mediciones de oxigeno disuelto.
+        - oxigenoDisuelto: Arreglo de mediciones de oxigeno.
+
+        Retorna:
+        - Instancia de FisicoQuimicaDTO.
         */
 
         this.id = id;
@@ -64,5 +66,4 @@ export class FisicoQuimicaDTO {
         this.temperatura = temperatura;
         this.oxigenoDisuelto = oxigenoDisuelto;
     }
-
 }

@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: fisicoQuimica.middleware.js
-Autor: Brandon
-Fecha: 03/07/2026
+Autor: Samuel Cerdas
+Fecha: 27/07/2026
 Modulo: Fisico Quimica
 Descripcion:
 Middleware de validacion de body para lecturas
@@ -13,6 +13,23 @@ esten presentes antes de llegar al controller.
 //////////////////////////////////////////////////////////
 */
 
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+
+Servicios
+*/
+import {
+    isFechaValida,
+    isIdValido,
+    isPhValido,
+    isSalinidadValida,
+    isTemperaturaValida,
+    isOxigeno
+} from '../services/fisicoQuimica.service.js';
+
+// Common
 import { error } from '../common/respuestaJson.js';
 
 /*
@@ -30,75 +47,144 @@ const camposRequeridos = [
     'ph',
     'salinidad',
     'temperatura',
-    'oxigenoDisuelto',
+    'oxigenoDisuelto'
 ];
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
+
+Contiene las validaciones internas utilizadas por el
+middleware del modulo.
 */
 
-function estaVacio(valor) {
+function validarCampos(req, res) {
     /*
     Descripcion:
-    Verifica si un valor esta vacio, sin marcar
-    como faltante un 0 valido (bug del !valor anterior).
+    Verifica el formato y contenido de los campos de una
+    lectura fisico quimica.
 
     Parametros:
-    - valor: Valor a revisar.
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
 
     Retorna:
-    - true si esta vacio.
-    - false si tiene contenido, incluyendo 0.
+    - Respuesta 400 si algun campo es invalido.
+    - null si todos los campos son validos.
     */
-    if (valor === undefined) return true;
-    if (valor === null) return true;
-    if (typeof valor === 'string' && valor.trim() === '') return true;
-    return false;
+    const {
+        fincaId,
+        estanqueId,
+        fecha,
+        ph,
+        salinidad,
+        temperatura,
+        oxigenoDisuelto
+    } = req.body;
+
+    if (!isIdValido(fincaId)) {
+        return error(res, 'El fincaId no es valido.', null, 400);
+    }
+
+    if (!isIdValido(estanqueId)) {
+        return error(res, 'El estanqueId no es valido.', null, 400);
+    }
+
+    if (!isFechaValida(fecha)) {
+        return error(res, 'La fecha no es valida.', null, 400);
+    }
+
+    if (!isPhValido(ph)) {
+        return error(
+            res,
+            'El ph debe contener mediciones validas.',
+            null,
+            400
+        );
+    }
+
+    if (!isSalinidadValida(salinidad)) {
+        return error(
+            res,
+            'La salinidad debe contener mediciones validas.',
+            null,
+            400
+        );
+    }
+
+    if (!isTemperaturaValida(temperatura)) {
+        return error(
+            res,
+            'La temperatura debe contener mediciones validas.',
+            null,
+            400
+        );
+    }
+
+    if (!isOxigeno(oxigenoDisuelto)) {
+        return error(
+            res,
+            'El oxigeno disuelto debe contener mediciones validas.',
+            null,
+            400
+        );
+    }
+
+    return null;
 }
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
+
+Contiene los middlewares de validacion de body
+para el modulo de fisico quimica.
 */
 
 export function validarFisicoQuimica(req, res, next) {
     /*
     Descripcion:
-    Verifica que el body no este vacio y contenga
-    los campos minimos requeridos para una lectura
-    fisico quimica.
+    Verifica que el body no este vacio, contenga los campos
+    requeridos y que sus valores sean validos.
 
     Parametros:
-    - req:  Objeto request de Express
-    - res:  Objeto response de Express
-    - next: Funcion para pasar al siguiente middleware
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
+    - next: Funcion para pasar al siguiente middleware.
 
     Retorna:
-    - next() si el body es valido
-    - 400 si el body esta vacio o faltan campos
+    - next() si el body es valido.
+    - 400 si el body esta vacio, incompleto o es invalido.
     */
-    if (!req.body || Object.keys(req.body).length === 0)
-        return error(res, 'El body no puede estar vacio.', null, 400);
+    if (!req.body || Object.keys(req.body).length === 0) {
+        return error(
+            res,
+            'El body no puede estar vacio.',
+            null,
+            400
+        );
+    }
 
-    const faltantes = camposRequeridos.filter(campo => estaVacio(req.body[campo]));
+    const faltantes = camposRequeridos.filter(
+        campo => req.body[campo] === undefined
+    );
 
-    if (faltantes.length > 0)
+    if (faltantes.length > 0) {
         return error(
             res,
             `Faltan campos requeridos: ${faltantes.join(', ')}.`,
             null,
             400
         );
+    }
 
-    const fechaIngresada = new Date(req.body.fecha);
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    const resultadoValidacion = validarCampos(req, res);
 
-    if (fechaIngresada > hoy)
-        return error(res, 'La fecha no puede ser futura.', null, 400);
+    if (resultadoValidacion) {
+        return resultadoValidacion;
+    }
 
-    next();
+    return next();
 }

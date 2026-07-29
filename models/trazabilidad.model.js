@@ -3,7 +3,7 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: trazabilidad.model.js
-Autor: Samuel
+Autor: Brandon
 Fecha: 05/07/2026
 Modulo: Trazabilidad
 Descripcion:
@@ -336,33 +336,35 @@ function obtenerGrupoDatos(valor) {
 
     /*
     Descripcion:
-    Obtiene el grupo de datos que utilizara
-    el registro.
-
-    Si no se recibe ningun valor se utiliza
-    el grupo 1 mientras se implementa la
-    autenticacion.
+    Valida el grupo de datos recibido desde el
+    JWT (req.user.grupoDatos). Ya no se tolera un
+    valor ausente: antes se usaba 1 por defecto
+    mientras se implementaba la autenticacion, pero
+    esa autenticacion ya existe en todos los modulos.
 
     Parametros:
-    - valor: Grupo de datos.
+    - valor: Grupo de datos proveniente del token.
 
     Retorna:
-    Numero del grupo de datos.
+    - Numero del grupo de datos, si es valido.
+
+    Lanza:
+    - Error si el valor no llego o no es numerico.
     */
 
-    if (valor === undefined) {
-        return 1;
+    if (valor === undefined || valor === null || String(valor).trim() === '') {
+        throw new Error(
+            'grupoDatos es obligatorio y debe venir del token JWT (req.user.grupoDatos).'
+        );
     }
 
-    if (valor === null) {
-        return 1;
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        throw new Error('grupoDatos debe ser numerico.');
     }
 
-    if (String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
+    return numero;
 }
 
 function normalizarFechaMysql(valor) {
