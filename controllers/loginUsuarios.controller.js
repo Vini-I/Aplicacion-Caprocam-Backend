@@ -4,13 +4,14 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loginUsuarios.controller.js
 Autor: Rodolfo Chaves / Marco Vásquez
-Fecha: 28/06/2026
+Fecha: 29/06/2026
 Modulo: Login
 Descripcion:
 Recibe las peticiones HTTP, consulta los modelos,
 delega validaciones al servicio, aplica el DTO
 correspondiente y devuelve la respuesta JSON al cliente.
-Incluye generacion de JWT con persistencia en DB.
+Incluye generacion de JWT, limite de 5 intentos de login
+y validacion de contrasenas seguras.
 //////////////////////////////////////////////////////////
 */
 
@@ -37,6 +38,9 @@ import {
     isPinValido,
     isPin,
     isContrasenaSegura,
+    estaBloqueado,
+    registrarIntentoFallido,
+    resetearIntentosLogin,
     obtenerPantallasPermitidas,
 } from '../services/loginUsuarios.services.js';
 
@@ -125,7 +129,8 @@ export async function login(req, res) {
     /*
     Descripcion:
     Autentica un administrador web por usuario o correo
-    y contrasena. Genera y persiste tokens JWT.
+    y contrasena. Aplica limite de 5 intentos fallidos.
+    Genera y persiste tokens JWT.
 
     Parametros:
     - req.body: { usuario?, correo?, contrasena }
@@ -133,7 +138,8 @@ export async function login(req, res) {
     Retorna:
     - 200 con tokens y datos del administrador
     - 404 si el usuario no existe
-    - 401 si la contrasena es incorrecta
+    - 401 si la contrasena es incorrecta (muestra intentos restantes)
+    - 429 si la cuenta esta bloqueada por superar 5 intentos
     */
     try {
         const identificador = req.body.usuario    ??
@@ -142,6 +148,17 @@ export async function login(req, res) {
                               req.body.nombreUsuario;
         const contrasena    = req.body.contrasena;
 
+        if (!identificador || !contrasena)
+            return error(res, 'Usuario y contrasena son requeridos.', null, 400);
+
+        // Verificacion de bloqueo por 5 intentos fallidos
+        const estadoBloqueo = estaBloqueado(identificador);
+        if (estadoBloqueo.bloqueado) {
+            const msg = `Cuenta bloqueada por superar 5 intentos. ` +
+                        `Intente de nuevo en ${estadoBloqueo.tiempoRestanteMinutos} min.`;
+            return error(res, msg, null, 429);
+        }
+
         const usuarioEncontrado = await UsuariosModel.findUsuarioByIdentificador(identificador);
 
         if (!usuarioEncontrado)
@@ -149,8 +166,17 @@ export async function login(req, res) {
 
         const contrasenaOk = await isContrasenaValida(contrasena, usuarioEncontrado.passwordHash);
 
-        if (!contrasenaOk)
-            return error(res, 'Credenciales incorrectas.', null, 401);
+        if (!contrasenaOk) {
+            const resultadoIntento = registrarIntentoFallido(identificador);
+            if (resultadoIntento.bloqueado) {
+                return error(res, 'Ha superado el maximo de 5 intentos. Cuenta bloqueada 15 min.', null, 429);
+            }
+            const msg = `Credenciales incorrectas. Intentos restantes: ${resultadoIntento.intentosRestantes}.`;
+            return error(res, msg, null, 401);
+        }
+
+        // Login exitoso: se resetea el contador de intentos fallidos
+        resetearIntentosLogin(identificador);
 
         const rol = await cargarRolConPantallas(usuarioEncontrado.rolId);
 
@@ -177,7 +203,8 @@ export async function login(req, res) {
 export async function registrar(req, res) {
     /*
     Descripcion:
-    Registra un nuevo administrador web.
+    Registra un nuevo administrador web. Valida politica
+    de contrasena fuerte (mayuscula, minuscula, numero, simbolo).
 
     Parametros:
     - req.body: { nombre, apellidos, correo, usuario, contrasena, rolId }
@@ -185,7 +212,7 @@ export async function registrar(req, res) {
     Retorna:
     - 201 con los datos del administrador creado
     - 409 si el correo o usuario ya existen
-    - 422 si la contrasena tiene menos de 8 caracteres o el rol no existe
+    - 422 si la contrasena no cumple politicas de seguridad o rol invalido
     */
     try {
         const nombre        = req.body.nombre;
@@ -197,8 +224,11 @@ export async function registrar(req, res) {
         const grupoDatos    = req.user.grupoDatos;
         const telefono      = req.body.telefono;
 
-        if (!isContrasenaSegura(contrasena))
-            return error(res, 'La contrasena debe tener minimo 8 caracteres.', null, 422);
+        if (!isContrasenaSegura(contrasena)) {
+            const msgErr = 'La contrasena debe tener al menos 8 caracteres, ' +
+                           'una mayuscula, una minuscula, un numero y un simbolo.';
+            return error(res, msgErr, null, 422);
+        }
 
         const correoExistente = await UsuariosModel.findUsuarioByCorreo(email);
         if (correoExistente)

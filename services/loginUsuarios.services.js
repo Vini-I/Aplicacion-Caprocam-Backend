@@ -3,12 +3,13 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loginUsuarios.services.js
-Autor: Rodolfo Chaves
-Fecha: 28/06/2026
+Autor: Rodolfo Chaves, Marco Vasquez
+Fecha: 29/06/2026
 Modulo: Login
 Descripcion:
 Define las reglas de negocio y validaciones del modulo
-de login. No maneja req/res, modelos ni DTOs.
+de login. Maneja regex de contrasenas y control de
+5 intentos maximo de autenticacion.
 //////////////////////////////////////////////////////////
 */
 
@@ -26,10 +27,20 @@ import bcrypt from "bcrypt";
 CONSTANTES
 //////////////////////////////////////////////////////////
 
-Expresiones regulares para validacion de campos.
+Expresiones regulares para validacion de campos y limites.
 */
 
 const pinRegex = /^\d{4}$/;
+
+// Regex: minimo 8 caracteres, 1 mayuscula, 1 minuscula, 1 numero y 1 simbolo
+const contrasenaRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&._\-#])[A-Za-z\d@$!%*?&._\-#]{8,}$/;
+
+const MAX_INTENTOS_LOGIN = 5;
+const TIEMPO_BLOQUEO_MS = 15 * 60 * 1000; // 15 minutos de bloqueo
+
+// Mapa en memoria para seguimiento de intentos de login
+const intentosLogin = new Map();
 
 const pantallasPorRol = {
     administrador: ["dashboard", "usuarios", "reportes"],
@@ -128,15 +139,95 @@ export function isPin(pin) {
 export function isContrasenaSegura(contrasena) {
     /*
     Descripcion:
-    Valida que una contrasena tenga al menos 8 caracteres.
+    Valida que una contrasena cumpla la politica de seguridad:
+    minimo 8 caracteres, al menos una mayuscula, una minuscula,
+    un numero y un caracter especial (@$!%*?&._-#).
 
     Parametros:
     - contrasena: String a validar.
 
     Retorna:
-    - true si cumple el minimo, false si no.
+    - true si cumple con la politica de seguridad, false si no.
     */
-    return String(contrasena ?? "").length >= 8;
+    return contrasenaRegex.test(String(contrasena ?? ""));
+}
+
+export function estaBloqueado(identificador) {
+    /*
+    Descripcion:
+    Verifica si un usuario ha sido bloqueado por superar
+    el limite de 5 intentos fallidos de login.
+
+    Parametros:
+    - identificador: Nombre de usuario o correo.
+
+    Retorna:
+    - Objeto { bloqueado: boolean, tiempoRestanteMinutos: number }
+    */
+    const clave = String(identificador ?? "").toLowerCase();
+    const registro = intentosLogin.get(clave);
+
+    if (!registro) return { bloqueado: false, tiempoRestanteMinutos: 0 };
+
+    const ahora = Date.now();
+    if (registro.bloqueadoHasta && ahora < registro.bloqueadoHasta) {
+        const tiempoRestante = Math.ceil(
+            (registro.bloqueadoHasta - ahora) / (60 * 1000)
+        );
+        return { bloqueado: true, tiempoRestanteMinutos: tiempoRestante };
+    }
+
+    // Si ya paso el tiempo de bloqueo, reiniciamos el registro
+    if (registro.bloqueadoHasta && ahora >= registro.bloqueadoHasta) {
+        intentosLogin.delete(clave);
+        return { bloqueado: false, tiempoRestanteMinutos: 0 };
+    }
+
+    return { bloqueado: false, tiempoRestanteMinutos: 0 };
+}
+
+export function registrarIntentoFallido(identificador) {
+    /*
+    Descripcion:
+    Registra un intento fallido de login. Bloquea si
+    se alcanzan 5 intentos fallidos.
+
+    Parametros:
+    - identificador: Nombre de usuario o correo.
+
+    Retorna:
+    - Objeto { bloqueado: boolean, intentosRestantes: number }
+    */
+    const clave = String(identificador ?? "").toLowerCase();
+    const ahora = Date.now();
+    let registro = intentosLogin.get(clave) || { intentos: 0, bloqueadoHasta: null };
+
+    registro.intentos += 1;
+
+    if (registro.intentos >= MAX_INTENTOS_LOGIN) {
+        registro.bloqueadoHasta = ahora + TIEMPO_BLOQUEO_MS;
+        intentosLogin.set(clave, registro);
+        return { bloqueado: true, intentosRestantes: 0 };
+    }
+
+    intentosLogin.set(clave, registro);
+    const intentosRestantes = MAX_INTENTOS_LOGIN - registro.intentos;
+    return { bloqueado: false, intentosRestantes };
+}
+
+export function resetearIntentosLogin(identificador) {
+    /*
+    Descripcion:
+    Limpia los intentos fallidos tras un login exitoso.
+
+    Parametros:
+    - identificador: Nombre de usuario o correo.
+
+    Retorna:
+    - No retorna valor.
+    */
+    const clave = String(identificador ?? "").toLowerCase();
+    intentosLogin.delete(clave);
 }
 
 export function obtenerPantallasPermitidas(nombreRol) {
