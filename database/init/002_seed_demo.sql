@@ -66,9 +66,9 @@ INSERT INTO fincas (id, uuid, grupo_datos, propietario_usuario_id, codigo_cbo, n
 -- 5. TABLA: colaboradores
 -- ------------------------------------------------------------------------------
 INSERT INTO colaboradores (id, uuid, grupo_datos, finca_id, rol_id, nombre, apellidos, cedula, telefono, email, nombre_usuario, pin_hash, tipo_colaborador, activo) VALUES
-(1, UUID(), 1001, 1, 5, 'Juan', 'Perez Morales', '601230456', '+506 7011-2233', 'jperez@gmail.com', 'jperez_maragal', '$2a$12$lbJP0Yno2WF3mxI.deIeYO2PuC0KdvFf1Ku3kT4N5TLpuRxqSFxV2', 'external_collab', TRUE),
-(2, UUID(), 1001, 1, 4, 'Laura', 'Sanchez Mora', '109870654', '+506 7022-3344', 'lsanchez@caprocam.com', 'lsanchez_tec', '$2a$12$lbJP0Yno2WF3mxI.deIeYO2PuC0KdvFf1Ku3kT4N5TLpuRxqSFxV2', 'caprocam_collab', TRUE),
-(3, UUID(), 1002, 3, 5, 'Esteban', 'Araya Cruz', '503210987', '+506 7033-4455', 'earaya@surcamaron.com', 'earaya_golfo', '$2a$12$lbJP0Yno2WF3mxI.deIeYO2PuC0KdvFf1Ku3kT4N5TLpuRxqSFxV2', 'external_owner', TRUE);
+(1, UUID(), 1001, 1, 5, 'Juan', 'Perez Morales', '601230456', '+506 7011-2233', 'jperez@gmail.com', 'jperez_maragal', '$2a$12$mbFWdJTd5ZkAaKdzEFm1j.TN2B4ZTQXTkVKshvsP5l/T6ViTn.l.6', 'external_collab', TRUE),
+(2, UUID(), 1001, 1, 4, 'Laura', 'Sanchez Mora', '109870654', '+506 7022-3344', 'lsanchez@caprocam.com', 'lsanchez_tec', '$2a$12$mbFWdJTd5ZkAaKdzEFm1j.TN2B4ZTQXTkVKshvsP5l/T6ViTn.l.6', 'caprocam_collab', TRUE),
+(3, UUID(), 1002, 3, 5, 'Esteban', 'Araya Cruz', '503210987', '+506 7033-4455', 'earaya@surcamaron.com', 'earaya_golfo', '$2a$12$mbFWdJTd5ZkAaKdzEFm1j.TN2B4ZTQXTkVKshvsP5l/T6ViTn.l.6', 'external_owner', TRUE);
 
 -- ------------------------------------------------------------------------------
 -- 6. TABLA: estanques
