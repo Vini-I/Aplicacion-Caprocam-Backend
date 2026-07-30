@@ -4,11 +4,14 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantenimiento.controller.js
 Autor: Marco Vásquez
-Fecha: 22/07/2026
+Fecha: 30/07/2026
 Modulo: Mantenimientos
 Descripcion:
 Recibe las peticiones HTTP, delega al servicio y modelo,
 y devuelve la respuesta al cliente.
+Aplica obtenerContextoPeticion para grupo_datos y creadores.
+costoProductos y costoTotalEstimado son calculados
+automaticamente por el backend al agregar productos.
 //////////////////////////////////////////////////////////
 */
 
@@ -33,6 +36,7 @@ import pool from '../config/database.js';
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
+import { obtenerContextoPeticion } from '../common/contextoPeticion.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -42,14 +46,14 @@ FUNCIONES SECUNDARIAS
 createMantenimiento() y updateMantenimiento() dependen de validarCuerpo().
 */
 
-function validarCuerpo({ tituloTicket, descripcionTicket, equipoId, fechaMantenimiento, tipoPersonal, estadoTicket }, res) {
+function validarCuerpo({ tituloTicket, descripcionTicket, equipoId, tipoPersonal, estadoTicket }, res) {
     /*
     Descripcion:
     Valida los campos del body antes de construir el DTO.
 
     Parametros:
     - tituloTicket, descripcionTicket, equipoId,
-      fechaMantenimiento, tipoPersonal, estadoTicket: Campos del body
+      tipoPersonal, estadoTicket: Campos del body
     - res: Objeto response de Express
 
     Retorna:
@@ -65,10 +69,20 @@ function validarCuerpo({ tituloTicket, descripcionTicket, equipoId, fechaManteni
         return error(res, 'El equipo es requerido.', null, 400);
 
     if (tipoPersonal && !isTipoPersonalValido(tipoPersonal))
-        return error(res, `Tipo de personal invalido. Opciones: ${Object.values(TipoPersonal).join(', ')}`, null, 422);
+        return error(
+            res,
+            `Tipo de personal invalido. Opciones: ${Object.values(TipoPersonal).join(', ')}`,
+            null,
+            422
+        );
 
     if (estadoTicket && !isEstadoValido(estadoTicket))
-        return error(res, `Estado invalido. Opciones: ${Object.values(EstadoTicket).join(', ')}`, null, 422);
+        return error(
+            res,
+            `Estado invalido. Opciones: ${Object.values(EstadoTicket).join(', ')}`,
+            null,
+            422
+        );
 
     return null;
 }
@@ -92,8 +106,8 @@ export async function getMantenimientos(req, res) {
     - 200 con lista de mantenimientos
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const data       = await MantenimientoModel.findAll(grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const data           = await MantenimientoModel.findAll(grupoDatos);
         return exito(res, 'Mantenimientos obtenidos correctamente.', data);
     } catch (err) {
         return error(res, 'Error al obtener mantenimientos.', err);
@@ -114,8 +128,8 @@ export async function getMantenimientoById(req, res) {
     - 404 si no existe
     */
     try {
-        const grupoDatos    = req.user.grupoDatos;
-        const mantenimiento = await MantenimientoModel.findById(req.params.id, grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const mantenimiento  = await MantenimientoModel.findById(req.params.id, grupoDatos);
 
         if (!mantenimiento)
             return error(res, 'Mantenimiento no encontrado.', null, 404);
@@ -130,8 +144,9 @@ export async function createMantenimiento(req, res) {
     /*
     Descripcion:
     Crea un nuevo ticket de mantenimiento.
-    El creador web se extrae del JWT.
-    El creador movil es placeholder hasta que se implemente auth movil.
+    El creador se resuelve de forma segura mediante obtenerContextoPeticion().
+    costoProductos inicia en 0 y se recalcula al agregar productos.
+    costoTotalEstimado inicia igual a costoManoObra.
 
     Parametros:
     - req: Objeto request de Express (req.body)
@@ -143,9 +158,8 @@ export async function createMantenimiento(req, res) {
     - 404 si el equipo no existe
     */
     try {
-        const grupoDatos             = req.user.grupoDatos;
-        const creadoPorUsuarioId     = req.user?.id        ?? null;
-        const creadoPorColaboradorId = req.colaborador?.id ?? null;
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
 
         const {
             codigoTicket,
@@ -155,12 +169,13 @@ export async function createMantenimiento(req, res) {
             descripcionTicket,
             tipoPersonal,
             costoManoObra,
-            costoProductos,
-            costoTotalEstimado,
             estadoTicket,
         } = req.body;
 
-        const err = validarCuerpo({ tituloTicket, descripcionTicket, equipoId, fechaMantenimiento, tipoPersonal, estadoTicket }, res);
+        const err = validarCuerpo(
+            { tituloTicket, descripcionTicket, equipoId, tipoPersonal, estadoTicket },
+            res
+        );
         if (err) return err;
 
         const [equipos] = await pool.query(
@@ -180,9 +195,9 @@ export async function createMantenimiento(req, res) {
             tituloTicket,
             descripcionTicket,
             tipoPersonal,
-            costoManoObra,
-            costoProductos,
-            costoTotalEstimado,
+            costoManoObra:      costoManoObra ?? 0,
+            costoProductos:     0,
+            costoTotalEstimado: costoManoObra ?? 0,
             estadoTicket,
         });
         const nuevo = await MantenimientoModel.create(dto, grupoDatos);
@@ -198,6 +213,8 @@ export async function updateMantenimiento(req, res) {
     Descripcion:
     Actualiza un ticket de mantenimiento existente por su ID.
     codigoTicket no se puede modificar.
+    costoProductos no se modifica aqui — lo recalcula el controller
+    de productos automaticamente.
 
     Parametros:
     - req: Objeto request de Express (req.params.id, req.body)
@@ -209,7 +226,7 @@ export async function updateMantenimiento(req, res) {
     - 404 si no existe
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const {
             equipoId,
             fechaMantenimiento,
@@ -217,12 +234,13 @@ export async function updateMantenimiento(req, res) {
             descripcionTicket,
             tipoPersonal,
             costoManoObra,
-            costoProductos,
-            costoTotalEstimado,
             estadoTicket,
         } = req.body;
 
-        const err = validarCuerpo({ tituloTicket, descripcionTicket, equipoId, tipoPersonal, estadoTicket }, res);
+        const err = validarCuerpo(
+            { tituloTicket, descripcionTicket, equipoId, tipoPersonal, estadoTicket },
+            res
+        );
         if (err) return err;
 
         const [equipos] = await pool.query(
@@ -239,9 +257,7 @@ export async function updateMantenimiento(req, res) {
             tituloTicket,
             descripcionTicket,
             tipoPersonal,
-            costoManoObra,
-            costoProductos,
-            costoTotalEstimado,
+            costoManoObra: costoManoObra ?? 0,
             estadoTicket,
         });
         const actualizado = await MantenimientoModel.update(req.params.id, dto, grupoDatos);
@@ -269,8 +285,8 @@ export async function deleteMantenimiento(req, res) {
     - 404 si no existe
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const eliminado  = await MantenimientoModel.remove(req.params.id, grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const eliminado      = await MantenimientoModel.remove(req.params.id, grupoDatos);
 
         if (!eliminado)
             return error(res, 'Mantenimiento no encontrado.', null, 404);
