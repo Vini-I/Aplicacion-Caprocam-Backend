@@ -46,7 +46,7 @@ function mapearComprador(fila) {
         id:         fila.id,
         grupoDatos: fila.grupo_datos,
         nombre:     fila.nombre,
-        contacto:   fila.contacto,
+        cedula:     fila.cedula,
         telefono:   fila.telefono,
         correo:     fila.correo,
         direccion:  fila.direccion,
@@ -73,7 +73,7 @@ FUNCIONES PRINCIPALES
  */
 export async function findAll(grupoDatos) {
     const [filas] = await pool.query(
-        `SELECT id, grupo_datos, nombre, contacto, telefono, correo, direccion, notas, estado
+        `SELECT id, grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado
          FROM compradores
          WHERE grupo_datos = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
         [grupoDatos]
@@ -94,7 +94,7 @@ export async function findAll(grupoDatos) {
  */
 export async function findById(id, grupoDatos) {
     const [filas] = await pool.query(
-        `SELECT id, grupo_datos, nombre, contacto, telefono, correo, direccion, notas, estado
+        `SELECT id, grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado
          FROM compradores
          WHERE id = ? AND grupo_datos = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
         [id, grupoDatos]
@@ -115,12 +115,12 @@ export async function findById(id, grupoDatos) {
  */
 export async function create(dto, grupoDatos) {
     const [result] = await pool.query(
-        `INSERT INTO compradores (grupo_datos, nombre, contacto, telefono, correo, direccion, notas, estado)
+        `INSERT INTO compradores (grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado)
          VALUES (?, ?, ?, ?, ?, ?, ?, "ACTIVO")`,
         [
             grupoDatos,
             dto.nombre,
-            dto.contacto || null,
+            dto.cedula || null,
             dto.telefono || null,
             dto.correo || null,
             dto.direccion || null,
@@ -145,11 +145,11 @@ export async function create(dto, grupoDatos) {
 export async function update(id, dto, grupoDatos) {
     const [result] = await pool.query(
         `UPDATE compradores
-         SET nombre = ?, contacto = ?, telefono = ?, correo = ?, direccion = ?, notas = ?
+         SET nombre = ?, cedula = ?, telefono = ?, correo = ?, direccion = ?, notas = ?
          WHERE id = ? AND grupo_datos = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
         [
             dto.nombre,
-            dto.contacto || null,
+            dto.cedula || null,
             dto.telefono || null,
             dto.correo || null,
             dto.direccion || null,
