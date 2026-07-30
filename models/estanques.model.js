@@ -338,7 +338,7 @@ export async function create(dto) {
             fechaInicioEngorde,
             fechaMantenimiento,
             dto.densidadSiembra,
-            dto.Precria,
+            dto.precria,
             dto.metodoAlimentacion,
             dto.proveedorAlimento,
             dto.numeroAireadores,
@@ -429,7 +429,7 @@ export async function update(
             fechaInicioEngorde,
             fechaMantenimiento,
             dto.densidadSiembra,
-            dto.Precria,
+            dto.precria,
             dto.metodoAlimentacion,
             dto.proveedorAlimento,
             dto.numeroAireadores,
@@ -521,7 +521,7 @@ function mapearFila(row) {
     Convierte una fila de MySQL en un objeto camelCase.
     */
 
-    const Precria = Boolean(
+    const precria = Boolean(
         row.precria
     );
 
@@ -568,14 +568,14 @@ function mapearFila(row) {
             row.densidad_siembra
         ),
 
-        Precria: Precria,
+        precria: precria,
 
         /*
         Alias mantenido para compatibilidad con codigo
         anterior del frontend.
         */
 
-        precria: Precria,
+        precria: precria,
 
         metodoAlimentacion:
             row.metodo_alimentacion,
