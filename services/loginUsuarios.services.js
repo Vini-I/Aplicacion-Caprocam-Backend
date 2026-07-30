@@ -3,13 +3,13 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loginUsuarios.services.js
-Autor: Rodolfo Chaves, Marco Vasquez
-Fecha: 29/06/2026
+Autor: Rodolfo Chaves
+Fecha: 29/07/2026
 Modulo: Login
 Descripcion:
 Define las reglas de negocio y validaciones del modulo
-de login. Maneja regex de contrasenas y control de
-5 intentos maximo de autenticacion.
+de login. Maneja regex de contrasenas, bcrypt (costo 12)
+y control de 5 intentos maximo de autenticacion.
 //////////////////////////////////////////////////////////
 */
 
@@ -29,6 +29,8 @@ CONSTANTES
 
 Expresiones regulares para validacion de campos y limites.
 */
+
+const BCRYPT_SALT_ROUNDS = 12;
 
 const pinRegex = /^\d{4}$/;
 
@@ -81,29 +83,29 @@ export async function isContrasenaValida(contrasena, hash) {
 export async function hashContrasena(contrasena) {
     /*
     Descripcion:
-    Genera un hash bcrypt a partir de una contrasena.
+    Genera un hash bcrypt con costo 12 a partir de contrasena.
 
     Parametros:
     - contrasena: String en texto plano a hashear.
 
     Retorna:
-    - El hash generado.
+    - El hash generado con costo 12.
     */
-    return await bcrypt.hash(contrasena, 10);
+    return await bcrypt.hash(contrasena, BCRYPT_SALT_ROUNDS);
 }
 
 export async function hashPin(pin) {
     /*
     Descripcion:
-    Genera un hash bcrypt a partir de un PIN de 4 digitos.
+    Genera un hash bcrypt con costo 12 a partir de PIN de 4 digitos.
 
     Parametros:
     - pin: String o numero de 4 digitos a hashear.
 
     Retorna:
-    - El hash generado.
+    - El hash generado con costo 12.
     */
-    return await bcrypt.hash(String(pin), 10);
+    return await bcrypt.hash(String(pin), BCRYPT_SALT_ROUNDS);
 }
 
 export async function isPinValido(pin, hash) {
@@ -133,7 +135,7 @@ export function isPin(pin) {
     Retorna:
     - true si es un PIN valido, false si no.
     */
-    return pinRegex.test(String(pin));
+    return pinRegex.test(String(pin ?? ""));
 }
 
 export function isContrasenaSegura(contrasena) {
@@ -177,7 +179,6 @@ export function estaBloqueado(identificador) {
         return { bloqueado: true, tiempoRestanteMinutos: tiempoRestante };
     }
 
-    // Si ya paso el tiempo de bloqueo, reiniciamos el registro
     if (registro.bloqueadoHasta && ahora >= registro.bloqueadoHasta) {
         intentosLogin.delete(clave);
         return { bloqueado: false, tiempoRestanteMinutos: 0 };
