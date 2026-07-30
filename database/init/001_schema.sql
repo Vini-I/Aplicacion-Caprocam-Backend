@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS fincas (
     telefono VARCHAR(25) NULL,
     area_total DECIMAL(10,2) NULL,
     espejos_agua DECIMAL(10,2) NULL,
+    creado_por_usuario_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -79,7 +80,10 @@ CREATE TABLE IF NOT EXISTS fincas (
     FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_fincas_usuarios
-    FOREIGN KEY (propietario_usuario_id) REFERENCES usuarios(id)
+    FOREIGN KEY (propietario_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_fincas_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id)
 );
 
 CREATE TABLE IF NOT EXISTS colaboradores (
@@ -96,6 +100,7 @@ CREATE TABLE IF NOT EXISTS colaboradores (
     nombre_usuario VARCHAR(80) NOT NULL,
     pin_hash VARCHAR(255) NOT NULL,
     tipo_colaborador ENUM('caprocam_collab', 'external_owner', 'external_collab') NOT NULL DEFAULT 'external_collab',
+    creado_por_usuario_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -115,7 +120,10 @@ CREATE TABLE IF NOT EXISTS colaboradores (
     UNIQUE (grupo_datos, nombre_usuario),
 
     CONSTRAINT uq_colaborador_cedula_grupo
-    UNIQUE (grupo_datos, cedula)
+    UNIQUE (grupo_datos, cedula),
+
+    CONSTRAINT fk_colaboradores_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id)
 );
 
 CREATE TABLE IF NOT EXISTS estanques (
@@ -140,6 +148,8 @@ CREATE TABLE IF NOT EXISTS estanques (
     proveedor_alimento VARCHAR(100) NULL,
     numero_aireadores INT NOT NULL DEFAULT 0,
     tiene_alimentador_automatico BOOLEAN NOT NULL DEFAULT FALSE,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -153,7 +163,13 @@ CREATE TABLE IF NOT EXISTS estanques (
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
 
     CONSTRAINT uq_estanque_codigo_finca
-    UNIQUE (finca_id, codigo)
+    UNIQUE (finca_id, codigo),
+
+    CONSTRAINT fk_estanques_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_estanques_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS equipos (
@@ -178,6 +194,8 @@ CREATE TABLE IF NOT EXISTS equipos (
     horas_actuales DECIMAL(10,2) NOT NULL DEFAULT 0,
     estado_operativo ENUM('Activo', 'Inactivo', 'Mantenimiento') NOT NULL,
     estado ENUM('Encendido', 'Apagado') NOT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -191,7 +209,13 @@ CREATE TABLE IF NOT EXISTS equipos (
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
     CONSTRAINT uq_equipo_identificador_grupo
-    UNIQUE (grupo_datos, identificador)
+    UNIQUE (grupo_datos, identificador),
+
+    CONSTRAINT fk_equipos_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_equipos_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS tareas (
@@ -204,6 +228,8 @@ CREATE TABLE IF NOT EXISTS tareas (
     categoria ENUM('Preventivo', 'Correctivo', 'Predictivo', 'Emergencia') NULL,
     horas DECIMAL(5,2) NULL,
     estado ENUM('Pendiente', 'En proceso', 'Finalizada', 'Cancelada') NOT NULL DEFAULT 'Pendiente',
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -214,7 +240,13 @@ CREATE TABLE IF NOT EXISTS tareas (
     FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT uq_tarea_codigo_grupo
-    UNIQUE (grupo_datos, codigo_tarea)
+    UNIQUE (grupo_datos, codigo_tarea),
+
+    CONSTRAINT fk_tareas_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_tareas_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS mantenimiento_equipo (
@@ -263,6 +295,8 @@ CREATE TABLE IF NOT EXISTS mantenimiento_equipo_tareas (
     mantenimiento_equipo_id INT NOT NULL,
     tarea_id INT NOT NULL,
     estado_tarea ENUM('Pendiente', 'Realizado') NOT NULL DEFAULT 'Pendiente',
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -279,7 +313,13 @@ CREATE TABLE IF NOT EXISTS mantenimiento_equipo_tareas (
     FOREIGN KEY (tarea_id) REFERENCES tareas(id),
 
     CONSTRAINT uq_mantenimiento_tarea
-    UNIQUE (mantenimiento_equipo_id, tarea_id)
+    UNIQUE (mantenimiento_equipo_id, tarea_id),
+
+    CONSTRAINT fk_mantenimiento_equipo_tareas_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_mantenimiento_equipo_tareas_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS proveedores (
@@ -292,6 +332,8 @@ CREATE TABLE IF NOT EXISTS proveedores (
     correo_electronico VARCHAR(120) NULL,
     direccion VARCHAR(255) NULL,
     notas VARCHAR(255) NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -299,7 +341,13 @@ CREATE TABLE IF NOT EXISTS proveedores (
     version INT NOT NULL DEFAULT 1,
 
     CONSTRAINT fk_proveedores_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo)
+    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
+
+    CONSTRAINT fk_proveedores_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_proveedores_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS productos (
@@ -315,6 +363,8 @@ CREATE TABLE IF NOT EXISTS productos (
     fecha_caducidad DATE NULL,
     estado ENUM('ACTIVO', 'INACTIVO') NOT NULL DEFAULT 'ACTIVO',
     grupo_datos INT NOT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -328,7 +378,13 @@ CREATE TABLE IF NOT EXISTS productos (
     FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
 
     CONSTRAINT uq_producto_codigo_grupo
-    UNIQUE (grupo_datos, codigo)
+    UNIQUE (grupo_datos, codigo),
+
+    CONSTRAINT fk_productos_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_productos_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS mantenimiento_equipo_productos (
@@ -340,6 +396,8 @@ CREATE TABLE IF NOT EXISTS mantenimiento_equipo_productos (
     cantidad DECIMAL(10,2) NOT NULL DEFAULT 1,
     costo_unitario DECIMAL(10,2) NOT NULL DEFAULT 0,
     subtotal DECIMAL(12,2) NOT NULL DEFAULT 0,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -353,7 +411,13 @@ CREATE TABLE IF NOT EXISTS mantenimiento_equipo_productos (
     FOREIGN KEY (mantenimiento_equipo_id) REFERENCES mantenimiento_equipo(id),
 
     CONSTRAINT fk_mant_prod_productos
-    FOREIGN KEY (producto_id) REFERENCES productos(id)
+    FOREIGN KEY (producto_id) REFERENCES productos(id),
+
+    CONSTRAINT fk_mantenimiento_equipo_productos_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_mantenimiento_equipo_productos_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS inventario (
@@ -364,6 +428,8 @@ CREATE TABLE IF NOT EXISTS inventario (
     proveedor_id INT NULL,
     cantidad DECIMAL(10,2) NOT NULL DEFAULT 0,
     stock_minimo DECIMAL(10,2) NOT NULL DEFAULT 0,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -380,7 +446,13 @@ CREATE TABLE IF NOT EXISTS inventario (
     FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
 
     CONSTRAINT uq_inventario_producto_grupo
-    UNIQUE (grupo_datos, producto_id)
+    UNIQUE (grupo_datos, producto_id),
+
+    CONSTRAINT fk_inventario_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_inventario_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS movimientos_inventario (
@@ -394,6 +466,8 @@ CREATE TABLE IF NOT EXISTS movimientos_inventario (
     cantidad DECIMAL(10,2) NOT NULL,
     observacion TEXT NULL,
     fecha_movimiento DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -410,7 +484,13 @@ CREATE TABLE IF NOT EXISTS movimientos_inventario (
     FOREIGN KEY (producto_id) REFERENCES productos(id),
 
     CONSTRAINT fk_mov_inv_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
+
+    CONSTRAINT fk_movimientos_inventario_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_movimientos_inventario_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS laboratorios (
@@ -419,6 +499,8 @@ CREATE TABLE IF NOT EXISTS laboratorios (
     grupo_datos INT NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     descripcion VARCHAR(150) NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -429,7 +511,13 @@ CREATE TABLE IF NOT EXISTS laboratorios (
     FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT uq_laboratorio_nombre_grupo
-    UNIQUE (grupo_datos, nombre)
+    UNIQUE (grupo_datos, nombre),
+
+    CONSTRAINT fk_laboratorios_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_laboratorios_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS procedencias (
@@ -438,6 +526,8 @@ CREATE TABLE IF NOT EXISTS procedencias (
     grupo_datos INT NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     descripcion VARCHAR(150) NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -448,7 +538,13 @@ CREATE TABLE IF NOT EXISTS procedencias (
     FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT uq_procedencia_nombre_grupo
-    UNIQUE (grupo_datos, nombre)
+    UNIQUE (grupo_datos, nombre),
+
+    CONSTRAINT fk_procedencias_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_procedencias_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS proveedores_larva (
@@ -457,6 +553,8 @@ CREATE TABLE IF NOT EXISTS proveedores_larva (
     grupo_datos INT NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     descripcion VARCHAR(150) NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -467,7 +565,13 @@ CREATE TABLE IF NOT EXISTS proveedores_larva (
     FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT uq_proveedor_larva_nombre_grupo
-    UNIQUE (grupo_datos, nombre)
+    UNIQUE (grupo_datos, nombre),
+
+    CONSTRAINT fk_proveedores_larva_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_proveedores_larva_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS lotes_larva (
@@ -483,6 +587,8 @@ CREATE TABLE IF NOT EXISTS lotes_larva (
     cantidad_inicial INT NOT NULL,
     fecha_ingreso DATE NOT NULL,
     estado_lote ENUM('Disponible', 'En PreCria', 'Sembrado', 'Agotado') NOT NULL DEFAULT 'Disponible',
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -502,7 +608,13 @@ CREATE TABLE IF NOT EXISTS lotes_larva (
     FOREIGN KEY (procedencia_id) REFERENCES procedencias(id),
 
     CONSTRAINT uq_lote_codigo_grupo
-    UNIQUE (grupo_datos, codigo_lote)
+    UNIQUE (grupo_datos, codigo_lote),
+
+    CONSTRAINT fk_lotes_larva_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_lotes_larva_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS precrias (
@@ -520,6 +632,8 @@ CREATE TABLE IF NOT EXISTS precrias (
     pl_inicial INT NULL,
     pl_final INT NULL,
     estado ENUM('Activa', 'Finalizada') NOT NULL DEFAULT 'Activa',
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -536,7 +650,13 @@ CREATE TABLE IF NOT EXISTS precrias (
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
 
     CONSTRAINT fk_precrias_estanques
-    FOREIGN KEY (estanque_id) REFERENCES estanques(id)
+    FOREIGN KEY (estanque_id) REFERENCES estanques(id),
+
+    CONSTRAINT fk_precrias_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_precrias_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS siembras (
@@ -554,6 +674,8 @@ CREATE TABLE IF NOT EXISTS siembras (
     pl_siembra INT NULL,
     duracion_ciclo INT NULL,
     estado ENUM('Activa', 'Finalizada') NOT NULL DEFAULT 'Activa',
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -573,7 +695,13 @@ CREATE TABLE IF NOT EXISTS siembras (
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
 
     CONSTRAINT fk_siembras_estanques
-    FOREIGN KEY (estanque_id) REFERENCES estanques(id)
+    FOREIGN KEY (estanque_id) REFERENCES estanques(id),
+
+    CONSTRAINT fk_siembras_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_siembras_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS crecimientos (
@@ -585,6 +713,8 @@ CREATE TABLE IF NOT EXISTS crecimientos (
     colaborador_id INT NULL,
     fecha_registro DATE NOT NULL,
     peso_actual DECIMAL(10,2) NOT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -601,7 +731,13 @@ CREATE TABLE IF NOT EXISTS crecimientos (
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
     CONSTRAINT fk_crecimientos_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
+
+    CONSTRAINT fk_crecimientos_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_crecimientos_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS compradores (
@@ -615,6 +751,8 @@ CREATE TABLE IF NOT EXISTS compradores (
     direccion VARCHAR(255) NULL,
     notas TEXT NULL,
     estado ENUM('ACTIVO', 'INACTIVO') NOT NULL DEFAULT 'ACTIVO',
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -622,7 +760,13 @@ CREATE TABLE IF NOT EXISTS compradores (
     version INT NOT NULL DEFAULT 1,
 
     CONSTRAINT fk_compradores_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo)
+    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
+
+    CONSTRAINT fk_compradores_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_compradores_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS ventas (
@@ -639,6 +783,8 @@ CREATE TABLE IF NOT EXISTS ventas (
     precio_kilo DECIMAL(10,2) NOT NULL,
     total DECIMAL(12,2) NOT NULL,
     fecha DATE NOT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -658,7 +804,13 @@ CREATE TABLE IF NOT EXISTS ventas (
     FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
 
     CONSTRAINT fk_ventas_compradores
-    FOREIGN KEY (comprador_id) REFERENCES compradores(id)
+    FOREIGN KEY (comprador_id) REFERENCES compradores(id),
+
+    CONSTRAINT fk_ventas_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_ventas_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS parasitologias (
@@ -677,6 +829,8 @@ CREATE TABLE IF NOT EXISTS parasitologias (
     porcentaje_infeccion DECIMAL(5,2) NULL,
     grado_infeccion ENUM('bajo', 'medio', 'alto') NULL,
     observaciones VARCHAR(400) NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -693,7 +847,13 @@ CREATE TABLE IF NOT EXISTS parasitologias (
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
     CONSTRAINT fk_parasitologias_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
+
+    CONSTRAINT fk_parasitologias_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_parasitologias_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS enfermedades (
@@ -710,6 +870,8 @@ CREATE TABLE IF NOT EXISTS enfermedades (
     severidad ENUM('bajo', 'medio', 'alto', 'critica') NOT NULL,
     mortalidad_registrada INT NULL,
     reporte VARCHAR(400) NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -726,7 +888,13 @@ CREATE TABLE IF NOT EXISTS enfermedades (
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
     CONSTRAINT fk_enfermedades_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
+
+    CONSTRAINT fk_enfermedades_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_enfermedades_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS alimentaciones (
@@ -746,6 +914,8 @@ CREATE TABLE IF NOT EXISTS alimentaciones (
     proveedor VARCHAR(100) NULL,
     tipo_alimento VARCHAR(80) NULL,
     observaciones TEXT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -768,7 +938,13 @@ CREATE TABLE IF NOT EXISTS alimentaciones (
     FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
 
     CONSTRAINT fk_alimentaciones_productos
-    FOREIGN KEY (producto_id) REFERENCES productos(id)
+    FOREIGN KEY (producto_id) REFERENCES productos(id),
+
+    CONSTRAINT fk_alimentaciones_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_alimentaciones_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS densidad_poblacional (
@@ -788,6 +964,8 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
     sobrevivencia DECIMAL(10,2) NULL,
     densidad DECIMAL(10,2) NULL,
     notas_conteo TEXT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -804,7 +982,13 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
     CONSTRAINT fk_densidad_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
+
+    CONSTRAINT fk_densidad_poblacional_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_densidad_poblacional_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS raleos (
@@ -821,6 +1005,8 @@ CREATE TABLE IF NOT EXISTS raleos (
     objetivo VARCHAR(80) NULL,
     metodos VARCHAR(50) NULL,
     observaciones TEXT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -837,7 +1023,13 @@ CREATE TABLE IF NOT EXISTS raleos (
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
     CONSTRAINT fk_raleos_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
+
+    CONSTRAINT fk_raleos_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_raleos_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS fisico_quimico (
@@ -847,6 +1039,8 @@ CREATE TABLE IF NOT EXISTS fisico_quimico (
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
     fecha_registro DATE NOT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -863,7 +1057,13 @@ CREATE TABLE IF NOT EXISTS fisico_quimico (
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
     CONSTRAINT uq_fq_estanque_fecha
-    UNIQUE (grupo_datos, estanque_id, fecha_registro)
+    UNIQUE (grupo_datos, estanque_id, fecha_registro),
+
+    CONSTRAINT fk_fisico_quimico_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_fisico_quimico_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS fisico_quimico_detalle (
@@ -873,6 +1073,8 @@ CREATE TABLE IF NOT EXISTS fisico_quimico_detalle (
     tipo_medicion ENUM('ph', 'salinidad', 'temperatura', 'oxigeno') NOT NULL,
     etiqueta VARCHAR(20) NOT NULL,
     valor DECIMAL(6,2) NOT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -883,7 +1085,13 @@ CREATE TABLE IF NOT EXISTS fisico_quimico_detalle (
     FOREIGN KEY (lectura_id) REFERENCES fisico_quimico(id),
 
     CONSTRAINT uq_fq_detalle_lectura_tipo_etiqueta
-    UNIQUE (lectura_id, tipo_medicion, etiqueta)
+    UNIQUE (lectura_id, tipo_medicion, etiqueta),
+
+    CONSTRAINT fk_fisico_quimico_detalle_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_fisico_quimico_detalle_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS trazabilidad (
@@ -899,6 +1107,8 @@ CREATE TABLE IF NOT EXISTS trazabilidad (
     dias INT NULL,
     pl DECIMAL(10,0) NULL,
     tipo_movimiento VARCHAR(80) NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -918,7 +1128,13 @@ CREATE TABLE IF NOT EXISTS trazabilidad (
     FOREIGN KEY (estanque_destino_id) REFERENCES estanques(id),
 
     CONSTRAINT fk_trazabilidad_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
+
+    CONSTRAINT fk_trazabilidad_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_trazabilidad_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -939,71 +1155,6 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 
     CONSTRAINT fk_refresh_tokens_colaboradores
     FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
-);
-
-INSERT INTO grupos_datos (
-    codigo,
-    nombre,
-    descripcion,
-    acceso_global,
-    activo
-)
-SELECT
-    1,
-    'Caprocam',
-    'Grupo base inicial del sistema',
-    TRUE,
-    TRUE
-FROM DUAL
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM grupos_datos
-    WHERE codigo = 1
-);
-
-INSERT INTO roles (
-    nombre,
-    descripcion,
-    acceso_global,
-    activo
-)
-SELECT
-    'administrador',
-    'Rol administrativo inicial del sistema',
-    TRUE,
-    TRUE
-FROM DUAL
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM roles
-    WHERE nombre = 'administrador'
-);
-
-INSERT INTO usuarios (
-    grupo_datos,
-    rol_id,
-    nombre,
-    apellidos,
-    email,
-    nombre_usuario,
-    password_hash,
-    activo
-)
-SELECT
-    (SELECT codigo FROM grupos_datos WHERE codigo = 1 LIMIT 1),
-    (SELECT id FROM roles WHERE nombre = 'administrador' LIMIT 1),
-    'Administrador',
-    'Sistema',
-    'admin@caprocam.local',
-    'admin',
-    '$2b$10$NuxtO925LglHJtx3CmDnROVHip/58kvWhpcKC4dF5XcQV3Mh9N1Di',
-    TRUE
-FROM DUAL
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM usuarios
-    WHERE nombre_usuario = 'admin'
-       OR email = 'admin@caprocam.local'
 );
 
 CREATE INDEX idx_usuarios_grupo ON usuarios(grupo_datos);
@@ -1044,3 +1195,60 @@ CREATE INDEX idx_densidad_colaborador ON densidad_poblacional(colaborador_id);
 
 CREATE INDEX idx_mantenimiento_estado_equipo ON mantenimiento_equipo(estado_equipo);
 CREATE INDEX idx_alimentaciones_colaborador ON alimentaciones(colaborador_id);
+
+CREATE INDEX idx_fincas_creado_usuario ON fincas(creado_por_usuario_id);
+CREATE INDEX idx_colaboradores_creado_usuario ON colaboradores(creado_por_usuario_id);
+CREATE INDEX idx_estanques_creado_usuario ON estanques(creado_por_usuario_id);
+CREATE INDEX idx_estanques_creado_colaborador ON estanques(creado_por_colaborador_id);
+CREATE INDEX idx_equipos_creado_usuario ON equipos(creado_por_usuario_id);
+CREATE INDEX idx_equipos_creado_colaborador ON equipos(creado_por_colaborador_id);
+CREATE INDEX idx_tareas_creado_usuario ON tareas(creado_por_usuario_id);
+CREATE INDEX idx_tareas_creado_colaborador ON tareas(creado_por_colaborador_id);
+CREATE INDEX idx_mantenimiento_equipo_tareas_creado_usuario ON mantenimiento_equipo_tareas(creado_por_usuario_id);
+CREATE INDEX idx_mantenimiento_equipo_tareas_creado_colaborador ON mantenimiento_equipo_tareas(creado_por_colaborador_id);
+CREATE INDEX idx_proveedores_creado_usuario ON proveedores(creado_por_usuario_id);
+CREATE INDEX idx_proveedores_creado_colaborador ON proveedores(creado_por_colaborador_id);
+CREATE INDEX idx_productos_creado_usuario ON productos(creado_por_usuario_id);
+CREATE INDEX idx_productos_creado_colaborador ON productos(creado_por_colaborador_id);
+CREATE INDEX idx_mantenimiento_equipo_productos_creado_usuario ON mantenimiento_equipo_productos(creado_por_usuario_id);
+CREATE INDEX idx_mantenimiento_equipo_productos_creado_colaborador ON mantenimiento_equipo_productos(creado_por_colaborador_id);
+CREATE INDEX idx_inventario_creado_usuario ON inventario(creado_por_usuario_id);
+CREATE INDEX idx_inventario_creado_colaborador ON inventario(creado_por_colaborador_id);
+CREATE INDEX idx_movimientos_inventario_creado_usuario ON movimientos_inventario(creado_por_usuario_id);
+CREATE INDEX idx_movimientos_inventario_creado_colaborador ON movimientos_inventario(creado_por_colaborador_id);
+CREATE INDEX idx_laboratorios_creado_usuario ON laboratorios(creado_por_usuario_id);
+CREATE INDEX idx_laboratorios_creado_colaborador ON laboratorios(creado_por_colaborador_id);
+CREATE INDEX idx_procedencias_creado_usuario ON procedencias(creado_por_usuario_id);
+CREATE INDEX idx_procedencias_creado_colaborador ON procedencias(creado_por_colaborador_id);
+CREATE INDEX idx_proveedores_larva_creado_usuario ON proveedores_larva(creado_por_usuario_id);
+CREATE INDEX idx_proveedores_larva_creado_colaborador ON proveedores_larva(creado_por_colaborador_id);
+CREATE INDEX idx_lotes_larva_creado_usuario ON lotes_larva(creado_por_usuario_id);
+CREATE INDEX idx_lotes_larva_creado_colaborador ON lotes_larva(creado_por_colaborador_id);
+CREATE INDEX idx_precrias_creado_usuario ON precrias(creado_por_usuario_id);
+CREATE INDEX idx_precrias_creado_colaborador ON precrias(creado_por_colaborador_id);
+CREATE INDEX idx_siembras_creado_usuario ON siembras(creado_por_usuario_id);
+CREATE INDEX idx_siembras_creado_colaborador ON siembras(creado_por_colaborador_id);
+CREATE INDEX idx_crecimientos_creado_usuario ON crecimientos(creado_por_usuario_id);
+CREATE INDEX idx_crecimientos_creado_colaborador ON crecimientos(creado_por_colaborador_id);
+CREATE INDEX idx_compradores_creado_usuario ON compradores(creado_por_usuario_id);
+CREATE INDEX idx_compradores_creado_colaborador ON compradores(creado_por_colaborador_id);
+CREATE INDEX idx_ventas_creado_usuario ON ventas(creado_por_usuario_id);
+CREATE INDEX idx_ventas_creado_colaborador ON ventas(creado_por_colaborador_id);
+CREATE INDEX idx_parasitologias_creado_usuario ON parasitologias(creado_por_usuario_id);
+CREATE INDEX idx_parasitologias_creado_colaborador ON parasitologias(creado_por_colaborador_id);
+CREATE INDEX idx_enfermedades_creado_usuario ON enfermedades(creado_por_usuario_id);
+CREATE INDEX idx_enfermedades_creado_colaborador ON enfermedades(creado_por_colaborador_id);
+CREATE INDEX idx_alimentaciones_creado_usuario ON alimentaciones(creado_por_usuario_id);
+CREATE INDEX idx_alimentaciones_creado_colaborador ON alimentaciones(creado_por_colaborador_id);
+CREATE INDEX idx_densidad_poblacional_creado_usuario ON densidad_poblacional(creado_por_usuario_id);
+CREATE INDEX idx_densidad_poblacional_creado_colaborador ON densidad_poblacional(creado_por_colaborador_id);
+CREATE INDEX idx_raleos_creado_usuario ON raleos(creado_por_usuario_id);
+CREATE INDEX idx_raleos_creado_colaborador ON raleos(creado_por_colaborador_id);
+CREATE INDEX idx_fisico_quimico_creado_usuario ON fisico_quimico(creado_por_usuario_id);
+CREATE INDEX idx_fisico_quimico_creado_colaborador ON fisico_quimico(creado_por_colaborador_id);
+CREATE INDEX idx_fisico_quimico_detalle_creado_usuario ON fisico_quimico_detalle(creado_por_usuario_id);
+CREATE INDEX idx_fisico_quimico_detalle_creado_colaborador ON fisico_quimico_detalle(creado_por_colaborador_id);
+CREATE INDEX idx_trazabilidad_creado_usuario ON trazabilidad(creado_por_usuario_id);
+CREATE INDEX idx_trazabilidad_creado_colaborador ON trazabilidad(creado_por_colaborador_id);
+CREATE INDEX idx_mantenimiento_creado_usuario ON mantenimiento_equipo(creado_por_usuario_id);
+CREATE INDEX idx_mantenimiento_creado_colaborador ON mantenimiento_equipo(creado_por_colaborador_id);
