@@ -57,7 +57,6 @@ export class EstanqueDTO {
         fechaMantenimiento,
         densidadSiembra,
         precria,
-        usaPrecria,
         metodoAlimentacion,
         proveedorAlimento,
         numeroAireadores,
@@ -151,7 +150,7 @@ export class EstanqueDTO {
                 densidadSiembra
             );
 
-        let valorPrecria = usaPrecria;
+        let valorPrecria = precria;
 
         if (
             valorPrecria === undefined ||
@@ -160,7 +159,7 @@ export class EstanqueDTO {
             valorPrecria = precria;
         }
 
-        this.usaPrecria = normalizarBooleano(
+        this.precria = normalizarBooleano(
             valorPrecria
         );
 
@@ -169,7 +168,7 @@ export class EstanqueDTO {
         anterior del frontend.
         */
 
-        this.precria = this.usaPrecria;
+        this.precria = this.precria;
 
         this.metodoAlimentacion =
             normalizarTextoOpcional(

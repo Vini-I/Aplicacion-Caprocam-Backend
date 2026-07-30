@@ -59,7 +59,7 @@ export async function findAll(filtros) {
             fecha_inicio_engorde,
             fecha_mantenimiento,
             densidad_siembra,
-            usa_precria,
+            precria,
             metodo_alimentacion,
             proveedor_alimento,
             numero_aireadores,
@@ -128,7 +128,7 @@ export async function findById(
             fecha_inicio_engorde,
             fecha_mantenimiento,
             densidad_siembra,
-            usa_precria,
+            precria,
             metodo_alimentacion,
             proveedor_alimento,
             numero_aireadores,
@@ -190,7 +190,7 @@ export async function findByCodigoAndFinca(
             fecha_inicio_engorde,
             fecha_mantenimiento,
             densidad_siembra,
-            usa_precria,
+            precria,
             metodo_alimentacion,
             proveedor_alimento,
             numero_aireadores,
@@ -312,7 +312,7 @@ export async function create(dto) {
             fecha_inicio_engorde,
             fecha_mantenimiento,
             densidad_siembra,
-            usa_precria,
+            precria,
             metodo_alimentacion,
             proveedor_alimento,
             numero_aireadores,
@@ -338,7 +338,7 @@ export async function create(dto) {
             fechaInicioEngorde,
             fechaMantenimiento,
             dto.densidadSiembra,
-            dto.usaPrecria,
+            dto.precria,
             dto.metodoAlimentacion,
             dto.proveedorAlimento,
             dto.numeroAireadores,
@@ -404,7 +404,7 @@ export async function update(
             fecha_inicio_engorde = ?,
             fecha_mantenimiento = ?,
             densidad_siembra = ?,
-            usa_precria = ?,
+            precria = ?,
             metodo_alimentacion = ?,
             proveedor_alimento = ?,
             numero_aireadores = ?,
@@ -429,7 +429,7 @@ export async function update(
             fechaInicioEngorde,
             fechaMantenimiento,
             dto.densidadSiembra,
-            dto.usaPrecria,
+            dto.precria,
             dto.metodoAlimentacion,
             dto.proveedorAlimento,
             dto.numeroAireadores,
@@ -521,8 +521,8 @@ function mapearFila(row) {
     Convierte una fila de MySQL en un objeto camelCase.
     */
 
-    const usaPrecria = Boolean(
-        row.usa_precria
+    const precria = Boolean(
+        row.precria
     );
 
     return {
@@ -568,14 +568,14 @@ function mapearFila(row) {
             row.densidad_siembra
         ),
 
-        usaPrecria: usaPrecria,
+        precria: precria,
 
         /*
         Alias mantenido para compatibilidad con codigo
         anterior del frontend.
         */
 
-        precria: usaPrecria,
+        precria: precria,
 
         metodoAlimentacion:
             row.metodo_alimentacion,
