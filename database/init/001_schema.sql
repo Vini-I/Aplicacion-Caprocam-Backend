@@ -745,7 +745,7 @@ CREATE TABLE IF NOT EXISTS compradores (
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
     nombre VARCHAR(150) NOT NULL,
-    contacto VARCHAR(120) NULL,
+    cedula VARCHAR(50) NULL,
     telefono VARCHAR(25) NULL,
     correo VARCHAR(150) NULL,
     direccion VARCHAR(255) NULL,
