@@ -4,11 +4,11 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantFinca.model.js
 Autor: Greivin Arguedas
-Fecha: 04/07/2026
+Fecha: 01/08/2026
 Modulo: Finca
 Descripcion:
-Capa de datos del modulo de finca.
-Por ahora trabaja con datos mock.
+Modelo de datos para el modulo de finca.
+
 //////////////////////////////////////////////////////////
 */
 
@@ -54,7 +54,8 @@ export async function findAll(grupoDatos) {
             propietario_responsable AS propietarioResponsable,
             telefono,
             area_total AS areaTotal,
-            espejos_agua AS espejosAgua
+            espejos_agua AS espejosAgua,
+            creado_por_usuario_id AS creadoPorUsuarioId
         FROM fincas
         WHERE grupo_datos = ?
         AND deleted_at IS NULL`,
@@ -119,8 +120,10 @@ export async function create(dto) {
             propietario_responsable,
             telefono,
             area_total,
-            espejos_agua
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+            espejos_agua,
+            creado_por_usuario_id,
+            propietario_usuario_id
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
             dto.codigoCBO,
             dto.grupoDatos,
@@ -132,7 +135,9 @@ export async function create(dto) {
             dto.propietarioResponsable,
             dto.telefono,
             dto.areaTotal,
-            dto.espejosAgua
+            dto.espejosAgua,
+            dto.creadoPorUsuarioId,
+            dto.propietarioUsuarioId
         ]
     );
     return await findByIdCBO(dto.codigoCBO, dto.grupoDatos);
@@ -154,7 +159,6 @@ export async function update(codigoCBO, grupoDatos, dto){
     await pool.execute(
         `UPDATE fincas  
         SET
-            grupo_datos=?,
             nombre_finca=?,
             provincia=?,
             canton=?,
@@ -164,9 +168,9 @@ export async function update(codigoCBO, grupoDatos, dto){
             telefono=?,
             area_total=?,
             espejos_agua=?
-        WHERE codigo_cbo=?`,
+        WHERE codigo_cbo=?
+        AND grupo_datos=?`,
         [
-            grupoDatos,
             dto.nombreFinca,
             dto.provincia,
             dto.canton,
@@ -176,7 +180,8 @@ export async function update(codigoCBO, grupoDatos, dto){
             dto.telefono,
             dto.areaTotal,
             dto.espejosAgua,
-            codigoCBO
+            codigoCBO,
+            grupoDatos
         ]
     );
     return await findByIdCBO(codigoCBO, grupoDatos);
@@ -196,9 +201,7 @@ export async function remove(codigoCBO, grupoDatos){
 
     const finca=await findByIdCBO(codigoCBO, grupoDatos);
 
-    if(!finca){
-        return null;
-    }
+    if(!finca) return null;
 
     await pool.execute(
         `UPDATE fincas
