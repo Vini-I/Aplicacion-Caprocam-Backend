@@ -4,12 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.controller.js
 Autor: Gerald Alfaro
-Fecha: 18/07/2026
+Fecha: 31/07/2026
 Modulo: Estanques
 Descripcion:
 Recibe las peticiones HTTP, obtiene el grupo de datos
-desde el JWT, delega las operaciones al modelo y devuelve
-la respuesta al cliente.
+desde el JWT, delega las operaciones a los modelos y
+devuelve la respuesta al cliente.
 //////////////////////////////////////////////////////////
 */
 
@@ -37,10 +37,11 @@ Servicios
 import {
     isEmpty,
     isNumeroMayorCero,
-    isNumeroMayorIgualCero,
-    isNumeroOpcionalMayorIgualCero,
     isEstadoEstanque,
-    isIdValido
+    isIdValido,
+    isFechaOpcionalValida,
+    isBooleanoOpcionalValido,
+    agruparEquiposPorTipo
 } from "../services/estanques.service.js";
 
 /*
@@ -51,7 +52,11 @@ IMPORTS
 Modelos
 */
 
-import * as EstanqueModel from "../models/estanques.model.js";
+import * as EstanqueModel
+    from "../models/estanques.model.js";
+
+import * as EquipoModel
+    from "../models/equipo.model.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -100,7 +105,11 @@ function obtenerGrupoDatosUsuario(req, res) {
         return null;
     }
 
-    if (!isNumeroMayorCero(req.user.grupoDatos)) {
+    if (
+        !isNumeroMayorCero(
+            req.user.grupoDatos
+        )
+    ) {
         error(
             res,
             "El usuario no tiene un grupo de datos valido.",
@@ -111,15 +120,17 @@ function obtenerGrupoDatosUsuario(req, res) {
         return null;
     }
 
-    return Number(req.user.grupoDatos);
+    return Number(
+        req.user.grupoDatos
+    );
 }
 
 function validarCuerpo(body, res) {
     /*
     Descripcion:
     Valida los campos del body antes de construir el DTO.
-    Revisa campos requeridos, campos numericos, estado
-    permitido y valores opcionales.
+    Revisa campos requeridos, campos numericos, estado,
+    fecha de mantenimiento y precria.
 
     Parametros:
     - body: Campos recibidos en el body de la peticion.
@@ -133,79 +144,102 @@ function validarCuerpo(body, res) {
     const errores = [];
 
     if (isEmpty(body.idFinca)) {
-        errores.push("El campo idFinca es requerido.");
+        errores.push(
+            "El campo idFinca es requerido."
+        );
     }
 
     if (isEmpty(body.codigo)) {
-        errores.push("El campo codigo es requerido.");
+        errores.push(
+            "El campo codigo es requerido."
+        );
     }
 
     if (isEmpty(body.tipoEstanque)) {
-        errores.push("El campo tipoEstanque es requerido.");
+        errores.push(
+            "El campo tipoEstanque es requerido."
+        );
     }
 
     if (isEmpty(body.estado)) {
-        errores.push("El campo estado es requerido.");
+        errores.push(
+            "El campo estado es requerido."
+        );
     }
 
     if (isEmpty(body.largo)) {
-        errores.push("El campo largo es requerido.");
+        errores.push(
+            "El campo largo es requerido."
+        );
     }
 
     if (isEmpty(body.ancho)) {
-        errores.push("El campo ancho es requerido.");
+        errores.push(
+            "El campo ancho es requerido."
+        );
     }
 
     if (isEmpty(body.profundidad)) {
-        errores.push("El campo profundidad es requerido.");
+        errores.push(
+            "El campo profundidad es requerido."
+        );
     }
 
     if (!isNumeroMayorCero(body.idFinca)) {
         errores.push(
-            "El campo idFinca debe ser numerico y mayor que cero."
+            "El campo idFinca debe ser numerico " +
+            "y mayor que cero."
         );
     }
 
     if (!isNumeroMayorCero(body.largo)) {
         errores.push(
-            "El campo largo debe ser numerico y mayor que cero."
+            "El campo largo debe ser numerico " +
+            "y mayor que cero."
         );
     }
 
     if (!isNumeroMayorCero(body.ancho)) {
         errores.push(
-            "El campo ancho debe ser numerico y mayor que cero."
+            "El campo ancho debe ser numerico " +
+            "y mayor que cero."
         );
     }
 
     if (!isNumeroMayorCero(body.profundidad)) {
         errores.push(
-            "El campo profundidad debe ser numerico y mayor que cero."
-        );
-    }
-
-    if (!isEmpty(body.densidadSiembra)) {
-        if (!isNumeroMayorIgualCero(body.densidadSiembra)) {
-            errores.push(
-                "El campo densidadSiembra debe ser numerico " +
-                "y mayor o igual que cero."
-            );
-        }
-    }
-
-    if (!isNumeroOpcionalMayorIgualCero(
-        body.numeroAireadores
-    )) {
-        errores.push(
-            "El campo numeroAireadores debe ser numerico " +
-            "y mayor o igual que cero."
+            "El campo profundidad debe ser numerico " +
+            "y mayor que cero."
         );
     }
 
     if (!isEstadoEstanque(body.estado)) {
         errores.push(
             "Estado invalido. Opciones: " +
-            Object.values(EstadoEstanque).join(", ")
+            Object.values(
+                EstadoEstanque
+            ).join(", ")
+        );
+    }
+
+    if (
+        !isFechaOpcionalValida(
+            body.fechaMantenimiento
+        )
+    ) {
+        errores.push(
+            "El campo fechaMantenimiento debe tener " +
+            "formato DD/MM/YYYY o YYYY-MM-DD."
+        );
+    }
+
+    if (
+        !isBooleanoOpcionalValido(
+            body.precria
+        )
+    ) {
+        errores.push(
+            "El campo precria debe ser booleano."
         );
     }
 
@@ -303,6 +337,7 @@ export async function getEstanques(req, res) {
     Obtiene los estanques activos que pertenecen al grupo
     de datos del usuario autenticado.
     Permite filtrar por idFinca mediante query params.
+    Esta ruta devuelve el listado basico sin equipos.
 
     Parametros:
     - req: Objeto request de Express.
@@ -316,17 +351,22 @@ export async function getEstanques(req, res) {
     */
 
     try {
-        const grupoDatos = obtenerGrupoDatosUsuario(
-            req,
-            res
-        );
+        const grupoDatos =
+            obtenerGrupoDatosUsuario(
+                req,
+                res
+            );
 
         if (grupoDatos === null) {
             return;
         }
 
         if (!isEmpty(req.query.idFinca)) {
-            if (!isNumeroMayorCero(req.query.idFinca)) {
+            if (
+                !isNumeroMayorCero(
+                    req.query.idFinca
+                )
+            ) {
                 return error(
                     res,
                     "El filtro idFinca debe ser numerico " +
@@ -364,15 +404,16 @@ export async function getEstanques(req, res) {
 export async function getEstanqueById(req, res) {
     /*
     Descripcion:
-    Obtiene un estanque por su ID y verifica que pertenezca
-    al grupo de datos del usuario autenticado.
+    Obtiene un estanque por su ID y agrega todos los
+    equipos asociados mediante equipos.estanque_id.
+    Los equipos son separados por tipo.
 
     Parametros:
     - req: Objeto request de Express.
     - res: Objeto response de Express.
 
     Retorna:
-    - 200 con el estanque encontrado.
+    - 200 con el estanque y sus equipos.
     - 400 si el id recibido no es valido.
     - 403 si el JWT no contiene un grupo valido.
     - 404 si no existe o pertenece a otro grupo.
@@ -389,10 +430,11 @@ export async function getEstanqueById(req, res) {
             return errId;
         }
 
-        const grupoDatos = obtenerGrupoDatosUsuario(
-            req,
-            res
-        );
+        const grupoDatos =
+            obtenerGrupoDatosUsuario(
+                req,
+                res
+            );
 
         if (grupoDatos === null) {
             return;
@@ -412,10 +454,26 @@ export async function getEstanqueById(req, res) {
             );
         }
 
+        const equipos = await EquipoModel.findAll({
+            grupoDatos,
+            estanqueId: req.params.id
+        });
+
+        const equiposAgrupados =
+            agruparEquiposPorTipo(
+                equipos
+            );
+
+        const detalleEstanque = {
+            ...estanque,
+            cantidadEquipos: equipos.length,
+            equipos: equiposAgrupados
+        };
+
         return exito(
             res,
             "Estanque obtenido correctamente.",
-            estanque
+            detalleEstanque
         );
     } catch (err) {
         return error(
@@ -449,10 +507,11 @@ export async function createEstanque(req, res) {
     */
 
     try {
-        const grupoDatos = obtenerGrupoDatosUsuario(
-            req,
-            res
-        );
+        const grupoDatos =
+            obtenerGrupoDatosUsuario(
+                req,
+                res
+            );
 
         if (grupoDatos === null) {
             return;
@@ -555,10 +614,11 @@ export async function updateEstanque(req, res) {
             return errId;
         }
 
-        const grupoDatos = obtenerGrupoDatosUsuario(
-            req,
-            res
-        );
+        const grupoDatos =
+            obtenerGrupoDatosUsuario(
+                req,
+                res
+            );
 
         if (grupoDatos === null) {
             return;
@@ -573,8 +633,8 @@ export async function updateEstanque(req, res) {
             return errValidacion;
         }
 
-        const estanqueActual = await EstanqueModel
-            .findById(
+        const estanqueActual =
+            await EstanqueModel.findById(
                 req.params.id,
                 grupoDatos
             );
@@ -625,11 +685,12 @@ export async function updateEstanque(req, res) {
             datosEstanque
         );
 
-        const actualizado = await EstanqueModel.update(
-            req.params.id,
-            dto,
-            grupoDatos
-        );
+        const actualizado =
+            await EstanqueModel.update(
+                req.params.id,
+                dto,
+                grupoDatos
+            );
 
         return exito(
             res,
@@ -674,10 +735,11 @@ export async function deleteEstanque(req, res) {
             return errId;
         }
 
-        const grupoDatos = obtenerGrupoDatosUsuario(
-            req,
-            res
-        );
+        const grupoDatos =
+            obtenerGrupoDatosUsuario(
+                req,
+                res
+            );
 
         if (grupoDatos === null) {
             return;
