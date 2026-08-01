@@ -4,11 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.model.js
 Autor: Marco Vásquez
-Fecha: 06/07/2026
+Fecha: 29/07/2026
 Modulo: Colaboradores
 Descripcion:
 Capa de datos del modulo de colaboradores.
-Conectado a MySQL via pool. Usa borrado logico.
+Conectado a MySQL via pool. Usa borrado logico y soporte
+para busquedas por cedula para el flujo APK movil.
 //////////////////////////////////////////////////////////
 */
 
@@ -33,8 +34,7 @@ Todas las funciones principales dependen de mapearColaborador().
 function mapearColaborador(fila) {
     /*
     Descripcion:
-    Convierte una fila MySQL (snake_case) a camelCase
-    para el frontend.
+    Convierte una fila MySQL (snake_case) a camelCase.
 
     Parametros:
     - fila: Objeto crudo de MySQL.
@@ -43,19 +43,20 @@ function mapearColaborador(fila) {
     - Objeto colaborador en camelCase.
     */
     return {
-        id:              fila.id,
-        uuid:            fila.uuid,
-        grupoDatos:      fila.grupo_datos,
-        fincaId:         fila.finca_id,
-        rolId:           fila.rol_id,
-        nombre:          fila.nombre,
-        apellidos:       fila.apellidos,
-        telefono:        fila.telefono,
-        email:           fila.email,
-        nombreUsuario:   fila.nombre_usuario,
-        tipoColaborador: fila.tipo_colaborador,
-        activo:          fila.activo,
-        fechaCreacion:   fila.fecha_creacion,
+        id:                 fila.id,
+        uuid:               fila.uuid,
+        grupoDatos:         fila.grupo_datos,
+        fincaId:            fila.finca_id,
+        rolId:              fila.rol_id,
+        nombre:             fila.nombre,
+        apellidos:          fila.apellidos,
+        cedula:             fila.cedula,
+        telefono:           fila.telefono,
+        email:              fila.email,
+        nombreUsuario:      fila.nombre_usuario,
+        tipoColaborador:    fila.tipo_colaborador,
+        activo:             fila.activo,
+        fechaCreacion:      fila.fecha_creacion,
         fechaActualizacion: fila.fecha_actualizacion,
     };
 }
@@ -91,8 +92,8 @@ export async function findById(id, grupoDatos) {
     Busca un colaborador por ID dentro del grupo.
 
     Parametros:
-    - id:          ID del colaborador.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID del colaborador.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El colaborador encontrado o null.
@@ -105,29 +106,51 @@ export async function findById(id, grupoDatos) {
     return filas.length > 0 ? mapearColaborador(filas[0]) : null;
 }
 
+export async function findByCedula(cedula) {
+    /*
+    Descripcion:
+    Busca un colaborador activo por su cedula.
+    Util para el flujo del APK movil donde se consulta
+    la cedula para obtener el grupo_datos del colaborador.
+
+    Parametros:
+    - cedula: Numero de cedula del colaborador.
+
+    Retorna:
+    - El colaborador encontrado o null.
+    */
+    const [filas] = await pool.query(
+        `SELECT * FROM colaboradores
+         WHERE cedula = ? AND activo = TRUE AND deleted_at IS NULL`,
+        [cedula]
+    );
+    return filas.length > 0 ? mapearColaborador(filas[0]) : null;
+}
+
 export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Inserta un nuevo colaborador en la DB.
+    Inserta un nuevo colaborador en la DB con PIN cifrado y cedula.
 
     Parametros:
-    - dto:         Objeto ColaboradorDTO con los datos.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - dto:        Objeto ColaboradorDTO con los datos.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El colaborador recien creado.
     */
     const [result] = await pool.query(
         `INSERT INTO colaboradores
-         (grupo_datos, finca_id, rol_id, nombre, apellidos, telefono, email,
-          nombre_usuario, pin_hash, tipo_colaborador)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (grupo_datos, finca_id, rol_id, nombre, apellidos, cedula,
+          telefono, email, nombre_usuario, pin_hash, tipo_colaborador)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             grupoDatos,
             dto.fincaId,
             dto.rolId,
             dto.nombre,
             dto.apellidos,
+            dto.cedula,
             dto.telefono,
             dto.email,
             dto.nombreUsuario,
@@ -142,33 +165,41 @@ export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
     Actualiza un colaborador existente e incrementa version.
+    Actualiza pin_hash solo si viene especificado en el DTO.
 
     Parametros:
-    - id:          ID del colaborador.
-    - dto:         Objeto ColaboradorDTO con los nuevos datos.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID del colaborador.
+    - dto:        Objeto ColaboradorDTO con los nuevos datos.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El colaborador actualizado o null si no existe.
     */
-    const [result] = await pool.query(
-        `UPDATE colaboradores
+    let querySQL = `UPDATE colaboradores
          SET finca_id = ?, rol_id = ?, nombre = ?, apellidos = ?,
-             telefono = ?, email = ?, tipo_colaborador = ?,
-             version = version + 1
-         WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
-        [
-            dto.fincaId,
-            dto.rolId,
-            dto.nombre,
-            dto.apellidos,
-            dto.telefono,
-            dto.email,
-            dto.tipoColaborador,
-            id,
-            grupoDatos,
-        ]
-    );
+             cedula = ?, telefono = ?, email = ?, tipo_colaborador = ?`;
+    const params = [
+        dto.fincaId,
+        dto.rolId,
+        dto.nombre,
+        dto.apellidos,
+        dto.cedula,
+        dto.telefono,
+        dto.email,
+        dto.tipoColaborador,
+    ];
+
+    if (dto.pinHash) {
+        querySQL += `, pin_hash = ?`;
+        params.push(dto.pinHash);
+    }
+
+    querySQL += `, version = version + 1
+         WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`;
+    params.push(id, grupoDatos);
+
+    const [result] = await pool.query(querySQL, params);
+
     if (result.affectedRows === 0) return null;
     return findById(id, grupoDatos);
 }
@@ -176,11 +207,11 @@ export async function update(id, dto, grupoDatos) {
 export async function remove(id, grupoDatos) {
     /*
     Descripcion:
-    Borrado logico del colaborador. No elimina el registro.
+    Borrado logico del colaborador.
 
     Parametros:
-    - id:          ID del colaborador.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - id:         ID del colaborador.
+    - grupoDatos: Grupo de datos del usuario en sesion.
 
     Retorna:
     - El colaborador antes de ser desactivado, o null si no existe.

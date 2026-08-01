@@ -4,13 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loginUsuarios.controller.js
 Autor: Rodolfo Chaves / Marco Vásquez
-Fecha: 28/06/2026
-Modulo: Login
+Fecha: 30/07/2026
+Modulo: Login / Usuarios
 Descripcion:
 Recibe las peticiones HTTP, consulta los modelos,
-delega validaciones al servicio, aplica el DTO
-correspondiente y devuelve la respuesta JSON al cliente.
-Incluye generacion de JWT con persistencia en DB.
+delega validaciones al servicio, aplica DTOs y gestiona
+usuarios con control jerarquico de grupo_datos.
 //////////////////////////////////////////////////////////
 */
 
@@ -37,6 +36,9 @@ import {
     isPinValido,
     isPin,
     isContrasenaSegura,
+    estaBloqueado,
+    registrarIntentoFallido,
+    resetearIntentosLogin,
     obtenerPantallasPermitidas,
 } from '../services/loginUsuarios.services.js';
 
@@ -55,6 +57,7 @@ import {
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
+import { obtenerContextoPeticion } from '../common/contextoPeticion.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -74,7 +77,7 @@ function generarTokens(payload) {
     Genera un Access Token y un Refresh Token firmados.
 
     Parametros:
-    - payload: Objeto con id, grupoDatos, rolId y nombre.
+    - payload: Objeto con id, grupoDatos, rolId, nombre y accesoGlobal.
 
     Retorna:
     - Objeto con accessToken, refreshToken y expiraEn.
@@ -118,14 +121,15 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
 Contiene las funciones exportables que manejan cada
-ruta del modulo de login.
+ruta del modulo de login y usuarios.
 */
 
 export async function login(req, res) {
     /*
     Descripcion:
     Autentica un administrador web por usuario o correo
-    y contrasena. Genera y persiste tokens JWT.
+    y contrasena. Aplica limite de 5 intentos fallidos.
+    Genera y persiste tokens JWT.
 
     Parametros:
     - req.body: { usuario?, correo?, contrasena }
@@ -133,7 +137,8 @@ export async function login(req, res) {
     Retorna:
     - 200 con tokens y datos del administrador
     - 404 si el usuario no existe
-    - 401 si la contrasena es incorrecta
+    - 401 si la contrasena es incorrecta (muestra intentos restantes)
+    - 429 si la cuenta esta bloqueada por superar 5 intentos
     */
     try {
         const identificador = req.body.usuario    ??
@@ -142,6 +147,17 @@ export async function login(req, res) {
                               req.body.nombreUsuario;
         const contrasena    = req.body.contrasena;
 
+        if (!identificador || !contrasena)
+            return error(res, 'Usuario y contrasena son requeridos.', null, 400);
+
+        // Verificacion de bloqueo por 5 intentos fallidos
+        const estadoBloqueo = estaBloqueado(identificador);
+        if (estadoBloqueo.bloqueado) {
+            const msg = `Cuenta bloqueada por superar 5 intentos. ` +
+                        `Intente de nuevo en ${estadoBloqueo.tiempoRestanteMinutos} min.`;
+            return error(res, msg, null, 429);
+        }
+
         const usuarioEncontrado = await UsuariosModel.findUsuarioByIdentificador(identificador);
 
         if (!usuarioEncontrado)
@@ -149,16 +165,27 @@ export async function login(req, res) {
 
         const contrasenaOk = await isContrasenaValida(contrasena, usuarioEncontrado.passwordHash);
 
-        if (!contrasenaOk)
-            return error(res, 'Credenciales incorrectas.', null, 401);
+        if (!contrasenaOk) {
+            const resultadoIntento = registrarIntentoFallido(identificador);
+            if (resultadoIntento.bloqueado) {
+                return error(res, 'Ha superado el maximo de 5 intentos. Cuenta bloqueada 15 min.', null, 429);
+            }
+            const msg = `Credenciales incorrectas. Intentos restantes: ${resultadoIntento.intentosRestantes}.`;
+            return error(res, msg, null, 401);
+        }
+
+        // Login exitoso: se resetea el contador de intentos fallidos
+        resetearIntentosLogin(identificador);
 
         const rol = await cargarRolConPantallas(usuarioEncontrado.rolId);
 
         const payload = {
-            id:         usuarioEncontrado.id,
-            grupoDatos: usuarioEncontrado.grupoDatos,
-            rolId:      usuarioEncontrado.rolId,
-            nombre:     usuarioEncontrado.nombre,
+            id:           usuarioEncontrado.id,
+            grupoDatos:   usuarioEncontrado.grupoDatos,
+            rolId:        usuarioEncontrado.rolId,
+            nombre:       usuarioEncontrado.nombre,
+            accesoGlobal: Boolean(rol?.accesoGlobal),
+            esColaborador: false,
         };
 
         const { accessToken, refreshToken, expiraEn } = generarTokens(payload);
@@ -177,15 +204,17 @@ export async function login(req, res) {
 export async function registrar(req, res) {
     /*
     Descripcion:
-    Registra un nuevo administrador web.
+    Registra un nuevo administrador/usuario web.
+    Jerarquia: Valida grupo_datos mediante obtenerContextoPeticion().
+    Solo superadministradores pueden elegir grupo_datos de otros.
 
     Parametros:
-    - req.body: { nombre, apellidos, correo, usuario, contrasena, rolId }
+    - req.body: { nombre, apellidos, correo, usuario, contrasena, rolId, grupoDatos? }
 
     Retorna:
     - 201 con los datos del administrador creado
     - 409 si el correo o usuario ya existen
-    - 422 si la contrasena tiene menos de 8 caracteres o el rol no existe
+    - 422 si la contrasena no cumple politicas o rol invalido
     */
     try {
         const nombre        = req.body.nombre;
@@ -194,11 +223,16 @@ export async function registrar(req, res) {
         const nombreUsuario = normalizarNombreUsuario(req.body.nombreUsuario ?? req.body.usuario);
         const contrasena    = req.body.contrasena;
         const rolId         = req.body.rolId;
-        const grupoDatos    = req.user.grupoDatos;
         const telefono      = req.body.telefono;
 
-        if (!isContrasenaSegura(contrasena))
-            return error(res, 'La contrasena debe tener minimo 8 caracteres.', null, 422);
+        // Jerarquia: Extrae grupoDatos de forma segura (solo accesoGlobal puede cambiarlo)
+        const { grupoDatos } = obtenerContextoPeticion(req);
+
+        if (!isContrasenaSegura(contrasena)) {
+            const msgErr = 'La contrasena debe tener al menos 8 caracteres, ' +
+                           'una mayuscula, una minuscula, un numero y un simbolo.';
+            return error(res, msgErr, null, 422);
+        }
 
         const correoExistente = await UsuariosModel.findUsuarioByCorreo(email);
         if (correoExistente)
@@ -235,7 +269,7 @@ export async function registrarOperario(req, res) {
     /*
     Descripcion:
     Registra un nuevo operario de campo con PIN de 4 digitos.
-    Solo accesible por administradores.
+    Solo accesible por usuarios autenticados. Usa contexto seguro.
 
     Parametros:
     - req.body: { nombre, apellidos, nombreUsuario, rolId, pin }
@@ -250,11 +284,12 @@ export async function registrarOperario(req, res) {
         const nombreUsuario   = normalizarNombreUsuario(req.body.nombreUsuario ?? req.body.usuario);
         const email           = req.body.email ?? req.body.correo ?? null;
         const telefono        = req.body.telefono ?? null;
-        const grupoDatos      = req.user.grupoDatos;
         const fincaId         = req.body.fincaId ?? null;
         const rolId           = req.body.rolId;
         const pin             = req.body.pin;
         const tipoColaborador = req.body.tipoColaborador ?? 'external_collab';
+
+        const { grupoDatos }  = obtenerContextoPeticion(req);
 
         if (!isPin(pin))
             return error(res, 'El PIN debe tener exactamente 4 digitos numericos.', null, 422);
@@ -287,14 +322,15 @@ export async function registrarOperario(req, res) {
 export async function verificarPin(req, res) {
     /*
     Descripcion:
-    Verifica el PIN de un operario desde la app movil.
-    Devuelve el rol y pantallasPermitidas.
+    Verifica el PIN de un operario/colaborador desde la app movil.
+    Genera tokens JWT con esColaborador: true y los devuelve
+    junto al rol y pantallasPermitidas.
 
     Parametros:
     - req.body: { operarioId, pin }
 
     Retorna:
-    - 200 con los datos del operario y su rol (sin pinHash)
+    - 200 con tokens, datos del colaborador y su rol
     - 404 si el operario no existe
     - 401 si el PIN es incorrecto
     - 422 si el PIN no tiene formato de 4 digitos
@@ -317,7 +353,24 @@ export async function verificarPin(req, res) {
 
         const rol = await cargarRolConPantallas(operario.rolId);
 
-        return exito(res, 'PIN verificado correctamente.', new LoginOperarioDTO(operario, rol));
+        // Generar JWT para el Colaborador de campo
+        const payload = {
+            id:           operario.id,
+            grupoDatos:   operario.grupoDatos,
+            rolId:        operario.rolId,
+            nombre:       operario.nombre,
+            accesoGlobal: false,
+            esColaborador: true,
+        };
+
+        const { accessToken, refreshToken, expiraEn } = generarTokens(payload);
+        await RefreshTokensModel.guardar(refreshToken, expiraEn, null, operario.id);
+
+        return exito(res, 'PIN verificado correctamente.', {
+            accessToken,
+            refreshToken,
+            colaborador: new LoginOperarioDTO(operario, rol),
+        });
     } catch (err) {
         return error(res, 'Error al verificar el PIN.', err);
     }
@@ -413,10 +466,12 @@ export async function refresh(req, res) {
 
         const decoded    = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
         const payload    = {
-            id:         decoded.id,
-            grupoDatos: decoded.grupoDatos,
-            rolId:      decoded.rolId,
-            nombre:     decoded.nombre,
+            id:           decoded.id,
+            grupoDatos:   decoded.grupoDatos,
+            rolId:        decoded.rolId,
+            nombre:       decoded.nombre,
+            accesoGlobal: Boolean(decoded.accesoGlobal),
+            esColaborador: Boolean(decoded.esColaborador),
         };
         const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 

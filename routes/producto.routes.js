@@ -4,10 +4,10 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.routes.js
 Autor: Jose Espinoza
-Fecha: 29/06/2026
+Fecha: 26/07/2026
 Modulo: Productos
 Descripcion:
-Define las rutas HTTP del modulo de productos bajo el nuevo estandar.
+Define las rutas HTTP del modulo de productos.
 //////////////////////////////////////////////////////////
 */
 
@@ -15,15 +15,23 @@ Define las rutas HTTP del modulo de productos bajo el nuevo estandar.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
+
+Librerias externas
 */
+
 import { Router } from 'express';
+
+// Middlewares
+import { verificarAuth }      from '../middlewares/auth.middleware.js';
 import { validarBodyProducto } from '../middlewares/producto.middleware.js';
+
+// Controladores
 import {
     getProductos,
     getProductoById,
     createProducto,
     updateProducto,
-    deleteProducto
+    deleteProducto,
 } from '../controllers/producto.controller.js';
 
 /*
@@ -31,6 +39,7 @@ import {
 CONSTANTES
 //////////////////////////////////////////////////////////
 */
+
 const router = Router();
 
 /*
@@ -38,17 +47,17 @@ const router = Router();
 RUTAS
 //////////////////////////////////////////////////////////
 */
-router.get('/', getProductos);
-router.get('/:id', getProductoById);
-router.post('/', validarBodyProducto, createProducto);
 
-// Ruta especifica de borrado logico arriba de la generica de actualizacion
-router.put('/:id/activo', deleteProducto);
-router.put('/:id', validarBodyProducto, updateProducto);
+router.get('/',       verificarAuth,                       getProductos);
+router.get('/:id',    verificarAuth,                       getProductoById);
+router.post('/',      verificarAuth, validarBodyProducto,  createProducto);
+router.put('/:id',    verificarAuth, validarBodyProducto,  updateProducto);
+router.delete('/:id', verificarAuth,                       deleteProducto);
 
 /*
 //////////////////////////////////////////////////////////
 EXPORT
 //////////////////////////////////////////////////////////
 */
+
 export default router;

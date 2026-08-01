@@ -7,70 +7,31 @@ Autor: Joan
 Fecha: 04/07/2026
 Modulo: Siembra
 Descripcion:
-Define las rutas HTTP para lotes de larva y pre-crias.
-//////////////////////////////////////////////////////////
-*/
-
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
+Define las rutas HTTP para el modulo de siembras.
 //////////////////////////////////////////////////////////
 */
 
 import { Router } from "express";
 import { verificarAuth } from "../middlewares/auth.middleware.js";
-import { validarBodyLote, validarBodyPrecria } from "../middleware/siembra.middleware.js";
+import { validarBodySiembra } from "../middlewares/siembra.middleware.js";
 import {
-    listarLotes,
-    obtenerLote,
-    crearLote,
-    actualizarLote,
-    eliminarLote,
-    listarPrecrias,
-    obtenerPrecria,
-    crearPrecria,
-    actualizarPrecria,
-    finalizarPrecria,
-    eliminarPrecria
+    listarSiembra,
+    obtenerSiembraActiva,
+    obtenerSiembra,
+    crearSiembra,
+    actualizarSiembra,
+    finalizarSiembra,
+    eliminarSiembra
 } from "../controllers/siembra.controller.js";
-
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
 
 const router = Router();
 
-/*
-//////////////////////////////////////////////////////////
-RUTAS - LOTES DE LARVA
-//////////////////////////////////////////////////////////
-*/
-
-router.get("/lotes", verificarAuth, listarLotes);
-router.get("/lotes/:id", verificarAuth, obtenerLote);
-router.post("/lotes", verificarAuth, validarBodyLote, crearLote);
-router.put("/lotes/:id", verificarAuth, validarBodyLote, actualizarLote);
-router.delete("/lotes/:id", verificarAuth, eliminarLote);
-
-/*
-//////////////////////////////////////////////////////////
-RUTAS - PRE-CRIAS
-//////////////////////////////////////////////////////////
-*/
-
-router.get("/precrias", verificarAuth, listarPrecrias);
-router.get("/precrias/:id", verificarAuth, obtenerPrecria);
-router.post("/precrias", verificarAuth, validarBodyPrecria, crearPrecria);
-router.put("/precrias/:id", verificarAuth, validarBodyPrecria, actualizarPrecria);
-router.post("/precrias/:id/finalizar", verificarAuth, finalizarPrecria);
-router.delete("/precrias/:id", verificarAuth, eliminarPrecria);
-
-/*
-//////////////////////////////////////////////////////////
-EXPORTS
-//////////////////////////////////////////////////////////
-*/
+router.get("/", verificarAuth, listarSiembra);
+router.get("/activa", verificarAuth, obtenerSiembraActiva);
+router.get("/:id", verificarAuth, obtenerSiembra);
+router.post("/", verificarAuth, validarBodySiembra, crearSiembra);
+router.put("/:id", verificarAuth, validarBodySiembra, actualizarSiembra);
+router.post("/:id/finalizar", verificarAuth, finalizarSiembra);
+router.delete("/:id", verificarAuth, eliminarSiembra);
 
 export default router;

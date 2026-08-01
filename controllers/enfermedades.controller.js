@@ -3,12 +3,13 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: enfermedades.controller.js
-Autor: Isaac
-Fecha: 03/07/2026
+Autor: Isaac Chaves
+Fecha: 30/07/2026
 Modulo: Enfermedades
 Descripcion:
-Recibe las peticiones HTTP, usa el modelo conectado a MySQL,
-aplica reglas del servicio y devuelve la respuesta al cliente.
+Controlador del modulo de enfermedades.
+Usa obtenerContextoPeticion para resolver grupo y creador
+segun una sesion web o una sesion de colaborador movil.
 //////////////////////////////////////////////////////////
 */
 
@@ -16,13 +17,12 @@ aplica reglas del servicio y devuelve la respuesta al cliente.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
-
-DTOs
 */
 
-import { EnfermedadDTO } from '../dtos/enfermedades.dto.js';
+import {
+    EnfermedadDTO
+} from '../dtos/enfermedades.dto.js';
 
-// Servicios
 import {
     isEmpty,
     isIdValido,
@@ -30,417 +30,709 @@ import {
     normalizarFiltrosEnfermedad,
     validarDatosEnfermedad,
     validarFiltrosEnfermedad,
-    obtenerCatalogoEnfermedades as obtenerCatalogoEnfermedadesService,
-    obtenerCatalogoSeveridades as obtenerCatalogoSeveridadesService,
+    obtenerCatalogoEnfermedades as
+        obtenerCatalogoEnfermedadesService,
+    obtenerCatalogoSeveridades as
+        obtenerCatalogoSeveridadesService,
     construirResumenEnfermedades,
 } from '../services/enfermedades.service.js';
 
-// Modelos
-import * as EnfermedadModel from '../models/enfermedades.model.js';
+import * as EnfermedadModel from
+    '../models/enfermedades.model.js';
 
-// Common
-import { exito, error } from '../common/respuestaJson.js';
+import {
+    exito,
+    error
+} from '../common/respuestaJson.js';
 
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
+import {
+    obtenerContextoPeticion
+} from '../common/contextoPeticion.js';
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-
-Contiene las funciones exportables que manejan cada
-ruta del modulo de enfermedades.
 */
 
-export async function obtenerEnfermedades(req, res) {
-    /*
-    Descripcion:
-    Obtiene todos los registros de enfermedades.
-    Filtra por grupoDatos y filtros opcionales.
+/*
+Descripcion:
+Obtiene las enfermedades activas que pertenecen al
+grupo de datos resuelto desde el JWT.
 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
+Parametros:
+- req: Peticion HTTP con filtros opcionales en req.query.
+- res: Respuesta HTTP de Express.
 
-    Retorna:
-    - 200 con lista de registros.
-    */
+Retorna:
+- Lista de enfermedades del grupo autenticado.
+- Respuesta estandar de error si la consulta falla.
+*/
 
+export async function obtenerEnfermedades(
+    req,
+    res
+) {
     try {
-        const grupoDatos = obtenerGrupoDatos(req);
-        const filtros = normalizarFiltrosEnfermedad(req.query, grupoDatos);
-        const errores = validarFiltrosEnfermedad(filtros);
+        const {
+            grupoDatos
+        } = obtenerContextoPeticion(
+            req
+        );
+
+        const filtros = normalizarFiltrosEnfermedad(
+            req.query,
+            grupoDatos
+        );
+
+        const errores = validarFiltrosEnfermedad(
+            filtros
+        );
 
         if (errores.length > 0) {
-            return error(res, 'Datos invalidos para consultar enfermedades.', errores, 422);
+            return error(
+                res,
+                'Datos invalidos para consultar enfermedades.',
+                errores,
+                422
+            );
         }
 
-        const data = await EnfermedadModel.findAll(filtros);
+        const data = await EnfermedadModel.findAll(
+            filtros
+        );
 
-        return exito(res, 'Enfermedades obtenidas correctamente.', data);
+        return exito(
+            res,
+            'Enfermedades obtenidas correctamente.',
+            data
+        );
     } catch (err) {
-        return manejarError(res, err, 'No se pudieron obtener las enfermedades.');
+        return manejarError(
+            res,
+            err,
+            'No se pudieron obtener las enfermedades.'
+        );
     }
 }
 
-export async function obtenerEnfermedadPorId(req, res) {
-    /*
-    Descripcion:
-    Obtiene un registro de enfermedad por su ID.
+/*
+Descripcion:
+Obtiene una enfermedad por id y verifica que el registro
+pertenezca al grupo de datos autenticado.
 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
+Parametros:
+- req: Peticion HTTP con el id en req.params.
+- res: Respuesta HTTP de Express.
 
-    Retorna:
-    - 200 con el registro encontrado.
-    - 400 si el id es invalido.
-    - 404 si no existe.
-    */
+Retorna:
+- Registro encontrado.
+- Error 400 si el id es invalido.
+- Error 404 si no existe dentro del grupo.
+*/
 
+export async function obtenerEnfermedadPorId(
+    req,
+    res
+) {
     try {
-        const errId = validarIdParametro(req.params.id, res);
+        const errId = validarIdParametro(
+            req.params.id,
+            res
+        );
 
         if (errId) {
             return errId;
         }
 
-        const grupoDatos = obtenerGrupoDatos(req);
+        const {
+            grupoDatos
+        } = obtenerContextoPeticion(
+            req
+        );
 
-        if (isEmpty(grupoDatos)) {
-            return error(res, 'El campo grupoDatos es requerido.', null, 400);
-        }
-
-        const registro = await EnfermedadModel.findById(req.params.id, grupoDatos);
+        const registro = await EnfermedadModel.findById(
+            req.params.id,
+            grupoDatos
+        );
 
         if (!registro) {
-            return error(res, 'Enfermedad no encontrada.', null, 404);
+            return error(
+                res,
+                'Enfermedad no encontrada.',
+                null,
+                404
+            );
         }
 
-        return exito(res, 'Enfermedad obtenida correctamente.', registro);
+        return exito(
+            res,
+            'Enfermedad obtenida correctamente.',
+            registro
+        );
     } catch (err) {
-        return manejarError(res, err, 'No se pudo obtener la enfermedad.');
+        return manejarError(
+            res,
+            err,
+            'No se pudo obtener la enfermedad.'
+        );
     }
 }
 
-export async function crearEnfermedad(req, res) {
-    /*
-    Descripcion:
-    Crea un nuevo registro de enfermedad en MySQL.
+/*
+Descripcion:
+Crea un registro de enfermedad con auditoria obtenida
+exclusivamente desde el JWT.
 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
+Registro creado con codigo HTTP 201.
+Error de validacion, relacion o base de datos.
 
-    Retorna:
-    - 201 con el registro creado.
-    - 400/422 si hay errores de validacion.
-    */
+Parametros:
+- La sesion web usa creadoPorUsuarioId.
+- La sesion movil usa creadoPorColaboradorId.
+- No se utiliza colaboradorId ni se acepta auditoria del body.
 
+Retorna:
+- req: Peticion HTTP con los datos funcionales.
+- res: Respuesta HTTP de Express.
+*/
+
+export async function crearEnfermedad(
+    req,
+    res
+) {
     try {
-        const grupoDatos = obtenerGrupoDatos(req);
-        const datos = normalizarDatosEnfermedad(req.body, grupoDatos);
-        const errores = validarDatosEnfermedad(datos);
+        const {
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        } = obtenerContextoPeticion(
+            req
+        );
+
+        const datosEntrada = {
+            ...req.body,
+            responsable:
+                obtenerResponsablePeticion(req),
+        };
+
+        const datos = normalizarDatosEnfermedad(
+            datosEntrada,
+            grupoDatos
+        );
+
+        const errores = validarDatosEnfermedad(
+            datos
+        );
 
         if (errores.length > 0) {
-            return error(res, 'Datos invalidos para la enfermedad.', errores, 422);
+            return error(
+                res,
+                'Datos invalidos para la enfermedad.',
+                errores,
+                422
+            );
         }
 
-        const dto = new EnfermedadDTO(datos);
-        const nuevo = await EnfermedadModel.create(dto);
+        const errRelacion =
+            await validarRelacionFincaEstanque(
+                datos.fincaId,
+                datos.estanqueId,
+                grupoDatos,
+                res
+            );
 
-        return exito(res, 'Enfermedad creada correctamente.', nuevo, 201);
+        if (errRelacion) {
+            return errRelacion;
+        }
+
+        const dto = new EnfermedadDTO({
+            ...datos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        });
+
+        const nuevo = await EnfermedadModel.create(
+            dto
+        );
+
+        return exito(
+            res,
+            'Enfermedad creada correctamente.',
+            nuevo,
+            201
+        );
     } catch (err) {
-        return manejarError(res, err, 'No se pudo crear la enfermedad.');
+        return manejarError(
+            res,
+            err,
+            'No se pudo crear la enfermedad.'
+        );
     }
 }
 
-export async function actualizarEnfermedad(req, res) {
-    /*
-    Descripcion:
-    Actualiza un registro de enfermedad existente por su ID.
+/*
+Descripcion:
+Actualiza los datos funcionales de una enfermedad.
 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
+Registro actualizado o error 404.
 
-    Retorna:
-    - 200 con el registro actualizado.
-    - 400/422 si hay errores de validacion.
-    - 404 si no existe.
-    */
+Parametros:
+- El creador original se conserva y los campos de auditoria
+- no forman parte del UPDATE del model.
 
+Retorna:
+- req: Peticion HTTP con id y nuevos datos.
+- res: Respuesta HTTP de Express.
+*/
+
+export async function actualizarEnfermedad(
+    req,
+    res
+) {
     try {
-        const errId = validarIdParametro(req.params.id, res);
+        const errId = validarIdParametro(
+            req.params.id,
+            res
+        );
 
         if (errId) {
             return errId;
         }
 
-        const grupoDatos = obtenerGrupoDatos(req);
-        const datos = normalizarDatosEnfermedad(req.body, grupoDatos);
-        const errores = validarDatosEnfermedad(datos);
+        const {
+            grupoDatos
+        } = obtenerContextoPeticion(
+            req
+        );
 
-        if (errores.length > 0) {
-            return error(res, 'Datos invalidos para la enfermedad.', errores, 422);
+        const registroActual =
+            await EnfermedadModel.findById(
+                req.params.id,
+                grupoDatos
+            );
+
+        if (!registroActual) {
+            return error(
+                res,
+                'Enfermedad no encontrada.',
+                null,
+                404
+            );
         }
 
-        const dto = new EnfermedadDTO(datos);
-        const actualizado = await EnfermedadModel.update(req.params.id, grupoDatos, dto);
+        const datosEntrada = {
+            ...req.body,
+            responsable:
+                registroActual.responsable,
+        };
+
+        const datos = normalizarDatosEnfermedad(
+            datosEntrada,
+            grupoDatos
+        );
+
+        const errores = validarDatosEnfermedad(
+            datos
+        );
+
+        if (errores.length > 0) {
+            return error(
+                res,
+                'Datos invalidos para la enfermedad.',
+                errores,
+                422
+            );
+        }
+
+        const errRelacion =
+            await validarRelacionFincaEstanque(
+                datos.fincaId,
+                datos.estanqueId,
+                grupoDatos,
+                res
+            );
+
+        if (errRelacion) {
+            return errRelacion;
+        }
+
+        const dto = new EnfermedadDTO({
+            ...datos,
+            creadoPorUsuarioId:
+                registroActual.creadoPorUsuarioId,
+            creadoPorColaboradorId:
+                registroActual.creadoPorColaboradorId,
+        });
+
+        const actualizado =
+            await EnfermedadModel.update(
+                req.params.id,
+                grupoDatos,
+                dto
+            );
 
         if (!actualizado) {
-            return error(res, 'Enfermedad no encontrada.', null, 404);
+            return error(
+                res,
+                'Enfermedad no encontrada.',
+                null,
+                404
+            );
         }
 
-        return exito(res, 'Enfermedad actualizada correctamente.', actualizado);
+        return exito(
+            res,
+            'Enfermedad actualizada correctamente.',
+            actualizado
+        );
     } catch (err) {
-        return manejarError(res, err, 'No se pudo actualizar la enfermedad.');
+        return manejarError(
+            res,
+            err,
+            'No se pudo actualizar la enfermedad.'
+        );
     }
 }
 
-export async function eliminarEnfermedad(req, res) {
-    /*
-    Descripcion:
-    Elimina logicamente un registro de enfermedad por su ID.
-    No realiza DELETE fisico.
+/*
+Descripcion:
+Realiza la eliminacion logica de una enfermedad protegida
+por id y grupo de datos.
 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
+Parametros:
+- req: Peticion HTTP con el id.
+- res: Respuesta HTTP de Express.
 
-    Retorna:
-    - 200 con el registro eliminado.
-    - 400 si el id es invalido.
-    - 404 si no existe.
-    */
+Retorna:
+- Registro eliminado logicamente o error 404.
+*/
 
+export async function eliminarEnfermedad(
+    req,
+    res
+) {
     try {
-        const errId = validarIdParametro(req.params.id, res);
+        const errId = validarIdParametro(
+            req.params.id,
+            res
+        );
 
         if (errId) {
             return errId;
         }
 
-        const grupoDatos = obtenerGrupoDatos(req);
+        const {
+            grupoDatos
+        } = obtenerContextoPeticion(
+            req
+        );
 
-        if (isEmpty(grupoDatos)) {
-            return error(res, 'El campo grupoDatos es requerido.', null, 400);
-        }
-
-        const eliminado = await EnfermedadModel.remove(req.params.id, grupoDatos);
+        const eliminado = await EnfermedadModel.remove(
+            req.params.id,
+            grupoDatos
+        );
 
         if (!eliminado) {
-            return error(res, 'Enfermedad no encontrada.', null, 404);
+            return error(
+                res,
+                'Enfermedad no encontrada.',
+                null,
+                404
+            );
         }
 
-        return exito(res, 'Enfermedad eliminada correctamente.', eliminado);
+        return exito(
+            res,
+            'Enfermedad eliminada correctamente.',
+            eliminado
+        );
     } catch (err) {
-        return manejarError(res, err, 'No se pudo eliminar la enfermedad.');
+        return manejarError(
+            res,
+            err,
+            'No se pudo eliminar la enfermedad.'
+        );
     }
 }
 
-export async function obtenerResumenEnfermedades(req, res) {
-    /*
-    Descripcion:
-    Obtiene un resumen general de los registros de enfermedades.
-    Permite filtrar por grupoDatos, fincaId, estanqueId,
-    enfermedad, severidad y fechaReporte.
+/*
+Descripcion:
+Construye el resumen sanitario de las enfermedades del
+grupo autenticado.
 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
+Parametros:
+- req: Peticion HTTP con filtros opcionales.
+- res: Respuesta HTTP de Express.
 
-    Retorna:
-    - 200 con resumen de enfermedades.
-    */
+Retorna:
+- Objeto con totales, mortalidad y frecuencias.
+*/
 
+export async function obtenerResumenEnfermedades(
+    req,
+    res
+) {
     try {
-        const grupoDatos = obtenerGrupoDatos(req);
-        const filtros = normalizarFiltrosEnfermedad(req.query, grupoDatos);
-        const errores = validarFiltrosEnfermedad(filtros);
+        const {
+            grupoDatos
+        } = obtenerContextoPeticion(
+            req
+        );
+
+        const filtros = normalizarFiltrosEnfermedad(
+            req.query,
+            grupoDatos
+        );
+
+        const errores = validarFiltrosEnfermedad(
+            filtros
+        );
 
         if (errores.length > 0) {
-            return error(res, 'Datos invalidos para consultar el resumen.', errores, 422);
+            return error(
+                res,
+                'Datos invalidos para consultar el resumen.',
+                errores,
+                422
+            );
         }
 
-        const registros = await EnfermedadModel.findAll(filtros);
-        const resumen = construirResumenEnfermedades(registros);
+        const registros = await EnfermedadModel.findAll(
+            filtros
+        );
 
-        return exito(res, 'Resumen de enfermedades obtenido correctamente.', resumen);
+        const resumen = construirResumenEnfermedades(
+            registros
+        );
+
+        return exito(
+            res,
+            'Resumen de enfermedades obtenido correctamente.',
+            resumen
+        );
     } catch (err) {
-        return manejarError(res, err, 'No se pudo obtener el resumen de enfermedades.');
+        return manejarError(
+            res,
+            err,
+            'No se pudo obtener el resumen de enfermedades.'
+        );
     }
 }
 
-export function obtenerCatalogoEnfermedades(req, res) {
-    /*
-    Descripcion:
-    Obtiene el catalogo de enfermedades disponibles.
+/*
+Descripcion:
+Devuelve el catalogo permitido de enfermedades.
 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
+Parametros:
+- req: Peticion HTTP.
+- res: Respuesta HTTP de Express.
 
-    Retorna:
-    - 200 con catalogo de enfermedades.
-    */
+Retorna:
+- Lista de opciones compatibles con la base de datos.
+*/
 
-    const data = obtenerCatalogoEnfermedadesService();
+export function obtenerCatalogoEnfermedades(
+    req,
+    res
+) {
+    const data =
+        obtenerCatalogoEnfermedadesService();
 
-    return exito(res, 'Catalogo de enfermedades obtenido correctamente.', data);
+    return exito(
+        res,
+        'Catalogo de enfermedades obtenido correctamente.',
+        data
+    );
 }
 
-export function obtenerCatalogoSeveridades(req, res) {
-    /*
-    Descripcion:
-    Obtiene el catalogo de severidades disponibles.
+/*
+Descripcion:
+Devuelve el catalogo permitido de severidades.
 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
+Parametros:
+- req: Peticion HTTP.
+- res: Respuesta HTTP de Express.
 
-    Retorna:
-    - 200 con catalogo de severidades.
-    */
+Retorna:
+- Lista de opciones de severidad.
+*/
 
-    const data = obtenerCatalogoSeveridadesService();
+export function obtenerCatalogoSeveridades(
+    req,
+    res
+) {
+    const data =
+        obtenerCatalogoSeveridadesService();
 
-    return exito(res, 'Catalogo de severidades obtenido correctamente.', data);
+    return exito(
+        res,
+        'Catalogo de severidades obtenido correctamente.',
+        data
+    );
 }
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
-
-Funciones internas del controller.
 */
 
-function validarIdParametro(id, res) {
-    /*
-    Descripcion:
-    Valida que el parametro id sea numerico y mayor a cero.
+/*
+Descripcion:
+Obtiene el nombre visible del usuario o colaborador
+autenticado.
 
-    Parametros:
-    - id:  ID recibido por params.
-    - res: Objeto response de Express.
+Nombre del responsable o null.
 
-    Retorna:
-    - Una respuesta de error si algo falla.
-    - null si todo esta bien.
-    */
+Parametros:
+- El valor se obtiene del JWT y nunca del body.
 
+Retorna:
+- req: Peticion HTTP autenticada.
+*/
+
+function obtenerResponsablePeticion(req) {
+    const nombre =
+        req.colaborador?.nombre ??
+        req.user?.nombre ??
+        null;
+
+    return isEmpty(nombre)
+        ? null
+        : String(nombre).trim();
+}
+
+/*
+Descripcion:
+Verifica que finca y estanque existan, esten activos,
+pertenezcan al grupo y mantengan relacion entre si.
+
+Retorna:
+- null si la relacion es valida.
+- Respuesta HTTP de error si la relacion es invalida.
+*/
+
+async function validarRelacionFincaEstanque(
+    fincaId,
+    estanqueId,
+    grupoDatos,
+    res
+) {
+    const relacionValida =
+        await EnfermedadModel
+            .existeRelacionFincaEstanqueGrupo(
+                fincaId,
+                estanqueId,
+                grupoDatos
+            );
+
+    if (!relacionValida) {
+        return error(
+            res,
+            'La finca o el estanque no existe, no pertenece ' +
+            'al grupo de datos o no existe relacion entre ambos.',
+            null,
+            404
+        );
+    }
+
+    return null;
+}
+
+/*
+Descripcion:
+Valida que el id recibido sea numerico y mayor que cero.
+
+Parametros:
+- id: Identificador recibido.
+- res: Respuesta HTTP de Express.
+
+Retorna:
+- null si es valido o respuesta de error.
+*/
+
+function validarIdParametro(
+    id,
+    res
+) {
     if (!isIdValido(id)) {
-        return error(res, 'El id debe ser numerico y mayor que cero.', null, 400);
+        return error(
+            res,
+            'El id debe ser numerico y mayor que cero.',
+            null,
+            400
+        );
     }
 
     return null;
 }
 
-function obtenerGrupoDatos(req) {
-    /*
-    Descripcion:
-    Obtiene grupoDatos desde el usuario autenticado, query o body.
-    El orden prioriza la informacion del usuario autenticado.
+/*
+Descripcion:
+Centraliza el formato de errores inesperados del controller.
 
-    Parametros:
-    - req: Objeto request de Express.
+Parametros:
+- res: Respuesta HTTP.
+- err: Error capturado.
+- mensaje: Mensaje general de la operacion.
 
-    Retorna:
-    - grupoDatos encontrado.
-    - null si no existe.
-    */
+Retorna:
+- Respuesta JSON estandar.
+*/
 
-    if (req.usuario !== undefined && req.usuario !== null) {
-        if (req.usuario.grupoDatos !== undefined) {
-            return req.usuario.grupoDatos;
-        }
-
-        if (req.usuario.grupo_datos !== undefined) {
-            return req.usuario.grupo_datos;
-        }
-    }
-
-    if (req.user !== undefined && req.user !== null) {
-        if (req.user.grupoDatos !== undefined) {
-            return req.user.grupoDatos;
-        }
-
-        if (req.user.grupo_datos !== undefined) {
-            return req.user.grupo_datos;
-        }
-    }
-
-    if (req.query !== undefined && req.query !== null) {
-        if (req.query.grupoDatos !== undefined) {
-            return req.query.grupoDatos;
-        }
-
-        if (req.query.grupo_datos !== undefined) {
-            return req.query.grupo_datos;
-        }
-    }
-
-    if (req.body !== undefined && req.body !== null) {
-        if (req.body.grupoDatos !== undefined) {
-            return req.body.grupoDatos;
-        }
-
-        if (req.body.grupo_datos !== undefined) {
-            return req.body.grupo_datos;
-        }
-    }
-
-    return null;
-}
-
-function manejarError(res, err, mensaje) {
-    /*
-    Descripcion:
-    Maneja errores del controller y errores comunes de MySQL.
-
-    Parametros:
-    - res: Objeto response de Express.
-    - err: Error capturado.
-    - mensaje: Mensaje general.
-
-    Retorna:
-    - JSON estandar de error.
-    */
-
+function manejarError(
+    res,
+    err,
+    mensaje
+) {
     let status = 500;
     let detalle = null;
 
-    if (err !== undefined && err !== null) {
-        if (err.status !== undefined) {
-            status = err.status;
-        }
+    if (
+        err !== undefined &&
+        err !== null
+    ) {
+        status =
+            err.status ??
+            status;
 
-        if (err.message !== undefined) {
-            detalle = err.message;
-        }
+        detalle =
+            err.message ??
+            detalle;
 
         if (err.code === 'ER_NO_REFERENCED_ROW_2') {
             status = 409;
-            detalle = 'No existe el grupoDatos, fincaId, estanqueId o colaboradorId indicado.';
+            detalle =
+                'No existe el grupo, finca, estanque ' +
+                'o creador indicado.';
+        }
+
+        if (err.code === 'ER_BAD_FIELD_ERROR') {
+            status = 500;
+            detalle =
+                'La estructura de la tabla enfermedades ' +
+                'no coincide con el modelo actualizado.';
         }
 
         if (err.code === 'ER_DATA_TOO_LONG') {
             status = 400;
-            detalle = 'Uno de los campos excede el tamano permitido.';
+            detalle =
+                'Uno de los campos excede el tamano permitido.';
         }
 
         if (err.code === 'WARN_DATA_TRUNCATED') {
             status = 400;
-            detalle = 'Uno de los valores no coincide con el tipo permitido por la base de datos.';
+            detalle =
+                'Uno de los valores no coincide con el ' +
+                'tipo permitido por la base de datos.';
         }
     }
 
-    return error(res, mensaje, detalle, status);
+    return error(
+        res,
+        mensaje,
+        detalle,
+        status
+    );
 }

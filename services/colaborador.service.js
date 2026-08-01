@@ -4,12 +4,22 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.service.js
 Autor: Marco Vásquez
-Fecha: 28/06/2026
+Fecha: 29/07/2026
 Modulo: Colaboradores
 Descripcion:
-Define las reglas de negocio de colaboradores.
+Define las reglas de negocio, validaciones y hasheo
+de PINs para el modulo de colaboradores.
 //////////////////////////////////////////////////////////
 */
+
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+
+Librerias externas
+*/
+import bcrypt from 'bcrypt';
 
 /*
 //////////////////////////////////////////////////////////
@@ -21,14 +31,15 @@ Expresiones regulares para validacion de campos.
 
 const emailRegex  = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 const phoneRegex  = /^\d{8}$/;
-const cedulaRegex = /^\d{9}$/;
+const cedulaRegex = /^\d{9,12}$/;
+const pinRegex    = /^\d{4}$/;
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
-Contiene las funciones exportables de validacion
+Contiene las funciones exportables de validacion y cifrado
 que utiliza el controller para verificar los datos.
 */
 
@@ -43,7 +54,7 @@ export function isEmail(email) {
     Retorna:
     - true si es un email valido, false si no.
     */
-    return emailRegex.test(email.trim());
+    return emailRegex.test(String(email ?? '').trim());
 }
 
 export function isPhone(phone) {
@@ -57,13 +68,13 @@ export function isPhone(phone) {
     Retorna:
     - true si es un telefono valido, false si no.
     */
-    return phoneRegex.test(phone.trim());
+    return phoneRegex.test(String(phone ?? '').trim());
 }
 
 export function isCedula(cedula) {
     /*
     Descripcion:
-    Valida que un string sea una cedula de 9 digitos.
+    Valida que un string sea una cedula valida (9 a 12 digitos).
 
     Parametros:
     - cedula: String a validar.
@@ -71,7 +82,50 @@ export function isCedula(cedula) {
     Retorna:
     - true si es una cedula valida, false si no.
     */
-    return cedulaRegex.test(cedula.trim());
+    return cedulaRegex.test(String(cedula ?? '').trim());
+}
+
+export function isPin(pin) {
+    /*
+    Descripcion:
+    Valida que un valor sea un PIN de exactamente 4 digitos.
+
+    Parametros:
+    - pin: String o numero a validar.
+
+    Retorna:
+    - true si es un PIN valido, false si no.
+    */
+    return pinRegex.test(String(pin ?? '').trim());
+}
+
+export async function hashPin(pin) {
+    /*
+    Descripcion:
+    Genera un hash bcrypt a partir de un PIN de 4 digitos.
+
+    Parametros:
+    - pin: String o numero con el PIN a cifrar.
+
+    Retorna:
+    - El hash bcrypt generado.
+    */
+    return await bcrypt.hash(String(pin), 10);
+}
+
+export async function isPinValido(pin, hash) {
+    /*
+    Descripcion:
+    Compara un PIN en texto plano con su hash bcrypt.
+
+    Parametros:
+    - pin:  String con el PIN en texto plano.
+    - hash: Hash almacenado del colaborador.
+
+    Retorna:
+    - true si el PIN es correcto, false si no.
+    */
+    return await bcrypt.compare(String(pin), hash);
 }
 
 export function isEmpty(string) {
@@ -85,5 +139,5 @@ export function isEmpty(string) {
     Retorna:
     - true si esta vacio, false si tiene contenido.
     */
-    return string.trim().length === 0;
+    return String(string ?? '').trim().length === 0;
 }

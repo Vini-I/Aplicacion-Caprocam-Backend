@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.dto.js
 Autor: Marco Vásquez
-Fecha: 06/07/2026
+Fecha: 29/07/2026
 Modulo: Colaboradores
 Descripcion:
 Archivo de transferencia de datos para colaboradores.
@@ -16,8 +16,6 @@ Adaptado a la estructura de la tabla colaboradores en DB.
 //////////////////////////////////////////////////////////
 ENUM
 //////////////////////////////////////////////////////////
-
-Define los valores permitidos para el campo tipo_colaborador.
 */
 
 export const TipoColaborador = Object.freeze({
@@ -40,6 +38,7 @@ export class ColaboradorDTO {
         rolId,
         nombre,
         apellidos,
+        cedula,
         telefono,
         email,
         nombreUsuario,
@@ -58,6 +57,7 @@ export class ColaboradorDTO {
         - rolId:           FK a roles (requerido)
         - nombre:          Nombre del colaborador (requerido)
         - apellidos:       Apellidos del colaborador (requerido)
+        - cedula:          Cedula unica por grupo (opcional)
         - telefono:        Telefono (opcional)
         - email:           Correo electronico (opcional)
         - nombreUsuario:   Nombre de usuario unico por grupo (requerido)
@@ -67,15 +67,16 @@ export class ColaboradorDTO {
         */
         this.id              = id;
         this.grupoDatos      = grupoDatos;
-        this.fincaId         = fincaId       ?? null;
+        this.fincaId         = fincaId         ?? null;
         this.rolId           = rolId;
         this.nombre          = nombre;
         this.apellidos       = apellidos;
-        this.telefono        = telefono      ?? null;
-        this.email           = email         ?? null;
+        this.cedula          = cedula           ?? null;
+        this.telefono        = telefono         ?? null;
+        this.email           = email            ?? null;
         this.nombreUsuario   = nombreUsuario;
-        this.pinHash         = pinHash;
-        this.tipoColaborador = tipoColaborador ?? TipoColaborador.EXTERNAL_COLLAB;
-        this.activo          = activo         ?? true;
+        this.pinHash         = pinHash          ?? null;
+        this.tipoColaborador = tipoColaborador  ?? TipoColaborador.EXTERNAL_COLLAB;
+        this.activo          = activo           ?? true;
     }
 }

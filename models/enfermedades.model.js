@@ -3,13 +3,14 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: enfermedades.model.js
-Autor: Isaac
-Fecha: 03/07/2026
+Autor: Isaac Chaves
+Fecha: 30/07/2026
 Modulo: Enfermedades
 Descripcion:
-Capa de datos del modulo de enfermedades.
-Trabaja con MySQL mediante config/database.js.
-No realiza DELETE fisico, solo borrado logico.
+Capa de acceso a datos del modulo de enfermedades.
+Protege los registros por grupo de datos y conserva
+inmutables los campos de auditoria durante el update.
+No utiliza la columna colaborador_id.
 //////////////////////////////////////////////////////////
 */
 
@@ -17,46 +18,43 @@ No realiza DELETE fisico, solo borrado logico.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
-
-Base de datos
 */
 
 import db from '../config/database.js';
+
+import {
+    obtenerNombreEnfermedad,
+    obtenerNombreSeveridad,
+} from '../services/enfermedades.service.js';
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
+*/
 
-Contiene las funciones exportables que interactuan
-con la tabla enfermedades.
+/*
+Descripcion:
+Obtiene enfermedades activas del grupo autenticado y
+aplica los filtros funcionales permitidos.
+
+Parametros:
+- filtros: Grupo de datos y filtros opcionales.
+
+Retorna:
+- Lista de registros mapeados.
 */
 
 export async function findAll(filtros) {
-    /*
-    Descripcion:
-    Obtiene todos los registros activos de enfermedades.
-    Filtra por grupo_datos y filtros opcionales.
-
-    Parametros:
-    - filtros: Objeto con filtros de busqueda.
-
-    Retorna:
-    - Lista con los registros encontrados.
-    */
-
-    const valores = [];
+    const valores = [filtros.grupoDatos];
     const condiciones = [
         'grupo_datos = ?',
         'activo = TRUE',
         'deleted_at IS NULL',
     ];
 
-    valores.push(filtros.grupoDatos);
-
     agregarFiltro(condiciones, valores, 'finca_id', filtros.fincaId);
     agregarFiltro(condiciones, valores, 'estanque_id', filtros.estanqueId);
-    agregarFiltro(condiciones, valores, 'colaborador_id', filtros.colaboradorId);
     agregarFiltro(condiciones, valores, 'enfermedad', filtros.enfermedad);
     agregarFiltro(condiciones, valores, 'severidad', filtros.severidad);
     agregarFiltro(condiciones, valores, 'fecha_reporte', filtros.fechaReporte);
@@ -66,59 +64,97 @@ export async function findAll(filtros) {
         ' ORDER BY fecha_reporte DESC, id DESC';
 
     const [rows] = await db.execute(sql, valores);
-
     return mapearFilas(rows);
 }
 
+/*
+Descripcion:
+Busca una enfermedad activa por id y grupo de datos.
+
+Parametros:
+- id: Identificador del registro.
+- grupoDatos: Grupo obtenido desde el JWT.
+
+Retorna:
+- Registro mapeado o null.
+*/
+
 export async function findById(id, grupoDatos) {
-    /*
-    Descripcion:
-    Busca un registro activo de enfermedad por su ID y grupo_datos.
+    const sql = seleccionarCampos() + `
+        WHERE id = ?
+        AND grupo_datos = ?
+        AND activo = TRUE
+        AND deleted_at IS NULL
+        LIMIT 1
+    `;
 
-    Parametros:
-    - id: ID del registro.
-    - grupoDatos: Grupo de datos al que pertenece el registro.
-
-    Retorna:
-    - Registro encontrado.
-    - null si no existe.
-    */
-
-    const sql = seleccionarCampos() +
-        ' WHERE id = ?' +
-        ' AND grupo_datos = ?' +
-        ' AND activo = TRUE' +
-        ' AND deleted_at IS NULL' +
-        ' LIMIT 1';
-
-    const valores = [id, grupoDatos];
-    const [rows] = await db.execute(sql, valores);
-
-    if (rows.length === 0) {
-        return null;
-    }
-
-    return mapearFila(rows[0]);
+    const [rows] = await db.execute(sql, [id, grupoDatos]);
+    return rows.length > 0 ? mapearFila(rows[0]) : null;
 }
 
+/*
+Descripcion:
+Verifica que finca y estanque existan, esten activos,
+pertenezcan al grupo y mantengan relacion entre si.
+
+Retorna:
+- true si la relacion es valida o false.
+*/
+
+export async function existeRelacionFincaEstanqueGrupo(
+    fincaId,
+    estanqueId,
+    grupoDatos
+) {
+    const sql = `
+        SELECT estanques.id
+        FROM estanques
+        INNER JOIN fincas
+            ON fincas.id = estanques.finca_id
+        WHERE fincas.id = ?
+        AND estanques.id = ?
+        AND fincas.grupo_datos = ?
+        AND estanques.grupo_datos = ?
+        AND fincas.activo = TRUE
+        AND estanques.activo = TRUE
+        AND fincas.deleted_at IS NULL
+        AND estanques.deleted_at IS NULL
+        LIMIT 1
+    `;
+
+    const [rows] = await db.execute(sql, [
+        fincaId,
+        estanqueId,
+        grupoDatos,
+        grupoDatos
+    ]);
+
+    return rows.length > 0;
+}
+
+/*
+Descripcion:
+Inserta una enfermedad con auditoria dual.
+
+Registro creado.
+
+Parametros:
+- No utiliza colaborador_id.
+- El creador se almacena solo en creado_por_usuario_id o
+- creado_por_colaborador_id.
+
+Retorna:
+- dto: Datos normalizados por EnfermedadDTO.
+*/
+
 export async function create(dto) {
-    /*
-    Descripcion:
-    Crea un nuevo registro de enfermedad en MySQL.
-
-    Parametros:
-    - dto: Objeto EnfermedadDTO con los datos del nuevo registro.
-
-    Retorna:
-    - Registro creado.
-    */
-
     const sql = `
         INSERT INTO enfermedades (
             grupo_datos,
             finca_id,
             estanque_id,
-            colaborador_id,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             tipo_registro,
             fecha_reporte,
             responsable,
@@ -127,53 +163,44 @@ export async function create(dto) {
             mortalidad_registrada,
             reporte
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const valores = [
+    const [resultado] = await db.execute(sql, [
         dto.grupoDatos,
         dto.fincaId,
         dto.estanqueId,
-        dto.colaboradorId,
+        dto.creadoPorUsuarioId,
+        dto.creadoPorColaboradorId,
         dto.tipoRegistro,
         dto.fechaReporte,
         dto.responsable,
         dto.enfermedad,
         dto.severidad,
         dto.mortalidadRegistrada,
-        dto.reporte,
-    ];
-
-    const [resultado] = await db.execute(sql, valores);
+        dto.reporte
+    ]);
 
     return findById(resultado.insertId, dto.grupoDatos);
 }
 
+/*
+Descripcion:
+Actualiza solamente los campos funcionales del registro.
+
+Registro actualizado o null.
+
+Parametros:
+- Los campos de auditoria no forman parte del UPDATE.
+*/
+
 export async function update(id, grupoDatos, dto) {
-    /*
-    Descripcion:
-    Actualiza un registro de enfermedad existente.
-    Aumenta la version del registro.
-
-    Parametros:
-    - id: ID del registro.
-    - grupoDatos: Grupo de datos del registro.
-    - dto: Objeto EnfermedadDTO con los nuevos datos.
-
-    Retorna:
-    - Registro actualizado.
-    - null si no existe.
-    */
-
     const sql = `
         UPDATE enfermedades
         SET
             finca_id = ?,
             estanque_id = ?,
-            colaborador_id = ?,
-            tipo_registro = ?,
             fecha_reporte = ?,
-            responsable = ?,
             enfermedad = ?,
             severidad = ?,
             mortalidad_registrada = ?,
@@ -185,45 +212,32 @@ export async function update(id, grupoDatos, dto) {
         AND deleted_at IS NULL
     `;
 
-    const valores = [
+    const [resultado] = await db.execute(sql, [
         dto.fincaId,
         dto.estanqueId,
-        dto.colaboradorId,
-        dto.tipoRegistro,
         dto.fechaReporte,
-        dto.responsable,
         dto.enfermedad,
         dto.severidad,
         dto.mortalidadRegistrada,
         dto.reporte,
         id,
-        grupoDatos,
-    ];
+        grupoDatos
+    ]);
 
-    const [resultado] = await db.execute(sql, valores);
-
-    if (resultado.affectedRows === 0) {
-        return null;
-    }
-
-    return findById(id, grupoDatos);
+    return resultado.affectedRows === 0
+        ? null
+        : findById(id, grupoDatos);
 }
 
+/*
+Descripcion:
+Realiza la eliminacion logica de una enfermedad.
+
+Retorna:
+- Registro eliminado logicamente o null.
+*/
+
 export async function remove(id, grupoDatos) {
-    /*
-    Descripcion:
-    Elimina logicamente un registro de enfermedad.
-    No realiza DELETE fisico.
-
-    Parametros:
-    - id: ID del registro.
-    - grupoDatos: Grupo de datos del registro.
-
-    Retorna:
-    - Registro eliminado logicamente.
-    - null si no existe.
-    */
-
     const sql = `
         UPDATE enfermedades
         SET
@@ -236,36 +250,28 @@ export async function remove(id, grupoDatos) {
         AND deleted_at IS NULL
     `;
 
-    const valores = [id, grupoDatos];
-    const [resultado] = await db.execute(sql, valores);
+    const [resultado] = await db.execute(sql, [id, grupoDatos]);
 
-    if (resultado.affectedRows === 0) {
-        return null;
-    }
-
-    return findByIdIncluyendoEliminados(id, grupoDatos);
+    return resultado.affectedRows === 0
+        ? null
+        : findByIdIncluyendoEliminados(id, grupoDatos);
 }
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
+*/
 
-Funciones internas para SQL y mapeo de datos.
+/*
+Descripcion:
+Centraliza los campos y alias usados por las consultas.
+
+Retorna:
+- Fragmento SELECT del modulo.
 */
 
 function seleccionarCampos() {
-    /*
-    Descripcion:
-    Define los campos que se consultan en la tabla enfermedades.
-
-    Parametros:
-    No posee.
-
-    Retorna:
-    - Fragmento SQL con alias camelCase.
-    */
-
     return `
         SELECT
             id,
@@ -273,7 +279,8 @@ function seleccionarCampos() {
             grupo_datos AS grupoDatos,
             finca_id AS fincaId,
             estanque_id AS estanqueId,
-            colaborador_id AS colaboradorId,
+            creado_por_usuario_id AS creadoPorUsuarioId,
+            creado_por_colaborador_id AS creadoPorColaboradorId,
             tipo_registro AS tipoRegistro,
             fecha_reporte AS fechaReporte,
             responsable,
@@ -290,30 +297,17 @@ function seleccionarCampos() {
     `;
 }
 
+/*
+Descripcion:
+Agrega una condicion SQL cuando el filtro tiene valor.
+*/
+
 function agregarFiltro(condiciones, valores, campo, valor) {
-    /*
-    Descripcion:
-    Agrega un filtro SQL cuando el valor tiene contenido.
-
-    Parametros:
-    - condiciones: Lista de condiciones SQL.
-    - valores: Lista de valores parametrizados.
-    - campo: Campo de la tabla.
-    - valor: Valor del filtro.
-
-    Retorna:
-    No retorna valor.
-    */
-
-    if (valor === undefined) {
-        return;
-    }
-
-    if (valor === null) {
-        return;
-    }
-
-    if (String(valor).trim().length === 0) {
+    if (
+        valor === undefined ||
+        valor === null ||
+        String(valor).trim().length === 0
+    ) {
         return;
     }
 
@@ -321,83 +315,68 @@ function agregarFiltro(condiciones, valores, campo, valor) {
     valores.push(valor);
 }
 
+/*
+Descripcion:
+Busca un registro incluyendo los eliminados logicamente.
+
+Retorna:
+- Registro mapeado o null.
+*/
+
 async function findByIdIncluyendoEliminados(id, grupoDatos) {
-    /*
-    Descripcion:
-    Busca un registro incluyendo los eliminados logicamente.
-    Se usa para devolver el registro despues del borrado logico.
+    const sql = seleccionarCampos() + `
+        WHERE id = ?
+        AND grupo_datos = ?
+        LIMIT 1
+    `;
 
-    Parametros:
-    - id: ID del registro.
-    - grupoDatos: Grupo de datos.
-
-    Retorna:
-    - Registro encontrado.
-    - null si no existe.
-    */
-
-    const sql = seleccionarCampos() +
-        ' WHERE id = ?' +
-        ' AND grupo_datos = ?' +
-        ' LIMIT 1';
-
-    const valores = [id, grupoDatos];
-    const [rows] = await db.execute(sql, valores);
-
-    if (rows.length === 0) {
-        return null;
-    }
-
-    return mapearFila(rows[0]);
+    const [rows] = await db.execute(sql, [id, grupoDatos]);
+    return rows.length > 0 ? mapearFila(rows[0]) : null;
 }
+
+/*
+Descripcion:
+Convierte una lista de filas MySQL a objetos del dominio.
+
+Parametros:
+- rows: Filas devueltas por mysql2.
+
+Retorna:
+- Lista mapeada.
+*/
 
 function mapearFilas(rows) {
-    /*
-    Descripcion:
-    Convierte una lista de filas MySQL a objetos camelCase.
-
-    Parametros:
-    - rows: Filas devueltas por MySQL.
-
-    Retorna:
-    - Lista mapeada.
-    */
-
-    const lista = [];
-
-    for (let i = 0; i < rows.length; i++) {
-        lista.push(mapearFila(rows[i]));
-    }
-
-    return lista;
+    return rows.map(mapearFila);
 }
 
+/*
+Descripcion:
+Mapea una fila MySQL y agrega los nombres visibles de
+enfermedad y severidad.
+
+Parametros:
+- row: Fila devuelta por MySQL.
+
+Retorna:
+- Objeto de enfermedad.
+*/
+
 function mapearFila(row) {
-    /*
-    Descripcion:
-    Convierte una fila MySQL a un objeto usado por el frontend.
-
-    Parametros:
-    - row: Fila devuelta por MySQL.
-
-    Retorna:
-    - Objeto camelCase.
-    */
-
     return {
         id: row.id,
         uuid: row.uuid,
         grupoDatos: row.grupoDatos,
         fincaId: row.fincaId,
         estanqueId: row.estanqueId,
-        colaboradorId: row.colaboradorId,
+        creadoPorUsuarioId: row.creadoPorUsuarioId,
+        creadoPorColaboradorId: row.creadoPorColaboradorId,
         tipoRegistro: row.tipoRegistro,
         fechaReporte: formatearFecha(row.fechaReporte),
         responsable: row.responsable,
         enfermedad: row.enfermedad,
+        enfermedadNombre: obtenerNombreEnfermedad(row.enfermedad),
         severidad: row.severidad,
         severidadNombre: obtenerNombreSeveridad(row.severidad),
-        enfermedadNombre: obtenerNombreEnfermedad(row.enfermedad),
         mortalidadRegistrada: row.mortalidadRegistrada,
         reporte: row.reporte,
         activo: row.activo === 1 || row.activo === true,
@@ -408,107 +387,40 @@ function mapearFila(row) {
     };
 }
 
+/*
+Descripcion:
+Convierte una fecha al formato yyyy-mm-dd.
+
+Parametros:
+- valor: Fecha recibida.
+
+Retorna:
+- Fecha formateada o null.
+*/
+
 function formatearFecha(valor) {
-    /*
-    Descripcion:
-    Formatea una fecha DATE a yyyy-mm-dd.
+    if (valor === undefined || valor === null) return null;
 
-    Parametros:
-    - valor: Valor fecha recibido desde MySQL.
-
-    Retorna:
-    - Fecha formateada o null.
-    */
-
-    if (valor === undefined) {
-        return null;
-    }
-
-    if (valor === null) {
-        return null;
-    }
-
-    if (valor instanceof Date) {
-        return valor.toISOString().slice(0, 10);
-    }
-
-    return String(valor).slice(0, 10);
+    return valor instanceof Date
+        ? valor.toISOString().slice(0, 10)
+        : String(valor).slice(0, 10);
 }
+
+/*
+Descripcion:
+Convierte una fecha y hora a texto serializable.
+
+Parametros:
+- valor: Fecha y hora recibida.
+
+Retorna:
+- Texto serializable o null.
+*/
 
 function formatearFechaHora(valor) {
-    /*
-    Descripcion:
-    Formatea una fecha DATETIME a ISO string.
+    if (valor === undefined || valor === null) return null;
 
-    Parametros:
-    - valor: Valor fecha recibido desde MySQL.
-
-    Retorna:
-    - Fecha formateada o null.
-    */
-
-    if (valor === undefined) {
-        return null;
-    }
-
-    if (valor === null) {
-        return null;
-    }
-
-    if (valor instanceof Date) {
-        return valor.toISOString();
-    }
-
-    return String(valor);
-}
-
-function obtenerNombreSeveridad(severidad) {
-    /*
-    Descripcion:
-    Obtiene el nombre visible de la severidad.
-
-    Parametros:
-    - severidad: Valor de severidad.
-
-    Retorna:
-    - Nombre visible.
-    */
-
-    if (severidad === 'medio') {
-        return 'Medio';
-    }
-
-    if (severidad === 'alto') {
-        return 'Alto';
-    }
-
-    if (severidad === 'critica') {
-        return 'Critica';
-    }
-
-    return 'Bajo';
-}
-
-function obtenerNombreEnfermedad(enfermedad) {
-    if (enfermedad === 'WSSV - Mancha Blanca' || enfermedad === 'wssv') {
-        return 'WSSV - Mancha Blanca';
-    }
-
-    if (enfermedad === 'AHPND - Necrosis hepatopancreatica aguda' || enfermedad === 'ahpnd') {
-        return 'AHPND - Necrosis hepatopancreatica aguda';
-    }
-
-    if (enfermedad === 'Vibriosis' || enfermedad === 'vibriosis') {
-        return 'Vibriosis';
-    }
-
-    if (enfermedad === 'IHHNV' || enfermedad === 'ihhnv') {
-        return 'IHHNV';
-    }
-
-    if (enfermedad === 'NHP - Hepatobacter penaei' || enfermedad === 'nhp') {
-        return 'NHP - Hepatobacter penaei';
-    }
-
-    return 'Otro';
+    return valor instanceof Date
+        ? valor.toISOString()
+        : String(valor);
 }

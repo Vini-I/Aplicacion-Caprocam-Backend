@@ -17,7 +17,7 @@ ENUM
 //////////////////////////////////////////////////////////
 */
 
-export const EstadoPrecria = Object.freeze({
+export const EstadoSiembra = Object.freeze({
     ACTIVA: "ACTIVA",
     FINALIZADA: "FINALIZADA"
 });
@@ -28,92 +28,47 @@ DTOs
 //////////////////////////////////////////////////////////
 */
 
-export class LoteLarvaDTO {
+export class SiembraDTO {
     constructor({
-        id,
-        codigo_lote,
-        proveedor,
-        laboratorio,
-        procedencia,
-        certificado_larva,
-        pl_inicial,
-        cantidad_inicial,
-        fecha_ingreso
-    }) {
-        /*
-        Descripcion:
-        DTO para un Lote de Larva.
-
-        Parametros:
-        - id: ID del lote (opcional).
-        - codigo_lote: Codigo de identificacion.
-        - proveedor: Nombre o ID del proveedor.
-        - laboratorio: Laboratorio de origen.
-        - procedencia: Procedencia de la larva.
-        - certificado_larva: Certificado sanitario.
-        - pl_inicial: PL inicial (numero entero positivo).
-        - cantidad_inicial: Cantidad inicial (numero entero positivo).
-        - fecha_ingreso: Fecha de ingreso de la larva.
-        */
-        this.id = id;
-        this.codigo_lote = String(codigo_lote).trim();
-        this.proveedor = String(proveedor).trim();
-        this.laboratorio = String(laboratorio).trim();
-        this.procedencia = String(procedencia).trim();
-        this.certificado_larva = String(certificado_larva).trim();
-        this.pl_inicial = Number(pl_inicial);
-        this.cantidad_inicial = Number(cantidad_inicial);
-        this.fecha_ingreso = String(fecha_ingreso).trim();
-    }
-}
-
-export class PrecriaDTO {
-    constructor({
-        id,
+        lote_larva_id,
         id_lote_larva,
+        precria_id,
+        id_precria,
+        finca_id,
         id_finca,
-        unidad_precria,
-        fecha_inicio,
-        cantidad_inicial,
-        pl_inicial,
+        estanque_id,
+        fecha_siembra,
+        tecnica_cultivo,
+        densidad_poblacional,
+        cantidad_sembrada,
+        pl_siembra,
+        duracion_ciclo,
         estado,
-        fecha_fin,
-        cantidad_final,
-        pl_final
     }) {
         /*
         Descripcion:
-        DTO para una Pre-cria.
+        Constructor del Data Transfer Object (DTO) para siembra. Se encarga de recibir datos crudos (ya sea del request del cliente o de una fila cruda de base de datos) y normalizarlos en una estructura segura, aplicando transformaciones de tipo, resolviendo llaves foraneas y seteando valores por defecto (ej. estados predeterminados).
 
         Parametros:
-        - id: ID de la pre-cria.
-        - id_lote_larva: ID del lote de larva.
-        - id_finca: ID de la finca.
-        - unidad_precria: Nombre de la unidad.
-        - fecha_inicio: Fecha de inicio.
-        - cantidad_inicial: Cantidad inicial.
-        - pl_inicial: PL inicial.
-        - estado: Estado de la pre-cria (ACTIVA/FINALIZADA).
-        - fecha_fin: Fecha de finalizacion (opcional).
-        - cantidad_final: Cantidad final (opcional).
-        - pl_final: PL final (opcional).
+        - Objeto literal destructurado con las propiedades originales a mapear (incluyendo snake_case desde BD o camelCase desde JSON).
         */
-        this.id = id;
-        this.id_lote_larva = Number(id_lote_larva);
-        this.id_finca = Number(id_finca);
-        this.unidad_precria = String(unidad_precria).trim();
-        this.fecha_inicio = String(fecha_inicio).trim();
-        this.cantidad_inicial = Number(cantidad_inicial);
-        this.pl_inicial = Number(pl_inicial);
-        this.estado = estado 
-            ? String(estado).trim().toUpperCase() 
-            : EstadoPrecria.ACTIVA;
-        this.fecha_fin = fecha_fin ? String(fecha_fin).trim() : null;
-        this.cantidad_final = cantidad_final !== undefined && cantidad_final !== null
-            ? Number(cantidad_final)
-            : null;
-        this.pl_final = pl_final !== undefined && pl_final !== null
-            ? Number(pl_final)
-            : null;
+        const loteIdDb    = lote_larva_id ?? id_lote_larva;
+        const precriaIdDb = precria_id ?? id_precria;
+        const fincaIdDb   = finca_id ?? id_finca;
+ 
+        this.lote_larva_id = Number(loteIdDb);
+        this.precria_id    = precriaIdDb ? Number(precriaIdDb) : null;
+        this.finca_id      = Number(fincaIdDb);
+        this.estanque_id   = Number(estanque_id);
+        this.fecha_siembra = String(fecha_siembra).trim();
+        this.tecnica_cultivo = tecnica_cultivo ? String(tecnica_cultivo).trim() : null;
+        this.densidad_poblacional = densidad_poblacional !== undefined && densidad_poblacional !== null
+            ? Number(densidad_poblacional) : null;
+        this.cantidad_sembrada = Number(cantidad_sembrada);
+        this.pl_siembra = pl_siembra !== undefined && pl_siembra !== null
+            ? Number(pl_siembra) : null;
+        this.duracion_ciclo = duracion_ciclo !== undefined && duracion_ciclo !== null
+            ? Number(duracion_ciclo) : null;
+        this.estado = estado ? String(estado).trim() : EstadoSiembra.ACTIVA;
     }
 }

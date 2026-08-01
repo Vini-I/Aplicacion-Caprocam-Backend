@@ -1,0 +1,288 @@
+/*
+//////////////////////////////////////////////////////////
+CABEZA DE ARCHIVO
+//////////////////////////////////////////////////////////
+Archivo: loteLarvas.model.js
+Autor: Joan
+Fecha: 04/07/2026
+Modulo: Lotes de Larva
+Descripcion:
+Capa de datos para lotes de larva.
+//////////////////////////////////////////////////////////
+*/
+
+import pool from '../config/database.js';
+
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES PRINCIPALES 
+//////////////////////////////////////////////////////////
+*/
+
+export async function findAll(grupoDatos) {
+    /*
+    Descripcion:
+    Obtiene un listado completo de todos los registros activos del modulo loteLarvas.
+    Parametros:
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+    const [rows] = await pool.execute(`
+        SELECT 
+            ll.*,
+            prov.nombre AS nombre_proveedor,
+            lab.nombre AS nombre_laboratorio,
+            proc.nombre AS nombre_procedencia
+        FROM   lotes_larva ll
+        LEFT JOIN proveedores_larva prov ON ll.proveedor_larva_id = prov.id
+        LEFT JOIN laboratorios lab ON ll.laboratorio_id = lab.id
+        LEFT JOIN procedencias proc ON ll.procedencia_id = proc.id
+        WHERE  ll.grupo_datos = ?
+        AND    ll.activo = TRUE
+        AND    ll.deleted_at IS NULL
+        ORDER BY ll.id ASC
+    `, [grupoDatos]);
+    return rows;
+}
+
+export async function findById(id, grupoDatos) {
+    /*
+    Descripcion:
+    Busca y retorna un registro especifico de loteLarvas mediante su identificador unico.
+    Parametros:
+    - id: Entero que representa el identificador unico primario (PK) del registro.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+    const [rows] = await pool.execute(`
+        SELECT 
+            ll.*,
+            prov.nombre AS nombre_proveedor,
+            lab.nombre AS nombre_laboratorio,
+            proc.nombre AS nombre_procedencia
+        FROM   lotes_larva ll
+        LEFT JOIN proveedores_larva prov ON ll.proveedor_larva_id = prov.id
+        LEFT JOIN laboratorios lab ON ll.laboratorio_id = lab.id
+        LEFT JOIN procedencias proc ON ll.procedencia_id = proc.id
+        WHERE  ll.id = ?
+        AND    ll.grupo_datos = ?
+        AND    ll.activo = TRUE
+        AND    ll.deleted_at IS NULL
+    `, [Number(id), grupoDatos]);
+    return rows[0] || null;
+}
+
+export async function findByCodigo(codigo, grupoDatos) {
+    /*
+    Descripcion:
+    Obtiene un listado completo de todos los registros activos del modulo loteLarvas filtrados por codigo.
+    Parametros:
+    - codigo: Argumento requerido para el procesamiento interno de la logica.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+    const [rows] = await pool.execute(`
+        SELECT *
+        FROM   lotes_larva
+        WHERE  LOWER(TRIM(codigo_lote)) = LOWER(TRIM(?))
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        LIMIT  1
+    `, [codigo, grupoDatos]);
+     return rows[0] || null;
+}
+
+export async function findByCodigoIgnorandoId(codigo, id, grupoDatos) {
+    /*
+    Descripcion:
+    Obtiene un registro de loteLarva excluyendo un ID especifico (util para validacion al actualizar).
+    Parametros:
+    - codigo: Argumento requerido para el procesamiento interno de la logica.
+    - id: Entero que representa el identificador unico primario (PK) del registro.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+    const [rows] = await pool.execute(`
+        SELECT *
+        FROM   lotes_larva
+        WHERE  LOWER(TRIM(codigo_lote)) = LOWER(TRIM(?))
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        AND    id != ?
+        LIMIT  1
+    `, [codigo, grupoDatos, Number(id)]);
+    return rows[0] || null;
+}
+
+export async function createLote(dto, grupoDatos) {
+    /*
+    Descripcion:
+    Registra una nueva entidad de loteLarvas en la base de datos, estructurando la informacion proveniente del cliente.
+    Parametros:
+    - dto: Objeto JSON/DTO con la carga util (payload) a procesar en la transaccion.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+    const sql = `
+        INSERT INTO lotes_larva (
+            grupo_datos,
+            codigo_lote,
+            proveedor_larva_id,
+            laboratorio_id,
+            procedencia_id,
+            certificado_larva,
+            pl_inicial,
+            cantidad_inicial,
+            fecha_ingreso,
+            estado_lote
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const [result] = await pool.execute(sql, [
+        grupoDatos,
+        dto.codigo_lote,
+        dto.proveedor_id  || null,
+        dto.laboratorio || null,
+        dto.lugar_procedencia || null,
+        dto.certificado_larva,
+        dto.pl_inicial,
+        dto.cantidad_inicial,
+        dto.fecha_ingreso,
+        dto.estado_lote || 'Disponible',
+    ]);
+    return findById(result.insertId, grupoDatos);
+}
+
+export async function update(id, dto, grupoDatos) {
+    /*
+    Descripcion:
+    Actualiza parcialmente los datos de un registro existente de loteLarvas, verificando primero su existencia y gestionando conflictos de unicidad.
+    Parametros:
+    - id: Entero que representa el identificador unico primario (PK) del registro.
+    - dto: Objeto JSON/DTO con la carga util (payload) a procesar en la transaccion.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+    const sql = `
+        UPDATE lotes_larva
+        SET    codigo_lote       = ?,
+               proveedor_larva_id = ?,
+               laboratorio_id    = ?,
+               procedencia_id    = ?,
+               certificado_larva = ?,
+               pl_inicial        = ?,
+               cantidad_inicial   = ?,
+               fecha_ingreso      = ?,
+               estado_lote        = ?,
+               version           = version + 1
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `;
+    const [result] = await pool.execute(sql, [
+        dto.codigo_lote,
+        dto.proveedor_id  || null,
+        dto.laboratorio || null,
+        dto.lugar_procedencia || null,
+        dto.certificado_larva,
+        dto.pl_inicial,
+        dto.cantidad_inicial,
+        dto.fecha_ingreso,
+        dto.estado_lote || 'Disponible',
+        Number(id),
+        grupoDatos
+    ]);
+    if (result.affectedRows === 0) return null;
+    return findById(id, grupoDatos);
+}
+
+export async function remove(id, grupoDatos) {
+    /*
+    Descripcion:
+    Realiza un borrado logico (soft-delete) sobre un registro de loteLarvas, marcandolo como inactivo (activo = FALSE) y dejando rastro en deleted_at.
+    Parametros:
+    - id: Entero que representa el identificador unico primario (PK) del registro.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    */
+    const lote = await findById(id, grupoDatos);
+    if (!lote) return null;
+
+    const [result] = await pool.execute(`
+        UPDATE lotes_larva
+        SET    activo     = FALSE,
+               deleted_at = NOW(),
+               version    = version + 1
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(id), grupoDatos]);
+
+    if (result.affectedRows === 0) return null;
+    return { ...lote, activo: false };
+}
+
+export async function actualizarEstado(id, estado, grupoDatos) {
+    /*
+    Descripcion:
+    Actualiza el estado de un registro existente de loteLarvas (ej. de Disponible a Sembrado).
+    Parametros:
+    - id: Entero que representa el identificador unico primario (PK) del registro.
+    - estado: String requerido con el nuevo estado a setear.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - Booleano (true si afecto alguna fila, false si no).
+    */
+    const [result] = await pool.execute(`
+        UPDATE lotes_larva
+        SET    estado_lote = ?,
+               version     = version + 1
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [estado, Number(id), grupoDatos]);
+    return result.affectedRows > 0;
+}
+
+export async function verificarProveedorExiste(proveedorId, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica de forma rapida si un proveedor de larva existe y esta activo.
+    Parametros:
+    - proveedorId: Identificador del proveedor a verificar.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - Booleano indicando si el proveedor existe (true) o no (false).
+    */
+    if (!proveedorId) return false;
+    const [rows] = await pool.execute(`
+        SELECT id
+        FROM   proveedores_larva
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(proveedorId), grupoDatos]);
+    return rows.length > 0;
+}

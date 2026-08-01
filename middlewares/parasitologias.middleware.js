@@ -4,32 +4,17 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: parasitologias.middleware.js
 Autor: Andres Gutierrez
-Fecha: 03/07/2026
+Fecha: 30/07/2026
 Modulo: Parasitologias
 Descripcion:
-Middleware de validacion de body para parasitologias.
+Valida el contexto autenticado y el body del modulo de
+parasitologias.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Common
-*/
-
-import { error } from "../common/respuestaJson.js";
-
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-
-Campos minimos requeridos en el body para parasitologias.
-Estos campos coinciden con los datos necesarios para insertar
-un registro en la tabla parasitologias de MySQL.
-*/
+import {
+    error
+} from "../common/respuestaJson.js";
 
 const camposRequeridos = [
     "fincaId",
@@ -40,37 +25,57 @@ const camposRequeridos = [
     "camaronesInfectados"
 ];
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
+export function validarGrupoDatos(
+    req,
+    res,
+    next
+) {
+    const grupoDatos =
+        req.colaborador?.grupoDatos ??
+        req.user?.grupoDatos;
 
-Contiene los middlewares de validacion de body
-para el modulo de parasitologias.
-*/
+    const grupoNumero = Number(grupoDatos);
 
-export function validarBodyParasitologia(req, res, next) {
-    /*
-    Descripcion:
-    Verifica que el body no este vacio y contenga
-    los campos minimos requeridos.
+    if (
+        Number.isInteger(grupoNumero) === false ||
+        grupoNumero <= 0
+    ) {
+        return error(
+            res,
+            "El usuario no tiene un grupo de datos valido.",
+            null,
+            403
+        );
+    }
 
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
-    - next: Funcion para pasar al siguiente middleware
+    return next();
+}
 
-    Retorna:
-    - next() si el body es valido
-    - 400 si el body esta vacio o faltan campos
-    */
-    if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, "El body no puede estar vacio.", null, 400);
+export function validarBodyParasitologia(
+    req,
+    res,
+    next
+) {
+    if (
+        req.body === undefined ||
+        req.body === null ||
+        Object.keys(req.body).length === 0
+    ) {
+        return error(
+            res,
+            "El body no puede estar vacio.",
+            null,
+            400
+        );
     }
 
     const faltantes = [];
 
-    for (let i = 0; i < camposRequeridos.length; i++) {
+    for (
+        let i = 0;
+        i < camposRequeridos.length;
+        i++
+    ) {
         const campo = camposRequeridos[i];
 
         if (campoVacio(req.body[campo])) {
@@ -81,43 +86,29 @@ export function validarBodyParasitologia(req, res, next) {
     if (faltantes.length > 0) {
         return error(
             res,
-            "Faltan campos requeridos: " + faltantes.join(", ") + ".",
+            "Faltan campos requeridos: " +
+            faltantes.join(", ") +
+            ".",
             null,
             400
         );
     }
 
-    next();
+    return next();
 }
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
-
-Funciones internas del middleware.
-*/
-
 function campoVacio(valor) {
-    /*
-    Descripcion:
-    Verifica si un valor esta vacio.
-
-    Parametros:
-    - valor: Valor a revisar.
-
-    Retorna:
-    - true si esta vacio, false si tiene contenido.
-    */
-    if (valor === undefined) {
+    if (
+        valor === undefined ||
+        valor === null
+    ) {
         return true;
     }
 
-    if (valor === null) {
-        return true;
-    }
-
-    if (String(valor).trim().length === 0) {
+    if (
+        typeof valor === "string" &&
+        valor.trim().length === 0
+    ) {
         return true;
     }
 
