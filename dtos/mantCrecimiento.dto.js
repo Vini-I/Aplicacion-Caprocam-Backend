@@ -26,8 +26,8 @@ export class MantCrecimientoDto {
         colaborador,
         fechaRegistro,
         pesoActual,
-        creadoPorUsuarioId = null,
-        creadoPorColaboradorId = null
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
     ) {
         /*
         Descripcion:
