@@ -61,6 +61,8 @@ export class AlimentacionDTO {
         idEstanque,
         estanqueId,
         estanque,
+        idColaborador,
+        colaboradorId,
         idProveedor,
         proveedorId,
         idProducto,
@@ -160,6 +162,7 @@ export class AlimentacionDTO {
             this.idEstanque = Number(estanque);
         }
 
+        this.idColaborador = normalizarNumeroOpcional(idColaborador !== undefined ? idColaborador : colaboradorId);
         this.idProveedor = normalizarNumeroOpcional(idProveedor !== undefined ? idProveedor : proveedorId);
         this.idProducto = normalizarNumeroOpcional(idProducto !== undefined ? idProducto : productoId);
 

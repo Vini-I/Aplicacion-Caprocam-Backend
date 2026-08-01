@@ -178,6 +178,10 @@ function validarCuerpo(body, res) {
         errores.push("Metodo invalido. Opciones: " + Object.values(MetodoAlimentacion).join(", "));
     }
 
+    if (!isNumeroOpcionalMayorIgualCero(body.idColaborador)) {
+        errores.push("El campo idColaborador debe ser numerico y mayor o igual que cero.");
+    }
+
     if (!isNumeroOpcionalMayorIgualCero(body.idProveedor)) {
         errores.push("El campo idProveedor debe ser numerico y mayor o igual que cero.");
     }
