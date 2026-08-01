@@ -68,6 +68,8 @@ export async function findAll(grupoDatos) {
             estanque_origen_id,
             estanque_destino_id,
             colaborador_id,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             fecha,
             tamano,
             dias,
@@ -112,6 +114,8 @@ export async function findById(id, grupoDatos) {
             estanque_origen_id,
             estanque_destino_id,
             colaborador_id,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             fecha,
             tamano,
             dias,
@@ -232,13 +236,15 @@ export async function create(dto) {
             estanque_origen_id,
             estanque_destino_id,
             colaborador_id,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             fecha,
             tamano,
             dias,
             pl,
             tipo_movimiento
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
@@ -246,6 +252,8 @@ export async function create(dto) {
             dto.estanqueOrigenId,
             dto.estanqueDestinoId,
             dto.colaboradorId,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId,
             fecha,
             dto.tamano,
             dto.dias,
@@ -319,6 +327,8 @@ function mapearFila(row) {
         estanqueOrigenId: row.estanque_origen_id,
         estanqueDestinoId: row.estanque_destino_id,
         colaboradorId: row.colaborador_id,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         fecha: formatearFecha(row.fecha),
         tamano: Number(row.tamano),
         dias: Number(row.dias),
