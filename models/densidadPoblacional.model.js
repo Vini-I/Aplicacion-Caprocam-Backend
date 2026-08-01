@@ -30,7 +30,7 @@ CONSTANTES
 //////////////////////////////////////////////////////////
 
 Columnas seleccionadas en todas las consultas de lectura.
-dp = densidad_poblacional.
+dp = densidad_poblacional, u = usuarios (LEFT JOIN).
 */
 
 const SELECT_BASE = `
@@ -41,7 +41,9 @@ const SELECT_BASE = `
         dp.finca_id,
         dp.estanque_id,
         dp.colaborador_id,
+        c.nombre AS usuario_nombre,
         dp.creado_por_usuario_id,
+        dp.creado_por_colaborador_id,
         dp.fecha,
         dp.cantidad_siembra,
         dp.area_estanque,
@@ -58,6 +60,7 @@ const SELECT_BASE = `
         dp.deleted_at,
         dp.version
     FROM densidad_poblacional dp
+    LEFT JOIN colaboradores c ON c.id = dp.colaborador_id
 `;
 
 /*
@@ -75,14 +78,14 @@ export async function findAll(filtros) {
     Obtiene todos los registros de densidad poblacional activos
     desde la base de datos.
     Permite filtrar por finca, estanque, grupo de datos y por el
-    usuario web que hizo el registro (creado_por_usuario_id).
+    usuario que hizo el registro.
 
     Parametros:
     - filtros: Objeto con filtros opcionales.
         - idFinca: Identificador de la finca.
         - idEstanque: Identificador del estanque.
         - grupoDatos: Codigo del grupo de datos.
-        - idUsuario: Identificador del usuario web que hizo el registro.
+        - idUsuario: Identificador del usuario que hizo el registro.
 
     Retorna:
     - Lista de registros de densidad poblacional encontrados.
@@ -109,7 +112,7 @@ export async function findAll(filtros) {
         }
 
         if (filtros.idUsuario) {
-            sql = sql + " AND dp.creado_por_usuario_id = ?";
+            sql = sql + " AND dp.colaborador_id = ?";
             params.push(filtros.idUsuario);
         }
     }
@@ -209,11 +212,8 @@ export async function create(dto) {
     Inserta un nuevo registro de densidad poblacional en la base de datos.
     grupoDatos debe venir ya resuelto desde el JWT (ver controller y
     dto): si falta o es invalido, se rechaza la insercion en vez de
-    asumir un valor por defecto (evita registros huerfanos o mal
-    atribuidos). creadoPorUsuarioId debe venir presente (resuelto
-    desde el JWT del usuario web autenticado); si falta, se rechaza
-    la insercion. Este modulo ya no soporta registros creados por
-    Colaborador APK (columna creado_por_colaborador_id eliminada).
+    asumir un valor por defecto. De creadoPorUsuarioId/
+    creadoPorColaboradorId debe venir presente exactamente uno.
 
     Parametros:
     - dto: Objeto DensidadPoblacionalDTO con los datos normalizados.
@@ -223,19 +223,36 @@ export async function create(dto) {
 
     Lanza:
     - Error si dto.grupoDatos no es valido.
-    - Error si dto.creadoPorUsuarioId esta ausente.
+    - Error si dto.creadoPorUsuarioId y dto.creadoPorColaboradorId
+      estan ambos ausentes.
     */
 
     const grupoDatos = obtenerNumeroValido(dto.grupoDatos);
     const creadoPorUsuarioId = obtenerNumeroValido(dto.creadoPorUsuarioId);
+    const creadoPorColaboradorId = obtenerNumeroValido(dto.creadoPorColaboradorId);
 
     if (grupoDatos === null) {
         throw new Error("No se pudo determinar el grupo de datos del usuario autenticado.");
     }
 
-    if (creadoPorUsuarioId === null) {
-        throw new Error("No se pudo determinar el usuario autenticado que hizo el registro.");
+    if (creadoPorUsuarioId === null && creadoPorColaboradorId === null) {
+        throw new Error("No se pudo determinar quien hizo el registro (usuario o colaborador autenticado).");
     }
+
+    /*
+    colaborador_id (quien realizo el conteo/medicion) es distinto de
+    creado_por_colaborador_id (quien autentico la peticion). Antes
+    este valor se llenaba con el id crudo del JWT sin distinguir si
+    era un Usuario Web o un Colaborador APK, lo que podia violar la
+    llave foranea hacia "colaboradores" o guardar un id equivocado.
+    Ahora: si el body trae un colaborador especifico (dto.idColaborador),
+    se usa ese; si no, se asume el colaborador que autentico la
+    peticion (cuando fue registrado desde la APK). Si fue un Usuario
+    Web sin colaborador especificado, queda en NULL (la columna lo
+    permite).
+    */
+    const idColaboradorEnviado = obtenerNumeroValido(dto.idColaborador);
+    const colaboradorId = idColaboradorEnviado !== null ? idColaboradorEnviado : creadoPorColaboradorId;
 
     const fecha = normalizarFechaMysql(dto.fecha);
 
@@ -245,7 +262,7 @@ export async function create(dto) {
             grupo_datos,
             finca_id,
             estanque_id,
-            creado_por_usuario_id,
+            colaborador_id,
             fecha,
             cantidad_siembra,
             area_estanque,
@@ -255,15 +272,17 @@ export async function create(dto) {
             promedio_por_tiro,
             sobrevivencia,
             densidad,
-            notas_conteo
+            notas_conteo,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
-            creadoPorUsuarioId,
+            colaboradorId,
             fecha,
             dto.cantidadSiembra,
             dto.areaEstanque,
@@ -273,7 +292,9 @@ export async function create(dto) {
             dto.promedioPorTiro,
             dto.sobrevivencia,
             dto.densidad,
-            dto.notasConteo
+            dto.notasConteo,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
         ]
     );
 
@@ -308,12 +329,21 @@ export async function update(id, dto, grupoDatos) {
 
     const fecha = normalizarFechaMysql(dto.fecha);
 
+    /*
+    Si el dto no trae idColaborador (no se reenvio desde el
+    formulario), se conserva el valor que ya tenia el registro en
+    vez de sobreescribirlo con null.
+    */
+    const idColaboradorEnviado = obtenerNumeroValido(dto.idColaborador);
+    const colaboradorId = idColaboradorEnviado !== null ? idColaboradorEnviado : actual.idColaborador;
+
     await pool.execute(
         `
         UPDATE densidad_poblacional
         SET
             finca_id = ?,
             estanque_id = ?,
+            colaborador_id = ?,
             fecha = ?,
             cantidad_siembra = ?,
             area_estanque = ?,
@@ -333,6 +363,7 @@ export async function update(id, dto, grupoDatos) {
         [
             dto.idFinca,
             dto.idEstanque,
+            colaboradorId,
             fecha,
             dto.cantidadSiembra,
             dto.areaEstanque,
@@ -427,7 +458,10 @@ function mapearFila(row) {
     Descripcion:
     Convierte una fila de MySQL en un objeto con formato camelCase.
     Tambien convierte tipos de datos como numeros, fechas y booleanos.
-    Incluye creadoPorUsuarioId (usuario web que hizo el registro).
+    Incluye usuarioId (id de quien hizo el registro) y
+    usuarioNombre (su nombre, obtenido por el LEFT JOIN con
+    usuarios; viene null si el registro es anterior a esta
+    migracion y no tiene usuario_id asignado).
 
     Parametros:
     - row: Fila obtenida desde MySQL.
@@ -442,7 +476,11 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         idFinca: row.finca_id,
         idEstanque: row.estanque_id,
+        idColaborador: row.colaborador_id,
+        usuarioId: row.colaborador_id,
+        usuarioNombre: row.usuario_nombre,
         creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         fecha: formatearFecha(row.fecha),
         cantidadSiembra: convertirNumero(row.cantidad_siembra),
         areaEstanque: convertirNumero(row.area_estanque),
@@ -465,8 +503,8 @@ function obtenerNumeroValido(valor) {
     /*
     Descripcion:
     Valida que un valor sea numerico y mayor que cero.
-    Se usa para grupoDatos y creadoPorUsuarioId antes de insertar:
-    ambos deben venir del JWT (nunca del body).
+    Se usa para grupoDatos y usuarioId antes de insertar, ya que
+    ambos son obligatorios y deben venir del JWT (nunca del body).
 
     Parametros:
     - valor: Valor recibido.
@@ -493,11 +531,7 @@ function normalizarFechaMysql(valor) {
     /*
     Descripcion:
     Convierte una fecha al formato YYYY-MM-DD compatible con MySQL.
-    El controller (validarCuerpo -> isFechaValida) ya exige que
-    dto.fecha venga en formato ISO estricto YYYY-MM-DD, por lo que
-    en el caso normal esta funcion solo hace un trim. Se mantiene
-    el soporte a Date y a DD/MM/YYYY como red de seguridad extra,
-    por si el modelo se usa alguna vez fuera del flujo del controller.
+    Acepta fechas tipo Date, YYYY-MM-DD o DD/MM/YYYY.
 
     Parametros:
     - valor: Fecha recibida.

@@ -22,19 +22,20 @@ Normaliza los campos recibidos desde el body antes de que sean
 procesados por el controller y el model.
 
 IMPORTANTE (seguridad):
-grupoDatos y creadoPorUsuarioId NO se reciben del body. Se reciben
-en un segundo parametro "contexto", que el controller arma siempre
-con obtenerContextoPeticion(req) a partir de req.user (el payload
-ya verificado del JWT). Si se aceptaran desde el body, cualquier
-cliente podria mandar esos campos falsos y el backend terminaria
-guardando datos en el grupo equivocado, o atribuyendo el registro
-a un usuario que no lo creo. Por eso el constructor ya ni siquiera
-destructura esos campos del body.
+grupoDatos, creadoPorUsuarioId y creadoPorColaboradorId NO se
+reciben del body. Se reciben en un segundo parametro "contexto",
+que el controller arma siempre a partir de obtenerContextoPeticion
+(req.user / req.colaborador, el payload ya verificado del JWT). Si
+se aceptaran desde el body, cualquier cliente podria mandar esos
+campos falsos y el backend terminaria guardando datos en el grupo
+equivocado, o atribuyendo el registro a otro usuario/colaborador
+que no lo creo. Por eso el constructor ya ni siquiera destructura
+esos campos del body.
 
-Este modulo ya no soporta creadoPorColaboradorId: la columna
-creado_por_colaborador_id fue eliminada de la tabla
-densidad_poblacional, por lo que los registros de este modulo
-solo pueden ser creados por Usuarios Web autenticados.
+idColaborador (quien realizo el conteo/medicion, distinto de quien
+autentico la peticion) SI se acepta del body, de forma opcional:
+si no viene, el model asume por defecto el colaborador que
+autentico la peticion (cuando fue registrado desde la APK).
 */
 
 export class DensidadPoblacionalDTO {
@@ -43,7 +44,8 @@ export class DensidadPoblacionalDTO {
         Descripcion:
         Construye un objeto DensidadPoblacionalDTO con los datos
         recibidos en el body de la peticion, mas el grupoDatos y
-        usuarioId reales del usuario autenticado.
+        creadoPorUsuarioId/creadoPorColaboradorId reales del usuario
+        o colaborador autenticado.
 
         Parametros:
         - body: Campos recibidos en el body de la peticion (req.body).
@@ -51,6 +53,7 @@ export class DensidadPoblacionalDTO {
             - uuid: Identificador global usado para futura sincronizacion offline.
             - idFinca / fincaId / finca: Identificador de la finca (se aceptan alias).
             - idEstanque / estanqueId / estanque: Identificador del estanque (se aceptan alias).
+            - idColaborador / colaboradorId: Colaborador que realizo el conteo (opcional; se aceptan alias).
             - fecha: Fecha del conteo.
             - cantidadSiembra: Cantidad sembrada.
             - areaEstanque: Area del estanque.
@@ -66,10 +69,11 @@ export class DensidadPoblacionalDTO {
             - fechaActualizacion: Fecha de ultima actualizacion.
             - deletedAt: Fecha de borrado logico.
             - version: Version del registro para control de cambios.
-        - contexto: Datos de confianza que arma el controller con
-          obtenerContextoPeticion(req), nunca del body.
-            - grupoDatos: Grupo de datos del usuario autenticado.
-            - creadoPorUsuarioId: Id del usuario web autenticado.
+        - contexto: Datos de confianza que arma el controller a partir
+          del JWT (via obtenerContextoPeticion), nunca del body.
+            - grupoDatos: Grupo de datos del usuario/colaborador autenticado.
+            - creadoPorUsuarioId: Id del usuario web autenticado (null si fue un colaborador).
+            - creadoPorColaboradorId: Id del colaborador APK autenticado (null si fue un usuario web).
 
         Retorna:
         - Objeto DensidadPoblacionalDTO con campos normalizados.
@@ -84,6 +88,8 @@ export class DensidadPoblacionalDTO {
             idEstanque,
             estanqueId,
             estanque,
+            idColaborador,
+            colaboradorId,
             fecha,
             cantidadSiembra,
             areaEstanque,
@@ -114,10 +120,19 @@ export class DensidadPoblacionalDTO {
         this.grupoDatos = normalizarNumeroObligatorio(contexto.grupoDatos);
 
         /*
-        creadoPorUsuarioId (quien hizo el registro) SIEMPRE viene
-        del contexto (JWT), nunca del body.
+        creadoPorUsuarioId / creadoPorColaboradorId (quien hizo el
+        registro) SIEMPRE vienen del contexto (JWT), nunca del body.
+        Exactamente uno de los dos identifica a quien realizo la
+        peticion (usuario web o colaborador APK); el otro queda null.
         */
         this.creadoPorUsuarioId = contexto.creadoPorUsuarioId ?? null;
+        this.creadoPorColaboradorId = contexto.creadoPorColaboradorId ?? null;
+
+        /*
+        idColaborador (quien realizo el conteo) SI se acepta del
+        body, de forma opcional y con alias.
+        */
+        this.idColaborador = normalizarNumeroOpcional(idColaborador !== undefined ? idColaborador : colaboradorId);
 
         /*
         Se permite recibir idFinca, fincaId o finca para mantener
