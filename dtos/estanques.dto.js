@@ -127,7 +127,7 @@ export class EstanqueDTO {
             );
 
         this.precria = normalizarBooleano(
-            valorPrecria
+            precria
         );
 
         this.creadoPorUsuarioId =
