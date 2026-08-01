@@ -64,6 +64,12 @@ function validarCuerpo(body, res) {
     if (!isFechaValida(body.fecha_inicio)) {
         errores.push("El campo fecha_inicio debe ser una fecha valida.");
     }
+    if (
+        !isEmpty(body.duracion_dias_esperada) &&
+        !isEnteroPositivo(body.duracion_dias_esperada)
+    ) {
+        errores.push("El campo duracion_dias_esperada debe ser un entero positivo.");
+    }
     if (!isEmpty(body.estado) && !isEstadoValido(body.estado)) {
         errores.push("El campo estado debe ser Activa o Finalizada.");
     }
@@ -139,7 +145,11 @@ export async function listarPrecrias(req, res) {
     */
     try {
         const grupoDatos = req.user.grupoDatos;
-        const precrias = await precriaModel.findAll(grupoDatos);
+        const estadoFiltro = req.query.estado || null;
+        if (estadoFiltro && !isEstadoValido(estadoFiltro)) {
+            return error(res, "El parametro estado debe ser Activa o Finalizada.", null, 422);
+        }
+        const precrias = await precriaModel.findAll(grupoDatos, estadoFiltro);
         return exito(res, "Pre-crias obtenidas correctamente.", precrias);
     } catch (err) {
         return error(res, "Error al obtener las pre-crias.", err, 500);

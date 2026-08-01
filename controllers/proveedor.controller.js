@@ -79,7 +79,7 @@ function validarCuerpo(body, res) {
         errores.push("El campo telefono es requerido.");
     }
     if (!isEmpty(body.telefono) && !isTelefonoValido(body.telefono)) {
-        errores.push("Formato de telefono invalido. Debe ser: +506 XXXX-XXXX");
+        errores.push("Formato de telefono invalido. Debe contener 8 digitos.");
     }
     if (!isEmpty(body.correo) && !isCorreoValido(body.correo)) {
         errores.push("Formato de correo electronico invalido.");
