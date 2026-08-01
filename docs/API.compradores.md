@@ -1,19 +1,31 @@
 # Compradores
 
-## GET /api/v0/compradores
-Obtiene todos los compradores en estado ACTIVO.
+## GET /api/compradores
+Obtiene todos los compradores en estado ACTIVO del grupo de datos.
 
-Respuesta:
+Respuesta exitosa:
 200 OK
 {
     "success": true,
     "message": "Compradores obtenidos correctamente.",
-    "data": [ ... ]
+    "data": [
+        {
+            "id": 1,
+            "grupoDatos": 2,
+            "nombre": "Hernesto Alfaro",
+            "contacto": "798465132",
+            "telefono": "12457836",
+            "correo": "HernestoGuapo@gmail.com",
+            "direccion": "San José, Costa Rica",
+            "notas": "Observaciones adicionales...",
+            "estado": "ACTIVO"
+        }
+    ]
 }
 
 ---
 
-## GET /api/v0/compradores/:id
+## GET /api/compradores/:id
 Obtiene un comprador activo por su ID.
 
 Parametros URL:
@@ -24,7 +36,17 @@ Respuesta exitosa:
 {
     "success": true,
     "message": "Comprador obtenido correctamente.",
-    "data": { ... }
+    "data": {
+        "id": 1,
+        "grupoDatos": 2,
+        "nombre": "Hernesto Alfaro",
+        "contacto": "798465132",
+        "telefono": "12457836",
+        "correo": "HernestoGuapo@gmail.com",
+        "direccion": "San José, Costa Rica",
+        "notas": "Observaciones adicionales...",
+        "estado": "ACTIVO"
+    }
 }
 
 Respuesta de error:
@@ -37,37 +59,50 @@ Respuesta de error:
 
 ---
 
-## POST /api/v0/compradores
+## POST /api/compradores
 Crea un nuevo comprador.
 
 Body (JSON):
 {
-    "nombre":   "AgroComercial S.A.",
-    "contacto": "Juan Pérez",
-    "telefono": "88334455"
+    "nombre":    "Hernesto Alfaro",
+    "cedula":    "798465132",
+    "telefono":  "12457836",
+    "email":     "HernestoGuapo@gmail.com",
+    "direccion": "San José, Costa Rica",
+    "notas":     "Observaciones adicionales..."
 }
 
-Campos requeridos: nombre, contacto
+Campos requeridos: nombre
 
 Respuesta exitosa:
 201 Created
 {
     "success": true,
     "message": "Comprador creado correctamente.",
-    "data": { ... }
+    "data": {
+        "id": 1,
+        "grupoDatos": 2,
+        "nombre": "Hernesto Alfaro",
+        "contacto": "798465132",
+        "telefono": "12457836",
+        "correo": "HernestoGuapo@gmail.com",
+        "direccion": "San José, Costa Rica",
+        "notas": "Observaciones adicionales...",
+        "estado": "ACTIVO"
+    }
 }
 
 Respuesta de error:
 400 Bad Request
 {
     "success": false,
-    "message": "Nombre y contacto son requeridos.",
+    "message": "El nombre es requerido.",
     "error": null
 }
 
 ---
 
-## PUT /api/v0/compradores/:id
+## PUT /api/compradores/:id
 Actualiza un comprador existente.
 
 Parametros URL:
@@ -75,9 +110,12 @@ Parametros URL:
 
 Body (JSON):
 {
-    "nombre":   "AgroComercial S.A. Modificado",
-    "contacto": "Juan Pérez",
-    "telefono": "88334455"
+    "nombre":    "Hernesto Alfaro",
+    "cedula":    "798465132",
+    "telefono":  "12457836",
+    "email":     "HernestoGuapo@gmail.com",
+    "direccion": "San José, Costa Rica",
+    "notas":     "Notas actualizadas"
 }
 
 Respuesta exitosa:
@@ -85,7 +123,17 @@ Respuesta exitosa:
 {
     "success": true,
     "message": "Comprador actualizado correctamente.",
-    "data": { ... }
+    "data": {
+        "id": 1,
+        "grupoDatos": 2,
+        "nombre": "Hernesto Alfaro",
+        "contacto": "798465132",
+        "telefono": "12457836",
+        "correo": "HernestoGuapo@gmail.com",
+        "direccion": "San José, Costa Rica",
+        "notas": "Notas actualizadas",
+        "estado": "ACTIVO"
+    }
 }
 
 Respuesta de error:
@@ -98,7 +146,7 @@ Respuesta de error:
 
 ---
 
-## PUT /api/v0/compradores/:id/activo
+## DELETE /api/compradores/:id
 Desactiva un comprador (borrado logico).
 
 Parametros URL:
@@ -109,7 +157,12 @@ Respuesta exitosa:
 {
     "success": true,
     "message": "Comprador desactivado correctamente.",
-    "data": { ... }
+    "data": {
+        "id": 1,
+        "grupoDatos": 2,
+        "nombre": "Hernesto Alfaro",
+        "estado": "INACTIVO"
+    }
 }
 
 Respuesta de error:

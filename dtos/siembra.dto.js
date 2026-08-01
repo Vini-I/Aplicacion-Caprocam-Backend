@@ -42,6 +42,7 @@ export class SiembraDTO {
         densidad_poblacional,
         cantidad_sembrada,
         pl_siembra,
+        duracion_ciclo,
         estado,
     }) {
         /*
@@ -51,7 +52,7 @@ export class SiembraDTO {
         Parametros:
         - Objeto literal destructurado con las propiedades originales a mapear (incluyendo snake_case desde BD o camelCase desde JSON).
         */
-const loteIdDb    = lote_larva_id ?? id_lote_larva;
+        const loteIdDb    = lote_larva_id ?? id_lote_larva;
         const precriaIdDb = precria_id ?? id_precria;
         const fincaIdDb   = finca_id ?? id_finca;
  
@@ -66,6 +67,8 @@ const loteIdDb    = lote_larva_id ?? id_lote_larva;
         this.cantidad_sembrada = Number(cantidad_sembrada);
         this.pl_siembra = pl_siembra !== undefined && pl_siembra !== null
             ? Number(pl_siembra) : null;
+        this.duracion_ciclo = duracion_ciclo !== undefined && duracion_ciclo !== null
+            ? Number(duracion_ciclo) : null;
         this.estado = estado ? String(estado).trim() : EstadoSiembra.ACTIVA;
     }
 }

@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantenimiento.model.js
 Autor: Marco Vásquez
-Fecha: 22/07/2026
+Fecha: 28/07/2026
 Modulo: Mantenimientos
 Descripcion:
 Capa de datos del modulo de mantenimientos.
@@ -111,6 +111,8 @@ export async function create(dto, grupoDatos) {
     /*
     Descripcion:
     Inserta un nuevo ticket de mantenimiento en la DB.
+    costoProductos inicia en 0 y se recalcula cuando se
+    agregan productos via mantenimientoProducto.controller.
 
     Parametros:
     - dto:        Objeto MantenimientoDTO con los datos.
@@ -125,7 +127,7 @@ export async function create(dto, grupoDatos) {
           creado_por_colaborador_id, fecha_mantenimiento, titulo_ticket,
           descripcion_ticket, tipo_personal, costo_mano_obra,
           costo_productos, costo_total_estimado, estado_ticket)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
         [
             grupoDatos,
             dto.codigoTicket,
@@ -137,8 +139,7 @@ export async function create(dto, grupoDatos) {
             dto.descripcionTicket,
             dto.tipoPersonal,
             dto.costoManoObra,
-            dto.costoProductos,
-            dto.costoTotalEstimado,
+            dto.costoManoObra,
             dto.estadoTicket,
         ]
     );
@@ -150,6 +151,7 @@ export async function update(id, dto, grupoDatos) {
     Descripcion:
     Actualiza un ticket de mantenimiento e incrementa version.
     codigoTicket no se puede modificar.
+    costoProductos no se toca aqui — lo maneja recalcularCostos.
 
     Parametros:
     - id:         ID del ticket.
@@ -163,8 +165,8 @@ export async function update(id, dto, grupoDatos) {
         `UPDATE mantenimiento_equipo
          SET equipo_id = ?, fecha_mantenimiento = ?, titulo_ticket = ?,
              descripcion_ticket = ?, tipo_personal = ?, costo_mano_obra = ?,
-             costo_productos = ?, costo_total_estimado = ?, estado_ticket = ?,
-             version = version + 1
+             costo_total_estimado = costo_productos + ?,
+             estado_ticket = ?, version = version + 1
          WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
         [
             dto.equipoId,
@@ -173,8 +175,7 @@ export async function update(id, dto, grupoDatos) {
             dto.descripcionTicket,
             dto.tipoPersonal,
             dto.costoManoObra,
-            dto.costoProductos,
-            dto.costoTotalEstimado,
+            dto.costoManoObra,
             dto.estadoTicket,
             id,
             grupoDatos,
@@ -206,4 +207,39 @@ export async function remove(id, grupoDatos) {
         [id, grupoDatos]
     );
     return mantenimiento;
+}
+
+export async function recalcularCostos(mantenimientoId, grupoDatos) {
+    /*
+    Descripcion:
+    Recalcula costo_productos y costo_total_estimado del ticket
+    sumando los subtotales de sus productos vinculados activos.
+    Llamado automaticamente desde mantenimientoProducto.controller
+    tras agregar, actualizar o eliminar un producto.
+
+    Parametros:
+    - mantenimientoId: ID del ticket a recalcular.
+    - grupoDatos:      Grupo de datos del usuario en sesion.
+
+    Retorna:
+    - No retorna valor.
+    */
+    await pool.query(
+        `UPDATE mantenimiento_equipo m
+         SET m.costo_productos = (
+             SELECT COALESCE(SUM(p.subtotal), 0)
+             FROM mantenimiento_equipo_productos p
+             WHERE p.mantenimiento_equipo_id = m.id
+             AND p.activo = TRUE AND p.deleted_at IS NULL
+         ),
+         m.costo_total_estimado = m.costo_mano_obra + (
+             SELECT COALESCE(SUM(p.subtotal), 0)
+             FROM mantenimiento_equipo_productos p
+             WHERE p.mantenimiento_equipo_id = m.id
+             AND p.activo = TRUE AND p.deleted_at IS NULL
+         ),
+         m.version = m.version + 1
+         WHERE m.id = ? AND m.grupo_datos = ?`,
+        [mantenimientoId, grupoDatos]
+    );
 }
