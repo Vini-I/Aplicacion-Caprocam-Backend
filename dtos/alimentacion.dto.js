@@ -3,7 +3,7 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: alimentacion.dto.js
-Autor: Felipe Salas
+Autor: Wendy Martinez
 Fecha: 06/07/2026
 Modulo: Alimentacion
 Descripcion:
@@ -53,6 +53,8 @@ export class AlimentacionDTO {
         id,
         uuid,
         grupoDatos,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
         idFinca,
         fincaId,
         finca,
@@ -85,6 +87,14 @@ export class AlimentacionDTO {
         - id: Identificador numerico interno del registro.
         - uuid: Identificador global usado para futura sincronizacion offline.
         - grupoDatos: Codigo del grupo de datos al que pertenece el registro.
+          SIEMPRE debe venir ya resuelto por el controller mediante
+          obtenerContextoPeticion(req), nunca directo del body.
+        - creadoPorUsuarioId: Id del usuario web autenticado que hizo el
+          registro (null si lo hizo un colaborador APK). Tambien viene
+          de obtenerContextoPeticion(req), nunca del body.
+        - creadoPorColaboradorId: Id del colaborador APK autenticado que
+          hizo el registro (null si lo hizo un usuario web). Tambien
+          viene de obtenerContextoPeticion(req), nunca del body.
         - idFinca / fincaId / finca: Identificador de la finca (se aceptan alias).
         - idEstanque / estanqueId / estanque: Identificador del estanque (se aceptan alias).
         - idProveedor / proveedorId: Identificador del proveedor (opcional).
@@ -111,14 +121,20 @@ export class AlimentacionDTO {
         this.uuid = uuid;
 
         /*
-        Si grupoDatos no viene definido, se utiliza 1 como valor
-        temporal para pruebas mientras se implementa autenticacion.
+        grupoDatos ya no tiene un valor por defecto: si falta o es
+        invalido, se guarda null y el model rechaza la insercion en
+        vez de guardar el registro en un grupo arbitrario.
         */
-        if (grupoDatos === undefined || grupoDatos === null || String(grupoDatos).trim() === "") {
-            this.grupoDatos = 1;
-        } else {
-            this.grupoDatos = Number(grupoDatos);
-        }
+        this.grupoDatos = normalizarNumeroOpcional(grupoDatos);
+
+        /*
+        creadoPorUsuarioId / creadoPorColaboradorId (quien hizo el
+        registro) SIEMPRE vienen del contexto (JWT), nunca del body.
+        Exactamente uno de los dos identifica a quien realizo la
+        peticion (usuario web o colaborador APK); el otro queda null.
+        */
+        this.creadoPorUsuarioId = creadoPorUsuarioId ?? null;
+        this.creadoPorColaboradorId = creadoPorColaboradorId ?? null;
 
         /*
         Se permite recibir idFinca, fincaId o finca para mantener

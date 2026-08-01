@@ -94,7 +94,8 @@ export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
             grupo_datos,
             finca_id,
             estanque_id,
-            colaborador_id,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             fecha,
             porcentaje,
             peso_estimado,
@@ -125,7 +126,7 @@ export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
     return mapearFila(rows[0]);
 }
 
-export async function create(dto, grupoDatos, idColaborador) {
+export async function create(dto, grupoDatos) {
     /*
     Descripcion:
     Inserta un nuevo raleo en la base de datos.
@@ -143,7 +144,8 @@ export async function create(dto, grupoDatos, idColaborador) {
             grupo_datos,
             finca_id,
             estanque_id,
-            colaborador_id,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             fecha,
             porcentaje,
             peso_estimado,
@@ -152,13 +154,14 @@ export async function create(dto, grupoDatos, idColaborador) {
             metodos,
             observaciones
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
-            idColaborador,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId,
             dto.fecha,
             dto.porcentaje,
             dto.pesoEstimado,
@@ -288,7 +291,8 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         idFinca: row.finca_id,
         idEstanque: row.estanque_id,
-        idColaborador: row.colaborador_id,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         fecha: formatearFecha(row.fecha),
         porcentaje: Number(row.porcentaje),
         pesoEstimado: Number(row.peso_estimado),
@@ -332,55 +336,3 @@ function formatearFecha(valor) {
 
     return String(valor);
 }
-
-function obtenerGrupoDatos(valor) {
-    /*
-    Descripcion:
-    Obtiene el grupo de datos del registro.
-    Si no viene definido, utiliza el grupo 1 como valor temporal
-    para pruebas mientras se implementa la autenticacion.
-
-    Parametros:
-    - valor: Valor recibido como grupo de datos.
-
-    Retorna:
-    - Numero del grupo de datos.
-    */
-
-    if (valor === undefined) {
-        return 1;
-    }
-
-    if (valor === null) {
-        return 1;
-    }
-
-    if (String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
-}
-
-function mapearLista(rows) {
-    /*
-    Descripcion:
-    Convierte una lista de filas de MySQL al formato usado por
-    el backend y el frontend.
-
-    Parametros:
-    - rows: Lista de filas obtenidas desde MySQL.
-
-    Retorna:
-    - Lista de estanques mapeados.
-    */
-
-    const resultado = [];
-
-    for (let i = 0; i < rows.length; i++) {
-        resultado.push(mapearFila(rows[i]));
-    }
-
-    return resultado;
-}
-
