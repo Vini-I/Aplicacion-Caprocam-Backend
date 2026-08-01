@@ -382,7 +382,6 @@ export function normalizarDatosEnfermedad(body, grupoDatos) {
         grupoDatos: normalizarEntero(grupoDatos),
         fincaId: normalizarEntero(body.fincaId),
         estanqueId: normalizarEntero(body.estanqueId),
-        colaboradorId: normalizarEnteroOpcional(body.colaboradorId),
         tipoRegistro: 'enfermedad',
         fechaReporte: limpiarTexto(body.fechaReporte),
         responsable: limpiarTextoOpcional(body.responsable),
@@ -412,7 +411,6 @@ export function normalizarFiltrosEnfermedad(query, grupoDatos) {
         grupoDatos: normalizarEntero(grupoDatos),
         fincaId: normalizarEnteroOpcional(query.fincaId),
         estanqueId: normalizarEnteroOpcional(query.estanqueId),
-        colaboradorId: normalizarEnteroOpcional(query.colaboradorId),
         enfermedad: normalizarEnfermedad(query.enfermedad),
         severidad: normalizarSeveridad(query.severidad),
         fechaReporte: limpiarTextoOpcional(query.fechaReporte),
@@ -437,7 +435,6 @@ export function validarDatosEnfermedad(datos) {
     validarEnteroMayorCero(datos.grupoDatos, 'grupoDatos', errores);
     validarEnteroMayorCero(datos.fincaId, 'fincaId', errores);
     validarEnteroMayorCero(datos.estanqueId, 'estanqueId', errores);
-    validarColaboradorOpcional(datos.colaboradorId, errores);
     validarFechaReporte(datos.fechaReporte, errores);
     validarEnfermedad(datos.enfermedad, errores);
     validarSeveridad(datos.severidad, errores);
@@ -468,10 +465,6 @@ export function validarFiltrosEnfermedad(filtros) {
 
     if (filtros.estanqueId !== null) {
         validarEnteroMayorCero(filtros.estanqueId, 'estanqueId', errores);
-    }
-
-    if (filtros.colaboradorId !== null) {
-        validarEnteroMayorCero(filtros.colaboradorId, 'colaboradorId', errores);
     }
 
     if (!isEmpty(filtros.fechaReporte)) {
@@ -716,25 +709,6 @@ function validarEnteroMayorCero(valor, campo, errores) {
     }
 }
 
-function validarColaboradorOpcional(valor, errores) {
-    /*
-    Descripcion:
-    Valida el colaborador cuando viene informado.
-
-    Parametros:
-    - valor: Colaborador recibido.
-    - errores: Lista donde se agregan los errores.
-
-    Retorna:
-    No retorna valor.
-    */
-
-    if (valor === null) {
-        return;
-    }
-
-    validarEnteroMayorCero(valor, 'colaboradorId', errores);
-}
 
 function validarFechaReporte(fechaReporte, errores) {
     /*

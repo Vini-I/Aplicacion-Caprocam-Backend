@@ -4,10 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantenimiento.middleware.js
 Autor: Marco Vásquez
-Fecha: 22/07/2026
+Fecha: 28/07/2026
 Modulo: Mantenimientos
 Descripcion:
 Middleware de validacion de body para mantenimientos.
+costoProductos y costoTotalEstimado removidos de los
+campos requeridos — son calculados automaticamente.
 //////////////////////////////////////////////////////////
 */
 
@@ -26,9 +28,8 @@ import { error } from '../common/respuestaJson.js';
 CONSTANTES
 //////////////////////////////////////////////////////////
 
-codigoTicket y fechaMantenimiento son nuevos campos requeridos.
-estadoEquipo removido — ya no existe en la tabla.
-creadoPor removido — viene del JWT.
+costoProductos y costoTotalEstimado no son campos del body.
+Son calculados por el backend al agregar/modificar productos.
 */
 
 const camposPost = ['codigoTicket', 'equipoId', 'fechaMantenimiento', 'tituloTicket', 'descripcionTicket'];
@@ -69,7 +70,7 @@ export function validarBodyMantenimientoPut(req, res, next) {
     /*
     Descripcion:
     Verifica campos requeridos para actualizacion de ticket.
-    codigoTicket no se puede cambiar en update.
+    codigoTicket no se puede modificar.
 
     Parametros:
     - req:  Objeto request de Express

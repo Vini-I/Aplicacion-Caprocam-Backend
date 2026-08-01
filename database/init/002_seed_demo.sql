@@ -207,9 +207,9 @@ INSERT INTO crecimientos (id, uuid, grupo_datos, finca_id, estanque_id, colabora
 -- ------------------------------------------------------------------------------
 -- 23. TABLA: compradores
 -- ------------------------------------------------------------------------------
-INSERT INTO compradores (id, uuid, grupo_datos, nombre, contacto, telefono, correo, direccion, notas, estado, activo) VALUES
-(1, UUID(), 1001, 'Empacadora Mariscos del Pacifico S.A.', 'Jorge Arguedas', '+506 2663-9900', 'compras@mariscospacifico.com', 'Puerto Caldera, Puntarenas', 'Comprador habitual para exportacion a EE.UU.', 'ACTIVO', TRUE),
-(2, UUID(), 1001, 'Distribuidora Gastronomica del Valle', 'Carmen Solis', '+506 2222-7777', 'csolis@disgastro.cr', 'Mercado Cenada, Heredia', 'Compra tallos medianos para mercado local', 'ACTIVO', TRUE);
+INSERT INTO compradores (id, uuid, grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado, activo) VALUES
+(1, UUID(), 1001, 'Empacadora Mariscos del Pacifico S.A.', '3101123456', '+506 2663-9900', 'compras@mariscospacifico.com', 'Puerto Caldera, Puntarenas', 'Comprador habitual para exportacion a EE.UU.', 'ACTIVO', TRUE),
+(2, UUID(), 1001, 'Distribuidora Gastronomica del Valle', '4012345678', '+506 2222-7777', 'csolis@disgastro.cr', 'Mercado Cenada, Heredia', 'Compra tallos medianos para mercado local', 'ACTIVO', TRUE);
 
 -- ------------------------------------------------------------------------------
 -- 24. TABLA: ventas
