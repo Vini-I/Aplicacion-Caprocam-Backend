@@ -57,6 +57,7 @@ export async function findAll(filtros) {
             grupo_datos,
             finca_id,
             estanque_id,
+            colaborador_id,
             proveedor_id,
             producto_id,
             fecha,
@@ -127,6 +128,7 @@ export async function findById(id, grupoDatos) {
             grupo_datos,
             finca_id,
             estanque_id,
+            colaborador_id,
             proveedor_id,
             producto_id,
             fecha,
@@ -187,6 +189,7 @@ export async function findByFechaHoraEstanque(fecha, hora, idEstanque, idIgnorad
             grupo_datos,
             finca_id,
             estanque_id,
+            colaborador_id,
             proveedor_id,
             producto_id,
             fecha,
@@ -272,6 +275,16 @@ export async function create(dto) {
         throw new Error("No se pudo determinar quien hizo el registro (usuario o colaborador autenticado).");
     }
 
+    /*
+    colaborador_id (quien aplico la alimentacion) es distinto de
+    creado_por_colaborador_id (quien autentico la peticion). Si el
+    formulario envio un colaborador especifico (dto.idColaborador),
+    se usa ese; si no, se asume por defecto el colaborador que
+    autentico la peticion (cuando fue registrado desde la APK).
+    */
+    const idColaboradorEnviado = obtenerNumeroValido(dto.idColaborador);
+    const colaboradorId = idColaboradorEnviado !== null ? idColaboradorEnviado : creadoPorColaboradorId;
+
     const fecha = normalizarFechaMysql(dto.fecha);
 
     const [result] = await pool.execute(
@@ -280,6 +293,7 @@ export async function create(dto) {
             grupo_datos,
             finca_id,
             estanque_id,
+            colaborador_id,
             proveedor_id,
             producto_id,
             fecha,
@@ -293,12 +307,13 @@ export async function create(dto) {
             creado_por_usuario_id,
             creado_por_colaborador_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
+            colaboradorId,
             dto.idProveedor,
             dto.idProducto,
             fecha,
@@ -340,6 +355,14 @@ export async function update(id, dto, grupoDatos) {
 
     const fecha = normalizarFechaMysql(dto.fecha);
 
+    /*
+    Si el dto no trae idColaborador (no se reenvio desde el
+    formulario), se conserva el valor que ya tenia el registro en
+    vez de sobreescribirlo con null.
+    */
+    const idColaboradorEnviado = obtenerNumeroValido(dto.idColaborador);
+    const colaboradorId = idColaboradorEnviado !== null ? idColaboradorEnviado : actual.idColaborador;
+
     await pool.execute(
         `
         UPDATE alimentaciones
@@ -347,6 +370,7 @@ export async function update(id, dto, grupoDatos) {
             grupo_datos = ?,
             finca_id = ?,
             estanque_id = ?,
+            colaborador_id = ?,
             proveedor_id = ?,
             producto_id = ?,
             fecha = ?,
@@ -366,6 +390,7 @@ export async function update(id, dto, grupoDatos) {
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
+            colaboradorId,
             dto.idProveedor,
             dto.idProducto,
             fecha,
@@ -476,6 +501,7 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         idFinca: row.finca_id,
         idEstanque: row.estanque_id,
+        idColaborador: row.colaborador_id,
         idProveedor: row.proveedor_id,
         idProducto: row.producto_id,
         fecha: formatearFecha(row.fecha),
