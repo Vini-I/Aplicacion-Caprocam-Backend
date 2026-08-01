@@ -73,10 +73,6 @@ function validarCuerpo(body, res) {
         errores.push("El campo idEstanque es requerido.");
     }
 
-    if (isEmpty(body.idColaborador)) {
-        errores.push("El campo idColaborador es requerido.");
-    }
-
     if (isEmpty(body.fecha)) {
         errores.push("El campo fecha es requerido.");
     }
@@ -109,7 +105,7 @@ function validarCuerpo(body, res) {
         errores.push("El campo idEstanque debe ser numerico y mayor que cero.");
     }
 
-    if (!isNumeroMayorCero(body.idColaborador)) {
+    if (!isEmpty(body.idColaborador) && !isNumeroMayorCero(body.idColaborador)) {
         errores.push("El campo idColaborador debe ser numerico y mayor que cero.");
     }
 
@@ -231,6 +227,17 @@ export async function createRaleo(req, res) {
     Descripcion:
     Crea un nuevo raleo en la base de datos.
 
+    IMPORTANTE: idColaborador se toma de dto.idColaborador (viene
+    del body, ya validado en validarCuerpo si esta presente), NO de
+    req.user. idColaborador representa al colaborador que realizo
+    fisicamente el raleo (elegido en un Select por quien llena el
+    formulario), no a quien esta autenticado en la app. Usar
+    req.user.idColaborador aqui era un bug: para un Usuario Web
+    autenticado ese campo no existe en el JWT, asi que colaborador_id
+    se intentaba insertar como undefined en vez del colaborador
+    realmente elegido (o del valor null si no se elige ninguno,
+    ya que el campo es opcional).
+
     Parametros:
     - req: Objeto request de Express
     - res: Objeto response de Express
@@ -240,7 +247,6 @@ export async function createRaleo(req, res) {
     - 400/422 si hay errores de validacion
     */
    const grupoDatos = req.user.grupoDatos;
-   const idColaborador = req.user.idColaborador;
    try {
     const err = validarCuerpo(req.body, res);
 
@@ -264,7 +270,7 @@ export async function createRaleo(req, res) {
         );
     }
     
-    const nuevo = await RaleoModel.create(dto, grupoDatos, idColaborador);
+    const nuevo = await RaleoModel.create(dto, grupoDatos, dto.idColaborador);
 
     return exito(res, "Raleo creado correctamente.", nuevo, 201);
     } catch (err) {
@@ -273,6 +279,57 @@ export async function createRaleo(req, res) {
     console.error("==========================");
 
     return error(res, "Error al crear el raleo.", err, 500);
+    }
+}
+
+export async function updateRaleo(req, res) {
+    /*
+    Descripcion:
+    Actualiza un raleo existente.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id, req.body)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el raleo actualizado
+    - 400/422 si hay errores de validacion
+    - 404 si no existe
+    */
+    const grupoDatos = req.user.grupoDatos;
+    try {
+        const errId = validarIdParametro(req.params.id, res);
+
+        if (errId) {
+            return errId;
+        }
+
+        const err = validarCuerpo(req.body, res);
+
+        if (err) {
+            return err;
+        }
+
+        const dto = new RaleoDTO(req.body);
+
+        const actualizado = await RaleoModel.update(
+            req.params.id,
+            dto,
+            grupoDatos,
+            dto.idColaborador
+        );
+
+        if (!actualizado) {
+            return error(res, "Raleo no encontrado.", null, 404);
+        }
+
+        return exito(res, "Raleo actualizado correctamente.", actualizado);
+    } catch (err) {
+        console.error("=== ERROR UPDATE RALEO ===");
+        console.error(err);
+        console.error("==========================");
+
+        return error(res, "Error al actualizar el raleo.", err, 500);
     }
 }
 
