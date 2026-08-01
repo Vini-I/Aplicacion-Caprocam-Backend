@@ -91,6 +91,8 @@ export class EstanqueDTO {
             );
         }
 
+        this.fincaId = this.idFinca;
+
         this.codigo = normalizarTexto(
             codigo
         );
@@ -125,7 +127,7 @@ export class EstanqueDTO {
             );
 
         this.precria = normalizarBooleano(
-            precria
+            valorPrecria
         );
 
         this.creadoPorUsuarioId =
@@ -213,7 +215,9 @@ function normalizarNumeroOpcional(valor) {
         return null;
     }
 
-    return Number(valor);
+    return Number(
+        valor
+    );
 }
 
 function normalizarBooleano(valor) {

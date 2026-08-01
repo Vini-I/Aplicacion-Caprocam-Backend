@@ -4,16 +4,10 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: parasitologias.routes.js
 Autor: Andres Gutierrez
-Fecha: 18/07/2026
+Fecha: 30/07/2026
 Modulo: Parasitologias
 Descripcion:
-Define las rutas HTTP protegidas del modulo.
-//////////////////////////////////////////////////////////
-*/
-
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
+Define las rutas protegidas del modulo de parasitologias.
 //////////////////////////////////////////////////////////
 */
 
@@ -40,75 +34,48 @@ import {
     obtenerCatalogoParasitos
 } from "../controllers/parasitologias.controller.js";
 
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
 const router = Router();
 
-/*
-//////////////////////////////////////////////////////////
-RUTAS
-//////////////////////////////////////////////////////////
-*/
+router.use(
+    verificarAuth,
+    validarGrupoDatos
+);
 
 router.get(
     "/",
-    verificarAuth,
-    validarGrupoDatos,
     obtenerParasitologias
 );
 
 router.get(
     "/resumen",
-    verificarAuth,
-    validarGrupoDatos,
     obtenerResumenParasitologias
 );
 
 router.get(
-    "/catalogos/parasitos",
-    verificarAuth,
-    validarGrupoDatos,
+    "/catalogo",
     obtenerCatalogoParasitos
 );
 
 router.get(
     "/:id",
-    verificarAuth,
-    validarGrupoDatos,
     obtenerParasitologiaPorId
 );
 
 router.post(
     "/",
-    verificarAuth,
-    validarGrupoDatos,
     validarBodyParasitologia,
     crearParasitologia
 );
 
 router.put(
     "/:id",
-    verificarAuth,
-    validarGrupoDatos,
     validarBodyParasitologia,
     actualizarParasitologia
 );
 
 router.delete(
     "/:id",
-    verificarAuth,
-    validarGrupoDatos,
     eliminarParasitologia
 );
-
-/*
-//////////////////////////////////////////////////////////
-EXPORT
-//////////////////////////////////////////////////////////
-*/
 
 export default router;

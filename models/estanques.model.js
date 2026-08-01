@@ -39,12 +39,6 @@ export async function findAll(filtros) {
     Obtiene los estanques activos que pertenecen al grupo
     de datos del usuario autenticado.
     Permite filtrar opcionalmente por finca.
-
-    Parametros:
-    - filtros: Objeto con grupoDatos e idFinca opcional.
-
-    Retorna:
-    - Lista de estanques encontrados.
     */
 
     let sql = `
@@ -107,14 +101,6 @@ export async function findById(
     Descripcion:
     Busca un estanque activo por su identificador numerico
     y por el grupo de datos del usuario autenticado.
-
-    Parametros:
-    - id: Identificador del estanque.
-    - grupoDatos: Grupo obtenido desde el JWT.
-
-    Retorna:
-    - El estanque encontrado.
-    - null si no existe, fue eliminado o pertenece a otro grupo.
     */
 
     const [rows] = await pool.execute(
@@ -172,16 +158,6 @@ export async function findByCodigoAndFinca(
     Descripcion:
     Busca un estanque por codigo, finca y grupo de datos.
     Permite ignorar un id durante una actualizacion.
-
-    Parametros:
-    - codigo: Codigo del estanque.
-    - idFinca: Identificador de la finca.
-    - idIgnorado: Identificador que se debe ignorar.
-    - grupoDatos: Grupo obtenido desde el JWT.
-
-    Retorna:
-    - El estanque encontrado.
-    - null si no existe coincidencia.
     */
 
     let sql = `
@@ -255,14 +231,6 @@ export async function fincaPerteneceGrupo(
     Descripcion:
     Verifica que una finca exista, se encuentre activa
     y pertenezca al grupo de datos del usuario.
-
-    Parametros:
-    - idFinca: Identificador de la finca.
-    - grupoDatos: Grupo obtenido desde el JWT.
-
-    Retorna:
-    - true si la finca pertenece al grupo.
-    - false si no existe o pertenece a otro grupo.
     */
 
     const [rows] = await pool.execute(
@@ -293,12 +261,6 @@ export async function create(dto) {
     Descripcion:
     Inserta un nuevo estanque utilizando el grupo de datos
     recibido desde el controller.
-
-    Parametros:
-    - dto: Objeto EstanqueDTO con datos normalizados.
-
-    Retorna:
-    - El estanque creado.
     */
 
     const fechaMantenimiento =
@@ -353,15 +315,6 @@ export async function update(
     Descripcion:
     Actualiza un estanque que pertenece al grupo del usuario.
     El campo grupo_datos no se modifica.
-
-    Parametros:
-    - id: Identificador del estanque.
-    - dto: Datos actualizados.
-    - grupoDatos: Grupo obtenido desde el JWT.
-
-    Retorna:
-    - El estanque actualizado.
-    - null si no existe o pertenece a otro grupo.
     */
 
     const actual = await findById(
@@ -428,14 +381,6 @@ export async function remove(
     Descripcion:
     Elimina logicamente un estanque que pertenece al grupo
     de datos del usuario autenticado.
-
-    Parametros:
-    - id: Identificador del estanque.
-    - grupoDatos: Grupo obtenido desde el JWT.
-
-    Retorna:
-    - El estanque eliminado logicamente.
-    - null si no existe o pertenece a otro grupo.
     */
 
     const actual = await findById(
@@ -472,9 +417,6 @@ export async function remove(
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
-
-Contiene funciones internas usadas por el modelo para
-mapear, normalizar y convertir datos.
 */
 
 function mapearLista(rows) {
@@ -482,12 +424,6 @@ function mapearLista(rows) {
     Descripcion:
     Convierte una lista de filas de MySQL al formato usado
     por el backend y el frontend.
-
-    Parametros:
-    - rows: Lista de filas obtenidas desde MySQL.
-
-    Retorna:
-    - Lista de estanques mapeados.
     */
 
     const resultado = [];
@@ -511,19 +447,20 @@ function mapearFila(row) {
     /*
     Descripcion:
     Convierte una fila de MySQL en un objeto camelCase.
-
-    Parametros:
-    - row: Fila obtenida desde MySQL.
-
-    Retorna:
-    - Objeto estanque.
     */
+
+    const precria = Boolean(
+        row.precria
+    );
 
     return {
         id: row.id,
         uuid: row.uuid,
         grupoDatos: row.grupo_datos,
+
         idFinca: row.finca_id,
+        fincaId: row.finca_id,
+
         codigo: row.codigo,
         tipoEstanque: row.tipo_estanque,
         estado: row.estado,
@@ -550,10 +487,18 @@ function mapearFila(row) {
         activo: Boolean(
             row.activo
         ),
-        fechaCreacion: row.fecha_creacion,
-        fechaActualizacion: row.fecha_actualizacion,
-        deletedAt: row.deleted_at,
-        version: row.version
+
+        fechaCreacion:
+            row.fecha_creacion,
+
+        fechaActualizacion:
+            row.fecha_actualizacion,
+
+        deletedAt:
+            row.deleted_at,
+
+        version:
+            row.version
     };
 }
 
@@ -561,12 +506,6 @@ function normalizarFechaMysqlOpcional(valor) {
     /*
     Descripcion:
     Normaliza una fecha opcional para guardarla en MySQL.
-
-    Parametros:
-    - valor: Fecha recibida.
-
-    Retorna:
-    - Fecha compatible con MySQL o null.
     */
 
     if (valor === undefined) {
@@ -591,12 +530,6 @@ function normalizarFechaMysql(valor) {
     Descripcion:
     Convierte una fecha al formato YYYY-MM-DD.
     Acepta Date, YYYY-MM-DD o DD/MM/YYYY.
-
-    Parametros:
-    - valor: Fecha recibida.
-
-    Retorna:
-    - Fecha en formato YYYY-MM-DD.
     */
 
     if (valor instanceof Date) {
@@ -606,7 +539,9 @@ function normalizarFechaMysql(valor) {
         );
     }
 
-    const texto = String(valor).trim();
+    const texto = String(
+        valor
+    ).trim();
 
     if (texto.includes("/")) {
         const partes = texto.split("/");
@@ -624,7 +559,13 @@ function normalizarFechaMysql(valor) {
 
             const anio = partes[2];
 
-            return anio + "-" + mes + "-" + dia;
+            return (
+                anio +
+                "-" +
+                mes +
+                "-" +
+                dia
+            );
         }
     }
 
@@ -635,12 +576,6 @@ function formatearFecha(valor) {
     /*
     Descripcion:
     Formatea una fecha recibida desde MySQL.
-
-    Parametros:
-    - valor: Fecha recibida desde MySQL.
-
-    Retorna:
-    - Fecha YYYY-MM-DD o null.
     */
 
     if (valor === undefined) {
