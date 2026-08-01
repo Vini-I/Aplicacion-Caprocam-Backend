@@ -22,14 +22,19 @@ Normaliza los campos recibidos desde el body antes de que sean
 procesados por el controller y el model.
 
 IMPORTANTE (seguridad):
-grupoDatos y usuarioId NO se reciben del body. Se reciben en un
-segundo parametro "contexto", que el controller arma siempre a
-partir de req.user (el payload ya verificado del JWT). Si se
-aceptaran desde el body, cualquier cliente podria mandar
-grupoDatos o usuarioId falsos y el backend terminaria guardando
-datos en el grupo equivocado, o atribuyendo el registro a otro
-usuario que no lo creo. Por eso el constructor ya ni siquiera
-destructura esos dos campos del body.
+grupoDatos y creadoPorUsuarioId NO se reciben del body. Se reciben
+en un segundo parametro "contexto", que el controller arma siempre
+con obtenerContextoPeticion(req) a partir de req.user (el payload
+ya verificado del JWT). Si se aceptaran desde el body, cualquier
+cliente podria mandar esos campos falsos y el backend terminaria
+guardando datos en el grupo equivocado, o atribuyendo el registro
+a un usuario que no lo creo. Por eso el constructor ya ni siquiera
+destructura esos campos del body.
+
+Este modulo ya no soporta creadoPorColaboradorId: la columna
+creado_por_colaborador_id fue eliminada de la tabla
+densidad_poblacional, por lo que los registros de este modulo
+solo pueden ser creados por Usuarios Web autenticados.
 */
 
 export class DensidadPoblacionalDTO {
@@ -61,10 +66,10 @@ export class DensidadPoblacionalDTO {
             - fechaActualizacion: Fecha de ultima actualizacion.
             - deletedAt: Fecha de borrado logico.
             - version: Version del registro para control de cambios.
-        - contexto: Datos de confianza que arma el controller a partir
-          del JWT (req.user), nunca del body.
+        - contexto: Datos de confianza que arma el controller con
+          obtenerContextoPeticion(req), nunca del body.
             - grupoDatos: Grupo de datos del usuario autenticado.
-            - usuarioId: Id del usuario autenticado (quien hizo el registro).
+            - creadoPorUsuarioId: Id del usuario web autenticado.
 
         Retorna:
         - Objeto DensidadPoblacionalDTO con campos normalizados.
@@ -109,11 +114,10 @@ export class DensidadPoblacionalDTO {
         this.grupoDatos = normalizarNumeroObligatorio(contexto.grupoDatos);
 
         /*
-        usuarioId (quien hizo el registro) SIEMPRE viene del contexto
-        (JWT), nunca del body. Es el dato que identifica al usuario
-        autenticado que realizo la peticion.
+        creadoPorUsuarioId (quien hizo el registro) SIEMPRE viene
+        del contexto (JWT), nunca del body.
         */
-        this.usuarioId = normalizarNumeroObligatorio(contexto.usuarioId);
+        this.creadoPorUsuarioId = contexto.creadoPorUsuarioId ?? null;
 
         /*
         Se permite recibir idFinca, fincaId o finca para mantener

@@ -30,7 +30,7 @@ CONSTANTES
 //////////////////////////////////////////////////////////
 
 Columnas seleccionadas en todas las consultas de lectura.
-dp = densidad_poblacional, u = usuarios (LEFT JOIN).
+dp = densidad_poblacional.
 */
 
 const SELECT_BASE = `
@@ -41,7 +41,7 @@ const SELECT_BASE = `
         dp.finca_id,
         dp.estanque_id,
         dp.colaborador_id,
-        c.nombre AS usuario_nombre,
+        dp.creado_por_usuario_id,
         dp.fecha,
         dp.cantidad_siembra,
         dp.area_estanque,
@@ -58,7 +58,6 @@ const SELECT_BASE = `
         dp.deleted_at,
         dp.version
     FROM densidad_poblacional dp
-    LEFT JOIN colaboradores c ON c.id = dp.colaborador_id
 `;
 
 /*
@@ -76,14 +75,14 @@ export async function findAll(filtros) {
     Obtiene todos los registros de densidad poblacional activos
     desde la base de datos.
     Permite filtrar por finca, estanque, grupo de datos y por el
-    usuario que hizo el registro.
+    usuario web que hizo el registro (creado_por_usuario_id).
 
     Parametros:
     - filtros: Objeto con filtros opcionales.
         - idFinca: Identificador de la finca.
         - idEstanque: Identificador del estanque.
         - grupoDatos: Codigo del grupo de datos.
-        - idUsuario: Identificador del usuario que hizo el registro.
+        - idUsuario: Identificador del usuario web que hizo el registro.
 
     Retorna:
     - Lista de registros de densidad poblacional encontrados.
@@ -110,7 +109,7 @@ export async function findAll(filtros) {
         }
 
         if (filtros.idUsuario) {
-            sql = sql + " AND dp.colaborador_id = ?";
+            sql = sql + " AND dp.creado_por_usuario_id = ?";
             params.push(filtros.idUsuario);
         }
     }
@@ -208,10 +207,13 @@ export async function create(dto) {
     /*
     Descripcion:
     Inserta un nuevo registro de densidad poblacional en la base de datos.
-    grupoDatos y usuarioId deben venir ya resueltos desde el JWT
-    (ver controller y dto): si cualquiera de los dos falta o es
-    invalido, se rechaza la insercion en vez de asumir un valor
-    por defecto (evita registros huerfanos o mal atribuidos).
+    grupoDatos debe venir ya resuelto desde el JWT (ver controller y
+    dto): si falta o es invalido, se rechaza la insercion en vez de
+    asumir un valor por defecto (evita registros huerfanos o mal
+    atribuidos). creadoPorUsuarioId debe venir presente (resuelto
+    desde el JWT del usuario web autenticado); si falta, se rechaza
+    la insercion. Este modulo ya no soporta registros creados por
+    Colaborador APK (columna creado_por_colaborador_id eliminada).
 
     Parametros:
     - dto: Objeto DensidadPoblacionalDTO con los datos normalizados.
@@ -220,17 +222,18 @@ export async function create(dto) {
     - El registro creado consultado nuevamente desde la base de datos.
 
     Lanza:
-    - Error si dto.grupoDatos o dto.usuarioId no son validos.
+    - Error si dto.grupoDatos no es valido.
+    - Error si dto.creadoPorUsuarioId esta ausente.
     */
 
     const grupoDatos = obtenerNumeroValido(dto.grupoDatos);
-    const usuarioId = obtenerNumeroValido(dto.usuarioId);
+    const creadoPorUsuarioId = obtenerNumeroValido(dto.creadoPorUsuarioId);
 
     if (grupoDatos === null) {
         throw new Error("No se pudo determinar el grupo de datos del usuario autenticado.");
     }
 
-    if (usuarioId === null) {
+    if (creadoPorUsuarioId === null) {
         throw new Error("No se pudo determinar el usuario autenticado que hizo el registro.");
     }
 
@@ -242,7 +245,7 @@ export async function create(dto) {
             grupo_datos,
             finca_id,
             estanque_id,
-            colaborador_id,
+            creado_por_usuario_id,
             fecha,
             cantidad_siembra,
             area_estanque,
@@ -260,7 +263,7 @@ export async function create(dto) {
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
-            usuarioId,
+            creadoPorUsuarioId,
             fecha,
             dto.cantidadSiembra,
             dto.areaEstanque,
@@ -424,10 +427,7 @@ function mapearFila(row) {
     Descripcion:
     Convierte una fila de MySQL en un objeto con formato camelCase.
     Tambien convierte tipos de datos como numeros, fechas y booleanos.
-    Incluye usuarioId (id de quien hizo el registro) y
-    usuarioNombre (su nombre, obtenido por el LEFT JOIN con
-    usuarios; viene null si el registro es anterior a esta
-    migracion y no tiene usuario_id asignado).
+    Incluye creadoPorUsuarioId (usuario web que hizo el registro).
 
     Parametros:
     - row: Fila obtenida desde MySQL.
@@ -442,8 +442,7 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         idFinca: row.finca_id,
         idEstanque: row.estanque_id,
-        usuarioId: row.colaborador_id,
-        usuarioNombre: row.usuario_nombre,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
         fecha: formatearFecha(row.fecha),
         cantidadSiembra: convertirNumero(row.cantidad_siembra),
         areaEstanque: convertirNumero(row.area_estanque),
@@ -466,8 +465,8 @@ function obtenerNumeroValido(valor) {
     /*
     Descripcion:
     Valida que un valor sea numerico y mayor que cero.
-    Se usa para grupoDatos y usuarioId antes de insertar, ya que
-    ambos son obligatorios y deben venir del JWT (nunca del body).
+    Se usa para grupoDatos y creadoPorUsuarioId antes de insertar:
+    ambos deben venir del JWT (nunca del body).
 
     Parametros:
     - valor: Valor recibido.
@@ -494,7 +493,11 @@ function normalizarFechaMysql(valor) {
     /*
     Descripcion:
     Convierte una fecha al formato YYYY-MM-DD compatible con MySQL.
-    Acepta fechas tipo Date, YYYY-MM-DD o DD/MM/YYYY.
+    El controller (validarCuerpo -> isFechaValida) ya exige que
+    dto.fecha venga en formato ISO estricto YYYY-MM-DD, por lo que
+    en el caso normal esta funcion solo hace un trim. Se mantiene
+    el soporte a Date y a DD/MM/YYYY como red de seguridad extra,
+    por si el modelo se usa alguna vez fuera del flujo del controller.
 
     Parametros:
     - valor: Fecha recibida.
