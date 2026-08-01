@@ -1,4 +1,4 @@
-# API de Físico Química
+# Físico Química
 
 ## Descripción general
 
