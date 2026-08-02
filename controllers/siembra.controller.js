@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: siembra.controller.js
-Autor: Joan
-Fecha: 04/07/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Siembra
 Descripcion:
 Maneja las peticiones HTTP y la logica de siembra.
@@ -39,6 +39,7 @@ import { EstadoEstanque } from "../dtos/estanques.dto.js";
 
 // Common
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -254,7 +255,7 @@ export async function listarSiembra(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const estadoFiltro = req.query.estado || null;
         if (estadoFiltro && !isEstadoValido(estadoFiltro)) {
             return error(res, "El parametro estado debe ser Activa o Finalizada.", null, 422);
@@ -278,7 +279,7 @@ export async function obtenerSiembra(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const { id } = req.params;
         const siembra = await siembraModel.findById(id, grupoDatos);
         if (!siembra) return error(res, "Siembra no encontrada.", null, 404);
@@ -303,11 +304,16 @@ export async function crearSiembra(req, res) {
     if (errBody) return errBody;
 
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
         const errRef = await validarReferencias(req.body, res, grupoDatos, { esCreacion: true });
         if (errRef) return errRef;
 
-        const dto = new SiembraDTO(req.body);
+        const dto = new SiembraDTO({
+            ...req.body,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        });
         const nueva = await siembraModel.create(dto, grupoDatos);
         return exito(res, "Siembra creada correctamente.", nueva, 201);
     } catch (err) {
@@ -336,7 +342,7 @@ export async function actualizarSiembra(req, res) {
     if (errBody) return errBody;
 
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const actual = await siembraModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Siembra no encontrada.", null, 404);
 
@@ -367,7 +373,7 @@ export async function finalizarSiembra(req, res) {
     */
     const { id } = req.params;
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const siembra = await siembraModel.findById(id, grupoDatos);
         if (!siembra) return error(res, "Siembra no encontrada.", null, 404);
 
@@ -402,7 +408,7 @@ export async function eliminarSiembra(req, res) {
     */
     const { id } = req.params;
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const eliminada = await siembraModel.remove(id, grupoDatos);
         if (!eliminada) return error(res, "Siembra no encontrada.", null, 404);
         return exito(res, "Siembra eliminada correctamente.", eliminada);
@@ -423,7 +429,7 @@ export async function obtenerSiembraActiva(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const estanqueId = req.query.estanqueId;
 
         if (!estanqueId) {

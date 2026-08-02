@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: proveedor.controller.js
-Autor: Joan
-Fecha: 29/06/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Proveedores
 Descripcion:
 Recibe las peticiones HTTP, delega al modelo,
@@ -40,6 +40,7 @@ import * as proveedorModel from "../models/proveedor.model.js";
 
 // Common
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -47,7 +48,7 @@ CONSTANTES
 //////////////////////////////////////////////////////////
 */
 
-//const grupoDatos = req.user.grupoDatos;
+//const { grupoDatos } = obtenerContextoPeticion(req);
 
 /*
 //////////////////////////////////////////////////////////
@@ -133,7 +134,7 @@ export async function listarProveedores(req, res) {
     - 200 con la lista de proveedores DTO
     */
     try {
-        const grupoDatos = req.user.grupoDatos
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const proveedores = await proveedorModel.findAll(grupoDatos);
         return exito(
             res,
@@ -163,7 +164,7 @@ export async function obtenerProveedor(req, res) {
     if (errId) return errId;
 
     try {
-        const grupoDatos = req.user.grupoDatos
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const proveedor = await proveedorModel.findById(req.params.id, grupoDatos);
         if (!proveedor) {
             return error(res, "Proveedor no encontrado.", null, 404);
@@ -196,7 +197,8 @@ export async function crearProveedor(req, res) {
     if (err) return err;
 
     try {
-        const grupoDatos = req.user.grupoDatos
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
         const nombre = req.body.nombre_empresa ?? req.body.nombre;
         const existente = await proveedorModel.findByName(nombre, grupoDatos);
         if (existente) {
@@ -205,7 +207,11 @@ export async function crearProveedor(req, res) {
             );
         }
 
-        const dto    = new proveedorDto(req.body);
+        const dto    = new proveedorDto({
+            ...req.body,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        });
         const nuevo  = await proveedorModel.create(dto, grupoDatos);
 
         return exito(
@@ -245,7 +251,7 @@ export async function actualizarProveedor(req, res) {
     if (errBody) return errBody;
 
     try {
-        const grupoDatos = req.user.grupoDatos
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const proveedorActual = await proveedorModel.findById(req.params.id, grupoDatos);
         if (!proveedorActual) {
             return error(res, "Proveedor no encontrado.", null, 404);
@@ -297,7 +303,7 @@ export async function eliminarProveedor(req, res) {
     if (errId) return errId;
 
     try {
-        const grupoDatos = req.user.grupoDatos
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const eliminado = await proveedorModel.remove(req.params.id, grupoDatos);
         if (!eliminado) {
             return error(res, "Proveedor no encontrado.", null, 404);

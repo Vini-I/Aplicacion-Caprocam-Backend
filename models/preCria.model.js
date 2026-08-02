@@ -100,8 +100,9 @@ export async function create(dto, grupoDatos) {
             INSERT INTO precrias (
                 grupo_datos, lote_larva_id, finca_id, estanque_id,
                 fecha_inicio, fecha_fin, duracion_dias, duracion_dias_esperada,
-                cantidad_inicial, cantidad_final, pl_inicial, pl_final, estado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                cantidad_inicial, cantidad_final, pl_inicial, pl_final, estado,
+                creado_por_usuario_id, creado_por_colaborador_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             grupoDatos,
             dto.lote_larva_id,
@@ -116,6 +117,8 @@ export async function create(dto, grupoDatos) {
             dto.pl_inicial,
             dto.pl_final,
             dto.estado || 'Activa',
+            dto.creado_por_usuario_id,
+            dto.creado_por_colaborador_id,
         ]);
  
         await connection.execute(`
