@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: siembra.model.js
-Autor: Joan
-Fecha: 04/07/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Siembra
 Descripcion:
 Capa de datos para siembra.
@@ -150,8 +150,9 @@ export async function create(dto, grupoDatos) {
             INSERT INTO siembras (
                 grupo_datos, lote_larva_id, precria_id, finca_id, estanque_id,
                 fecha_siembra, tecnica_cultivo, densidad_poblacional,
-                cantidad_sembrada, pl_siembra, duracion_ciclo, estado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                cantidad_sembrada, pl_siembra, duracion_ciclo, estado,
+                creado_por_usuario_id, creado_por_colaborador_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             grupoDatos,
             dto.lote_larva_id,
@@ -168,6 +169,8 @@ export async function create(dto, grupoDatos) {
             // cliente mande en el body. El unico camino hacia 'Finalizada'
             // es finalizarConEstanque(), que ademas sincroniza el estanque.
             'Activa',
+            dto.creado_por_usuario_id,
+            dto.creado_por_colaborador_id,
         ]);
  
         await connection.execute(`

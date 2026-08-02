@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loteLarvas.model.js
-Autor: Joan
-Fecha: 04/07/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Lotes de Larva
 Descripcion:
 Capa de datos para lotes de larva.
@@ -147,8 +147,10 @@ export async function createLote(dto, grupoDatos) {
             pl_inicial,
             cantidad_inicial,
             fecha_ingreso,
-            estado_lote
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            estado_lote,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const [result] = await pool.execute(sql, [
         grupoDatos,
@@ -161,6 +163,8 @@ export async function createLote(dto, grupoDatos) {
         dto.cantidad_inicial,
         dto.fecha_ingreso,
         dto.estado_lote || 'Disponible',
+        dto.creado_por_usuario_id,
+        dto.creado_por_colaborador_id,
     ]);
     return findById(result.insertId, grupoDatos);
 }
