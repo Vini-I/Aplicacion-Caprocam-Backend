@@ -22,7 +22,8 @@ export class ProductoDTO {
     /**
      * Descripcion:
      * Construye un objeto ProductoDTO alineado con el frontend.
-     * Acepta tanto nomenclaturas en ingles como en espanol.
+     * Acepta tanto nomenclaturas en ingles como en espanol y
+     * captura campos de auditoria dual.
      *
      * Parametros:
      * - data: Objeto con las propiedades del producto.
@@ -47,19 +48,23 @@ export class ProductoDTO {
         fechaCaducidad,
         fechaVencimiento,
         estado,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
     } = {}) {
-        this.id             = id;
-        this.codigo         = codigo         ?? null;
-        this.grupoDatos     = grupoDatos;
-        this.proveedorId    = proveedorId    ?? null;
-        this.nombre         = nombre;
-        this.categoria      = categoria      ?? null;
-        this.unidad         = unidad         ?? 'unidades';
-        this.precioUnidad   = precioUnidad   ?? 0;
-        this.cantidad       = cantidad       ?? 0;
-        this.stockMinimo    = stockMinimo    ?? 0;
-        this.entryDate      = entryDate      ?? fechaIngreso   ?? null;
-        this.expirationDate = expirationDate ?? fechaCaducidad ?? fechaVencimiento ?? null;
-        this.estado         = estado         ?? 'ACTIVO';
+        this.id                     = id;
+        this.codigo                 = codigo                 ?? null;
+        this.grupoDatos             = grupoDatos;
+        this.proveedorId            = proveedorId            ?? null;
+        this.nombre                 = nombre;
+        this.categoria              = categoria              ?? null;
+        this.unidad                 = unidad                 ?? 'unidades';
+        this.precioUnidad           = precioUnidad           ?? 0;
+        this.cantidad               = cantidad               ?? 0;
+        this.stockMinimo            = stockMinimo            ?? 0;
+        this.entryDate              = entryDate              ?? fechaIngreso   ?? null;
+        this.expirationDate         = expirationDate         ?? fechaCaducidad ?? fechaVencimiento ?? null;
+        this.estado                 = estado                 ?? 'ACTIVO';
+        this.creadoPorUsuarioId     = creadoPorUsuarioId     ?? null;
+        this.creadoPorColaboradorId = creadoPorColaboradorId ?? null;
     }
 }
