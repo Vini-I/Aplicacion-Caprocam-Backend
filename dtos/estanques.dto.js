@@ -78,6 +78,7 @@ export class EstanqueDTO {
 
         this.id = id;
         this.uuid = uuid;
+
         this.grupoDatos = Number(
             grupoDatos
         );
@@ -95,6 +96,8 @@ export class EstanqueDTO {
                 fincaId
             );
         }
+
+        this.fincaId = this.idFinca;
 
         this.codigo = normalizarTexto(
             codigo
@@ -132,40 +135,65 @@ export class EstanqueDTO {
             fechaSiembra
         );
 
-        this.fechaInicioEngorde = normalizarTextoOpcional(
-            fechaInicioEngorde
-        );
+        this.fechaInicioEngorde =
+            normalizarTextoOpcional(
+                fechaInicioEngorde
+            );
 
-        this.fechaMantenimiento = normalizarTextoOpcional(
-            fechaMantenimiento
-        );
+        this.fechaMantenimiento =
+            normalizarTextoOpcional(
+                fechaMantenimiento
+            );
 
-        this.densidadSiembra = normalizarNumeroOpcional(
-            densidadSiembra
-        );
+        this.densidadSiembra =
+            normalizarNumeroOpcional(
+                densidadSiembra
+            );
+
+        let valorPrecria = precria;
+
+        if (
+            valorPrecria === undefined ||
+            valorPrecria === null
+        ) {
+            valorPrecria = precria;
+        }
 
         this.precria = normalizarBooleano(
-            precria
+            valorPrecria
         );
 
-        this.metodoAlimentacion = normalizarTextoOpcional(
-            metodoAlimentacion
-        );
+        /*
+        Alias mantenido para compatibilidad con codigo
+        anterior del frontend.
+        */
 
-        this.proveedorAlimento = normalizarTextoOpcional(
-            proveedorAlimento
-        );
+        this.precria = this.precria;
 
-        this.numeroAireadores = normalizarNumeroOpcional(
-            numeroAireadores
-        );
+        this.metodoAlimentacion =
+            normalizarTextoOpcional(
+                metodoAlimentacion
+            );
+
+        this.proveedorAlimento =
+            normalizarTextoOpcional(
+                proveedorAlimento
+            );
+
+        this.numeroAireadores =
+            normalizarNumeroOpcional(
+                numeroAireadores
+            );
 
         this.tieneAlimentadorAutomatico =
             normalizarBooleano(
                 tieneAlimentadorAutomatico
             );
 
-        if (activo === undefined || activo === null) {
+        if (
+            activo === undefined ||
+            activo === null
+        ) {
             this.activo = true;
         } else {
             this.activo = normalizarBooleano(
@@ -237,7 +265,9 @@ function normalizarNumeroOpcional(valor) {
         return null;
     }
 
-    return Number(valor);
+    return Number(
+        valor
+    );
 }
 
 function normalizarBooleano(valor) {

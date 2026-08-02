@@ -34,7 +34,9 @@ export class FisicoQuimicaDTO {
         ph,
         salinidad,
         temperatura,
-        oxigenoDisuelto
+        oxigenoDisuelto,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
     }) {
         /*
         Descripcion:
@@ -51,6 +53,10 @@ export class FisicoQuimicaDTO {
         - salinidad: Arreglo de mediciones de salinidad.
         - temperatura: Arreglo de mediciones de temperatura.
         - oxigenoDisuelto: Arreglo de mediciones de oxigeno.
+        - creadoPorUsuarioId: Usuario web que registro la
+        lectura, resuelto por obtenerContextoPeticion.
+        - creadoPorColaboradorId: Colaborador movil que
+        registro la lectura, resuelto por el contexto.
 
         Retorna:
         - Instancia de FisicoQuimicaDTO.
@@ -65,5 +71,7 @@ export class FisicoQuimicaDTO {
         this.salinidad = salinidad;
         this.temperatura = temperatura;
         this.oxigenoDisuelto = oxigenoDisuelto;
+        this.creadoPorUsuarioId = creadoPorUsuarioId ?? null;
+        this.creadoPorColaboradorId = creadoPorColaboradorId ?? null;
     }
 }
