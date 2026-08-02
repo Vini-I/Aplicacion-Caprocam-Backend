@@ -107,17 +107,19 @@ export function isIdValido(id) {
 export function isNumeroMayorCero(valor) {
     /*
     Descripcion:
-    Valida que un valor sea numerico y mayor que cero.
+    Valida que un valor sea un numero entero mayor que cero.
 
     Parametros:
     - valor: Valor a validar.
 
     Retorna:
-    - true si es numerico y mayor que cero, false si no.
+    - true si es entero y mayor que cero.
+    - false si no cumple la regla.
     */
+
     const numero = Number(valor);
 
-    if (Number.isNaN(numero)) {
+    if (Number.isInteger(numero) === false) {
         return false;
     }
 
@@ -131,17 +133,20 @@ export function isNumeroMayorCero(valor) {
 export function isNumeroMayorIgualCero(valor) {
     /*
     Descripcion:
-    Valida que un valor sea numerico y mayor o igual que cero.
+    Valida que un valor sea un numero entero mayor o igual
+    que cero.
 
     Parametros:
     - valor: Valor a validar.
 
     Retorna:
-    - true si es numerico y mayor o igual que cero, false si no.
+    - true si es entero y mayor o igual que cero.
+    - false si no cumple la regla.
     */
+
     const numero = Number(valor);
 
-    if (Number.isNaN(numero)) {
+    if (Number.isInteger(numero) === false) {
         return false;
     }
 

@@ -73,11 +73,11 @@ INSERT INTO colaboradores (id, uuid, grupo_datos, finca_id, rol_id, nombre, apel
 -- ------------------------------------------------------------------------------
 -- 6. TABLA: estanques
 -- ------------------------------------------------------------------------------
-INSERT INTO estanques (id, uuid, grupo_datos, finca_id, codigo, tipo_estanque, estado, largo, ancho, profundidad, fuente_agua, especie, fecha_siembra, fecha_inicio_engorde, fecha_mantenimiento, densidad_siembra, precria, metodo_alimentacion, proveedor_alimento, numero_aireadores, tiene_alimentador_automatico, activo) VALUES
-(1, UUID(), 1001, 1, 'EST-01', 'Engorde', 'Engorde', 100.00, 50.00, 1.40, 'Estero Chinchilla', 'Litopenaeus vannamei', '2026-05-10', '2026-05-25', NULL, 15.00, FALSE, 'Alimentadores Automaticos', 'Nicovita', 4, TRUE, TRUE),
-(2, UUID(), 1001, 1, 'EST-02', 'Precria', 'Activo', 40.00, 25.00, 1.20, 'Estero Chinchilla', 'Litopenaeus vannamei', '2026-06-01', NULL, NULL, 120.00, TRUE, 'Bandejas y manual', 'Skretting', 2, FALSE, TRUE),
-(3, UUID(), 1001, 2, 'EST-A1', 'Engorde', 'Activo', 120.00, 60.00, 1.50, 'Canal Principal', 'Litopenaeus vannamei', '2026-04-15', '2026-05-01', NULL, 18.00, FALSE, 'Alimentador Mecanico', 'Nicovita', 6, TRUE, TRUE),
-(4, UUID(), 1002, 3, 'EST-G01', 'Engorde', 'Mantenimiento', 150.00, 80.00, 1.60, 'Rio Tempisque', 'Litopenaeus vannamei', NULL, NULL, '2026-07-01', 0.00, FALSE, 'Manual', 'Cargill', 8, FALSE, TRUE);
+INSERT INTO estanques (id, uuid, grupo_datos, finca_id, codigo, tipo_estanque, estado, largo, ancho, profundidad, fuente_agua, fecha_mantenimiento, precria, creado_por_usuario_id, creado_por_colaborador_id, activo) VALUES
+(1, UUID(), 1001, 1, 'EST-01', 'Engorde', 'Engorde', 100.00, 50.00, 1.40, 'Estero Chinchilla', NULL, FALSE, 2, NULL, TRUE),
+(2, UUID(), 1001, 1, 'EST-02', 'Precria', 'Activo', 40.00, 25.00, 1.20, 'Estero Chinchilla', NULL, TRUE, 3, NULL, TRUE),
+(3, UUID(), 1001, 2, 'EST-A1', 'Engorde', 'Activo', 120.00, 60.00, 1.50, 'Canal Principal', NULL, FALSE, 3, NULL, TRUE),
+(4, UUID(), 1002, 3, 'EST-G01', 'Engorde', 'Mantenimiento', 150.00, 80.00, 1.60, 'Rio Tempisque', '2026-07-01', FALSE, 4, NULL, TRUE);
 
 -- ------------------------------------------------------------------------------
 -- 7. TABLA: equipos
@@ -220,15 +220,14 @@ INSERT INTO ventas (id, uuid, grupo_datos, finca_id, estanque_id, colaborador_id
 -- ------------------------------------------------------------------------------
 -- 25. TABLA: parasitologias
 -- ------------------------------------------------------------------------------
-INSERT INTO parasitologias (id, uuid, grupo_datos, finca_id, estanque_id, colaborador_id, tipo_registro, fecha_reporte, responsable, parasito, camarones_muestreados, camarones_infectados, porcentaje_infeccion, grado_infeccion, observaciones, activo) VALUES
-(1, UUID(), 1001, 1, 1, 2, 'Rutina Semanal', '2026-07-12', 'Dra. Laura Sanchez', 'gregarina', 50, 4, 8.00, 'bajo', 'Presencia leve de gregarinas en intestino medio. Sin impacto en consumo de alimento.', TRUE);
+INSERT INTO parasitologias (id, uuid, grupo_datos, finca_id, estanque_id, tipo_registro, fecha_reporte, responsable, parasito, camarones_muestreados, camarones_infectados, porcentaje_infeccion, grado_infeccion, observaciones, creado_por_usuario_id, creado_por_colaborador_id, activo) VALUES
+(1, UUID(), 1001, 1, 1, 'Rutina Semanal', '2026-07-12', 'Dra. Laura Sanchez', 'gregarina', 50, 4, 8.00, 'bajo', 'Presencia leve de gregarinas en intestino medio. Sin impacto en consumo de alimento.', NULL, 2, TRUE);
 
 -- ------------------------------------------------------------------------------
 -- 26. TABLA: enfermedades
 -- ------------------------------------------------------------------------------
-INSERT INTO enfermedades (id, uuid, grupo_datos, finca_id, estanque_id, colaborador_id, tipo_registro, fecha_reporte, responsable, enfermedad, severidad, mortalidad_registrada, reporte, activo) VALUES
-(1, UUID(), 1001, 1, 1, 2, 'Muestreo Preventivo PCR', '2026-07-15', 'Dra. Laura Sanchez', 'Vibriosis', 'medio', 120, 'Se detecta leve incremento de colonias amarillas en agar TCBS. Se aplica probiotico bacteriano en agua.', TRUE);
-
+INSERT INTO enfermedades (id, uuid, grupo_datos, finca_id, estanque_id, tipo_registro, fecha_reporte, responsable, enfermedad, severidad, mortalidad_registrada, reporte, creado_por_usuario_id, creado_por_colaborador_id, activo) VALUES
+(1, UUID(), 1001, 1, 1, 'Muestreo Preventivo PCR', '2026-07-15', 'Dra. Laura Sanchez', 'Vibriosis', 'medio', 120, 'Se detecta leve incremento de colonias amarillas en agar TCBS. Se aplica probiotico bacteriano en agua.', NULL, 2, TRUE);
 -- ------------------------------------------------------------------------------
 -- 27. TABLA: alimentaciones
 -- ------------------------------------------------------------------------------

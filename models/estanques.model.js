@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.model.js
 Autor: Gerald Alfaro
-Fecha: 18/07/2026
+Fecha: 31/07/2026
 Modulo: Estanques
 Descripcion:
 Capa de datos del modulo de estanques.
@@ -54,16 +54,10 @@ export async function findAll(filtros) {
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -123,16 +117,10 @@ export async function findById(
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -185,16 +173,10 @@ export async function findByCodigoAndFinca(
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -214,14 +196,15 @@ export async function findByCodigoAndFinca(
         grupoDatos
     ];
 
-    if (idIgnorado !== null) {
-        if (idIgnorado !== undefined) {
-            sql = sql + " AND id <> ?";
+    if (
+        idIgnorado !== null &&
+        idIgnorado !== undefined
+    ) {
+        sql = sql + " AND id <> ?";
 
-            params.push(
-                idIgnorado
-            );
-        }
+        params.push(
+            idIgnorado
+        );
     }
 
     sql = sql + " LIMIT 1";
@@ -280,16 +263,6 @@ export async function create(dto) {
     recibido desde el controller.
     */
 
-    const fechaSiembra =
-        normalizarFechaMysqlOpcional(
-            dto.fechaSiembra
-        );
-
-    const fechaInicioEngorde =
-        normalizarFechaMysqlOpcional(
-            dto.fechaInicioEngorde
-        );
-
     const fechaMantenimiento =
         normalizarFechaMysqlOpcional(
             dto.fechaMantenimiento
@@ -307,21 +280,10 @@ export async function create(dto) {
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
-            precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico
+            precria
         )
-        VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-            ?, ?, ?, ?, ?, ?, ?, ?, ?
-        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             dto.grupoDatos,
@@ -333,16 +295,8 @@ export async function create(dto) {
             dto.ancho,
             dto.profundidad,
             dto.fuenteAgua,
-            dto.especie,
-            fechaSiembra,
-            fechaInicioEngorde,
             fechaMantenimiento,
-            dto.densidadSiembra,
-            dto.precria,
-            dto.metodoAlimentacion,
-            dto.proveedorAlimento,
-            dto.numeroAireadores,
-            dto.tieneAlimentadorAutomatico
+            dto.precria
         ]
     );
 
@@ -372,16 +326,6 @@ export async function update(
         return null;
     }
 
-    const fechaSiembra =
-        normalizarFechaMysqlOpcional(
-            dto.fechaSiembra
-        );
-
-    const fechaInicioEngorde =
-        normalizarFechaMysqlOpcional(
-            dto.fechaInicioEngorde
-        );
-
     const fechaMantenimiento =
         normalizarFechaMysqlOpcional(
             dto.fechaMantenimiento
@@ -399,16 +343,8 @@ export async function update(
             ancho = ?,
             profundidad = ?,
             fuente_agua = ?,
-            especie = ?,
-            fecha_siembra = ?,
-            fecha_inicio_engorde = ?,
             fecha_mantenimiento = ?,
-            densidad_siembra = ?,
             precria = ?,
-            metodo_alimentacion = ?,
-            proveedor_alimento = ?,
-            numero_aireadores = ?,
-            tiene_alimentador_automatico = ?,
             version = version + 1
         WHERE id = ?
         AND grupo_datos = ?
@@ -424,16 +360,8 @@ export async function update(
             dto.ancho,
             dto.profundidad,
             dto.fuenteAgua,
-            dto.especie,
-            fechaSiembra,
-            fechaInicioEngorde,
             fechaMantenimiento,
-            dto.densidadSiembra,
             dto.precria,
-            dto.metodoAlimentacion,
-            dto.proveedorAlimento,
-            dto.numeroAireadores,
-            dto.tieneAlimentadorAutomatico,
             id,
             grupoDatos
         ]
@@ -536,61 +464,26 @@ function mapearFila(row) {
         codigo: row.codigo,
         tipoEstanque: row.tipo_estanque,
         estado: row.estado,
-
         largo: Number(
             row.largo
         ),
-
         ancho: Number(
             row.ancho
         ),
-
         profundidad: Number(
             row.profundidad
         ),
-
         fuenteAgua: row.fuente_agua,
-        especie: row.especie,
-
-        fechaSiembra: formatearFecha(
-            row.fecha_siembra
-        ),
-
-        fechaInicioEngorde: formatearFecha(
-            row.fecha_inicio_engorde
-        ),
-
         fechaMantenimiento: formatearFecha(
             row.fecha_mantenimiento
         ),
-
-        densidadSiembra: convertirNumero(
-            row.densidad_siembra
+        precria: Boolean(
+            row.precria
         ),
-
-        precria: precria,
-
-        /*
-        Alias mantenido para compatibilidad con codigo
-        anterior del frontend.
-        */
-
-        precria: precria,
-
-        metodoAlimentacion:
-            row.metodo_alimentacion,
-
-        proveedorAlimento:
-            row.proveedor_alimento,
-
-        numeroAireadores: convertirNumero(
-            row.numero_aireadores
-        ),
-
-        tieneAlimentadorAutomatico: Boolean(
-            row.tiene_alimentador_automatico
-        ),
-
+        creadoPorUsuarioId:
+            row.creado_por_usuario_id,
+        creadoPorColaboradorId:
+            row.creado_por_colaborador_id,
         activo: Boolean(
             row.activo
         ),
@@ -700,26 +593,5 @@ function formatearFecha(valor) {
         );
     }
 
-    return String(
-        valor
-    );
-}
-
-function convertirNumero(valor) {
-    /*
-    Descripcion:
-    Convierte un valor recibido desde MySQL a numero.
-    */
-
-    if (valor === undefined) {
-        return null;
-    }
-
-    if (valor === null) {
-        return null;
-    }
-
-    return Number(
-        valor
-    );
+    return String(valor);
 }
