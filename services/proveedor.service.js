@@ -3,7 +3,7 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: proveedor.service.js
-Autor: Pamela / Joan
+Autor: Joan
 Fecha: 29/06/2026
 Modulo: Proveedores
 Descripcion:
@@ -41,10 +41,10 @@ export function isEmpty(valor) {
 export function isTelefonoValido(telefono) {
     /*
     Descripcion:
-    Valida el formato costarricense +506 XXXX-XXXX.
+    Valida que el telefono tenga exactamente ocho digitos.
     */
-    const regex = /^\+506 \d{4}-\d{4}$/;
-    return regex.test(telefono);
+    const telefonoRegex = /^\d{8}$/;
+    return telefonoRegex.test(telefono);
 }
 
 export function isCorreoValido(correo) {
