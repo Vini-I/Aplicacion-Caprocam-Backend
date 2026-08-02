@@ -379,8 +379,16 @@ export async function remove(
 ) {
     /*
     Descripcion:
-    Elimina logicamente un estanque que pertenece al grupo
-    de datos del usuario autenticado.
+    Elimina logicamente un estanque y deja sin asignar
+    los equipos que se encontraban relacionados.
+
+    Parametros:
+    - id: Identificador del estanque.
+    - grupoDatos: Grupo de datos obtenido desde el JWT.
+
+    Retorna:
+    - Estanque eliminado logicamente.
+    - null si el estanque no existe.
     */
 
     const actual = await findById(
@@ -392,25 +400,72 @@ export async function remove(
         return null;
     }
 
-    await pool.execute(
-        `
-        UPDATE estanques
-        SET
-            activo = FALSE,
-            deleted_at = CURRENT_TIMESTAMP,
-            version = version + 1
-        WHERE id = ?
-        AND grupo_datos = ?
-        AND deleted_at IS NULL
-        AND activo = TRUE
-        `,
-        [
-            id,
-            grupoDatos
-        ]
-    );
+    const connection =
+        await pool.getConnection();
 
-    return actual;
+    try {
+        await connection.beginTransaction();
+
+        /*
+        Deja sin asignar los equipos relacionados,
+        pero no elimina ni desactiva los equipos.
+        */
+
+        await connection.execute(
+            `
+            UPDATE equipos
+            SET
+                estanque_id = NULL,
+                version = version + 1
+            WHERE estanque_id = ?
+            AND grupo_datos = ?
+            AND deleted_at IS NULL
+            `,
+            [
+                id,
+                grupoDatos
+            ]
+        );
+
+        /*
+        Realiza la eliminacion logica del estanque.
+        */
+
+        const [resultado] =
+            await connection.execute(
+                `
+                UPDATE estanques
+                SET
+                    activo = FALSE,
+                    deleted_at = CURRENT_TIMESTAMP,
+                    version = version + 1
+                WHERE id = ?
+                AND grupo_datos = ?
+                AND deleted_at IS NULL
+                AND activo = TRUE
+                `,
+                [
+                    id,
+                    grupoDatos
+                ]
+            );
+
+        if (resultado.affectedRows === 0) {
+            await connection.rollback();
+
+            return null;
+        }
+
+        await connection.commit();
+
+        return actual;
+    } catch (err) {
+        await connection.rollback();
+
+        throw err;
+    } finally {
+        connection.release();
+    }
 }
 
 /*
