@@ -148,30 +148,30 @@ export async function login(req, res) {
         const contrasena    = req.body.contrasena;
 
         if (!identificador || !contrasena)
-            return error(res, 'Usuario y contrasena son requeridos.', null, 400);
+            return error(res, 'Debe ingresar su usuario o correo y su contrasena.', null, 400);
 
         // Verificacion de bloqueo por 5 intentos fallidos
         const estadoBloqueo = estaBloqueado(identificador);
         if (estadoBloqueo.bloqueado) {
-            const msg = `Cuenta bloqueada por superar 5 intentos. ` +
-                        `Intente de nuevo en ${estadoBloqueo.tiempoRestanteMinutos} min.`;
-            return error(res, msg, null, 429);
+            const msg = `Tu cuenta ha sido bloqueada temporalmente por multiples intentos fallidos. ` +
+                        `Intenta de nuevo en ${estadoBloqueo.tiempoRestanteMinutos} minuto(s).`;
+            return error(res, msg, { tiempoRestanteMinutos: estadoBloqueo.tiempoRestanteMinutos }, 429);
         }
 
         const usuarioEncontrado = await UsuariosModel.findUsuarioByIdentificador(identificador);
 
         if (!usuarioEncontrado)
-            return error(res, 'Usuario no encontrado.', null, 404);
+            return error(res, 'No existe una cuenta con ese usuario o correo electronico.', null, 404);
 
         const contrasenaOk = await isContrasenaValida(contrasena, usuarioEncontrado.passwordHash);
 
         if (!contrasenaOk) {
             const resultadoIntento = registrarIntentoFallido(identificador);
             if (resultadoIntento.bloqueado) {
-                return error(res, 'Ha superado el maximo de 5 intentos. Cuenta bloqueada 15 min.', null, 429);
+                return error(res, 'Has superado el limite de 5 intentos fallidos. Tu cuenta estara bloqueada por 15 minutos.', null, 429);
             }
-            const msg = `Credenciales incorrectas. Intentos restantes: ${resultadoIntento.intentosRestantes}.`;
-            return error(res, msg, null, 401);
+            const msg = `Contrasena incorrecta. Te quedan ${resultadoIntento.intentosRestantes} intento(s) antes de bloquear la cuenta.`;
+            return error(res, msg, { intentosRestantes: resultadoIntento.intentosRestantes }, 401);
         }
 
         // Login exitoso: se resetea el contador de intentos fallidos
@@ -191,13 +191,13 @@ export async function login(req, res) {
         const { accessToken, refreshToken, expiraEn } = generarTokens(payload);
         await RefreshTokensModel.guardar(refreshToken, expiraEn, usuarioEncontrado.id, null);
 
-        return exito(res, 'Login exitoso.', {
+        return exito(res, 'Inicio de sesion exitoso.', {
             accessToken,
             refreshToken,
             usuario: new LoginAdminDTO(usuarioEncontrado, rol),
         });
     } catch (err) {
-        return error(res, 'Error al iniciar sesion.', err);
+        return error(res, 'Ocurrio un error al iniciar sesion. Intentalo de nuevo mas tarde.', err);
     }
 }
 
@@ -229,22 +229,22 @@ export async function registrar(req, res) {
         const { grupoDatos } = obtenerContextoPeticion(req);
 
         if (!isContrasenaSegura(contrasena)) {
-            const msgErr = 'La contrasena debe tener al menos 8 caracteres, ' +
-                           'una mayuscula, una minuscula, un numero y un simbolo.';
-            return error(res, msgErr, null, 422);
+            const msgErr = 'La contrasena no es segura. Debe contener al menos 8 caracteres, ' +
+                           'una letra mayuscula, una letra minuscula, un numero y un simbolo especial (ej. !, @, #).';
+            return error(res, msgErr, { campo: 'contrasena' }, 422);
         }
 
         const correoExistente = await UsuariosModel.findUsuarioByCorreo(email);
         if (correoExistente)
-            return error(res, 'El correo ya esta registrado.', null, 409);
+            return error(res, 'Este correo electronico ya esta registrado. Usa otro correo o inicia sesion.', { campo: 'correo' }, 409);
 
         const usuarioExistente = await UsuariosModel.findUsuarioByNombreUsuario(nombreUsuario);
         if (usuarioExistente)
-            return error(res, 'El nombre de usuario ya existe.', null, 409);
+            return error(res, 'Este nombre de usuario ya esta en uso. Por favor elige uno diferente.', { campo: 'usuario' }, 409);
 
         const rol = await cargarRolConPantallas(rolId);
         if (!rol)
-            return error(res, 'El rol indicado no existe.', null, 422);
+            return error(res, 'El rol seleccionado no existe o no es valido.', { campo: 'rolId' }, 422);
 
         const passwordHash = await hashContrasena(contrasena);
 
@@ -261,7 +261,7 @@ export async function registrar(req, res) {
 
         return exito(res, 'Administrador registrado correctamente.', new LoginAdminDTO(nuevo, rol), 201);
     } catch (err) {
-        return error(res, 'Error al registrar el administrador.', err);
+        return error(res, 'Ocurrio un error al registrar el administrador. Intentalo de nuevo.', err);
     }
 }
 
@@ -292,11 +292,11 @@ export async function registrarOperario(req, res) {
         const { grupoDatos }  = obtenerContextoPeticion(req);
 
         if (!isPin(pin))
-            return error(res, 'El PIN debe tener exactamente 4 digitos numericos.', null, 422);
+            return error(res, 'El PIN debe ser un numero de exactamente 4 digitos (ej. 1234).', { campo: 'pin' }, 422);
 
         const rol = await cargarRolConPantallas(rolId);
         if (!rol)
-            return error(res, 'El rol indicado no existe.', null, 422);
+            return error(res, 'El rol seleccionado no existe o no es valido.', { campo: 'rolId' }, 422);
 
         const pinHash = await hashPin(pin);
 
@@ -315,7 +315,7 @@ export async function registrarOperario(req, res) {
 
         return exito(res, 'Operario registrado correctamente.', new LoginOperarioDTO(operario, rol), 201);
     } catch (err) {
-        return error(res, 'Error al registrar el operario.', err);
+        return error(res, 'Ocurrio un error al registrar el operario. Intentalo de nuevo.', err);
     }
 }
 
@@ -339,17 +339,17 @@ export async function verificarPin(req, res) {
         const { operarioId, pin } = req.body;
 
         if (!isPin(pin))
-            return error(res, 'El PIN debe tener exactamente 4 digitos numericos.', null, 422);
+            return error(res, 'El PIN debe ser un numero de exactamente 4 digitos.', { campo: 'pin' }, 422);
 
         const operario = await UsuariosModel.findColaboradorById(operarioId);
 
         if (!operario)
-            return error(res, 'Operario no encontrado.', null, 404);
+            return error(res, 'No se encontro ningún operario con ese identificador.', null, 404);
 
         const pinOk = await isPinValido(pin, operario.pinHash);
 
         if (!pinOk)
-            return error(res, 'PIN incorrecto.', null, 401);
+            return error(res, 'PIN incorrecto. Verifica tu PIN e intentalo de nuevo.', { campo: 'pin' }, 401);
 
         const rol = await cargarRolConPantallas(operario.rolId);
 
@@ -372,7 +372,7 @@ export async function verificarPin(req, res) {
             colaborador: new LoginOperarioDTO(operario, rol),
         });
     } catch (err) {
-        return error(res, 'Error al verificar el PIN.', err);
+        return error(res, 'Ocurrio un error al verificar el PIN. Intentalo de nuevo.', err);
     }
 }
 
