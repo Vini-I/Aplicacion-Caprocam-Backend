@@ -3,7 +3,7 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: trazabilidad.service.js
-Autor: Samuel
+Autor: Brandon
 Fecha: 29/06/2026
 Modulo: Trazabilidad
 Descripcion:

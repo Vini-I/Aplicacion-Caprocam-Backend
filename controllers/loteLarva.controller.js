@@ -21,6 +21,7 @@ import {
     isEmpty,
     isFechaValida,
     isEnteroPositivo,
+    isCodigoLarvaValido,
 } from "../services/loteLarva.service.js";
 import * as loteLarvaModel from "../models/loteLarvas.model.js";
 import { exito, error } from "../common/respuestaJson.js";
@@ -37,6 +38,15 @@ function validarCuerpo(body, res) {
  
     if (isEmpty(body.codigo_lote)) {
         errores.push("El campo codigo_lote es requerido.");
+    } else if (!isCodigoLarvaValido(body.codigo_lote)) {
+        errores.push(
+            "El campo codigo_lote solo puede contener letras y numeros, con un maximo de 14 caracteres."
+        );
+    }
+    if (!isEmpty(body.certificado_larva) && !isCodigoLarvaValido(body.certificado_larva)) {
+        errores.push(
+            "El campo certificado_larva solo puede contener letras y numeros, con un maximo de 14 caracteres."
+        );
     }
     if (!isEnteroPositivo(body.cantidad_inicial)) {
         errores.push("El campo cantidad_inicial debe ser un entero positivo.");

@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.dto.js
 Autor: Marco Vásquez
-Fecha: 22/07/2026
+Fecha: 29/07/2026
 Modulo: Colaboradores
 Descripcion:
 Archivo de transferencia de datos para colaboradores.
@@ -75,7 +75,7 @@ export class ColaboradorDTO {
         this.telefono        = telefono         ?? null;
         this.email           = email            ?? null;
         this.nombreUsuario   = nombreUsuario;
-        this.pinHash         = pinHash;
+        this.pinHash         = pinHash          ?? null;
         this.tipoColaborador = tipoColaborador  ?? TipoColaborador.EXTERNAL_COLLAB;
         this.activo          = activo           ?? true;
     }

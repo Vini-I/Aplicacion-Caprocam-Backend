@@ -4,11 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.model.js
 Autor: Marco Vásquez
-Fecha: 22/07/2026
+Fecha: 29/07/2026
 Modulo: Colaboradores
 Descripcion:
 Capa de datos del modulo de colaboradores.
-Conectado a MySQL via pool. Usa borrado logico.
+Conectado a MySQL via pool. Usa borrado logico y soporte
+para busquedas por cedula para el flujo APK movil.
 //////////////////////////////////////////////////////////
 */
 
@@ -42,19 +43,19 @@ function mapearColaborador(fila) {
     - Objeto colaborador en camelCase.
     */
     return {
-        id:              fila.id,
-        uuid:            fila.uuid,
-        grupoDatos:      fila.grupo_datos,
-        fincaId:         fila.finca_id,
-        rolId:           fila.rol_id,
-        nombre:          fila.nombre,
-        apellidos:       fila.apellidos,
-        cedula:          fila.cedula,
-        telefono:        fila.telefono,
-        email:           fila.email,
-        nombreUsuario:   fila.nombre_usuario,
-        tipoColaborador: fila.tipo_colaborador,
-        activo:          fila.activo,
+        id:                 fila.id,
+        uuid:               fila.uuid,
+        grupoDatos:         fila.grupo_datos,
+        fincaId:            fila.finca_id,
+        rolId:              fila.rol_id,
+        nombre:             fila.nombre,
+        apellidos:          fila.apellidos,
+        cedula:             fila.cedula,
+        telefono:           fila.telefono,
+        email:              fila.email,
+        nombreUsuario:      fila.nombre_usuario,
+        tipoColaborador:    fila.tipo_colaborador,
+        activo:             fila.activo,
         fechaCreacion:      fila.fecha_creacion,
         fechaActualizacion: fila.fecha_actualizacion,
     };
@@ -105,10 +106,31 @@ export async function findById(id, grupoDatos) {
     return filas.length > 0 ? mapearColaborador(filas[0]) : null;
 }
 
+export async function findByCedula(cedula) {
+    /*
+    Descripcion:
+    Busca un colaborador activo por su cedula.
+    Util para el flujo del APK movil donde se consulta
+    la cedula para obtener el grupo_datos del colaborador.
+
+    Parametros:
+    - cedula: Numero de cedula del colaborador.
+
+    Retorna:
+    - El colaborador encontrado o null.
+    */
+    const [filas] = await pool.query(
+        `SELECT * FROM colaboradores
+         WHERE cedula = ? AND activo = TRUE AND deleted_at IS NULL`,
+        [cedula]
+    );
+    return filas.length > 0 ? mapearColaborador(filas[0]) : null;
+}
+
 export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Inserta un nuevo colaborador en la DB.
+    Inserta un nuevo colaborador en la DB con PIN cifrado y cedula.
 
     Parametros:
     - dto:        Objeto ColaboradorDTO con los datos.
@@ -143,6 +165,7 @@ export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
     Actualiza un colaborador existente e incrementa version.
+    Actualiza pin_hash solo si viene especificado en el DTO.
 
     Parametros:
     - id:         ID del colaborador.
@@ -152,25 +175,31 @@ export async function update(id, dto, grupoDatos) {
     Retorna:
     - El colaborador actualizado o null si no existe.
     */
-    const [result] = await pool.query(
-        `UPDATE colaboradores
+    let querySQL = `UPDATE colaboradores
          SET finca_id = ?, rol_id = ?, nombre = ?, apellidos = ?,
-             cedula = ?, telefono = ?, email = ?, tipo_colaborador = ?,
-             version = version + 1
-         WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
-        [
-            dto.fincaId,
-            dto.rolId,
-            dto.nombre,
-            dto.apellidos,
-            dto.cedula,
-            dto.telefono,
-            dto.email,
-            dto.tipoColaborador,
-            id,
-            grupoDatos,
-        ]
-    );
+             cedula = ?, telefono = ?, email = ?, tipo_colaborador = ?`;
+    const params = [
+        dto.fincaId,
+        dto.rolId,
+        dto.nombre,
+        dto.apellidos,
+        dto.cedula,
+        dto.telefono,
+        dto.email,
+        dto.tipoColaborador,
+    ];
+
+    if (dto.pinHash) {
+        querySQL += `, pin_hash = ?`;
+        params.push(dto.pinHash);
+    }
+
+    querySQL += `, version = version + 1
+         WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`;
+    params.push(id, grupoDatos);
+
+    const [result] = await pool.query(querySQL, params);
+
     if (result.affectedRows === 0) return null;
     return findById(id, grupoDatos);
 }
