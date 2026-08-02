@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: preCria.dto.js
-Autor: Joan
-Fecha: 04/07/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Siembra
 Descripcion:
 DTOs para transferir y normalizar datos del modulo de siembra.
@@ -44,6 +44,8 @@ export class PrecriaDTO {
         pl_inicial,
         pl_final,
         estado,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
     }) {
         /*
         Descripcion:
@@ -67,6 +69,9 @@ export class PrecriaDTO {
         - estado:           Estado (opcional, default Activa).
         - fecha_fin, cantidad_final, pl_final, duracion_dias:
           Se completan al finalizar la pre-cria.
+        - creadoPorUsuarioId:     FK a usuarios - web (resuelto por
+          obtenerContextoPeticion, nunca por el body del cliente).
+        - creadoPorColaboradorId: FK a colaboradores - movil (idem).
         */
         const loteIdDb  = lote_larva_id ?? id_lote_larva;
         const fincaIdDb = finca_id ?? id_finca;
@@ -88,5 +93,7 @@ export class PrecriaDTO {
             ? Number(duracion_dias) : null;
         this.duracion_dias_esperada = duracion_dias_esperada !== undefined && duracion_dias_esperada !== null
             ? Number(duracion_dias_esperada) : null;
+        this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
+        this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
     }
 }

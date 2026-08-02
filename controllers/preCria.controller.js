@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: preCria.controller.js
-Autor: Joan
-Fecha: 04/07/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Pre-cria
 Descripcion:
 Maneja las peticiones HTTP y la logica de pre-cria.
@@ -28,6 +28,7 @@ import {
 import * as precriaModel from "../models/preCria.model.js";
 import * as loteLarvaModel from "../models/loteLarvas.model.js";
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -144,7 +145,7 @@ export async function listarPrecrias(req, res) {
     Obtiene todas las pre-crias activas del grupo de datos.
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const estadoFiltro = req.query.estado || null;
         if (estadoFiltro && !isEstadoValido(estadoFiltro)) {
             return error(res, "El parametro estado debe ser Activa o Finalizada.", null, 422);
@@ -173,7 +174,7 @@ export async function obtenerPrecria(req, res) {
     Obtiene una pre-cria activa por su ID.
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const { id } = req.params;
         const pc = await precriaModel.findById(id, grupoDatos);
         if (!pc) return error(res, "Pre-cria no encontrada.", null, 404);
@@ -204,11 +205,16 @@ export async function crearPrecria(req, res) {
     if (errBody) return errBody;
 
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
         const errRef = await validarReferencias(req.body, res, grupoDatos);
         if (errRef) return errRef;
 
-        const dto = new PrecriaDTO(req.body);
+        const dto = new PrecriaDTO({
+            ...req.body,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        });
         const nuevo = await precriaModel.create(dto, grupoDatos);
         return exito(res, "Pre-cria creada correctamente.", nuevo, 201);
     } catch (err) {
@@ -237,7 +243,7 @@ export async function actualizarPrecria(req, res) {
     if (errBody) return errBody;
 
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const actual = await precriaModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Pre-cria no encontrada.", null, 404);
 
@@ -272,7 +278,7 @@ export async function finalizarPrecria(req, res) {
     */
     const { id } = req.params;
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const pc = await precriaModel.findById(id, grupoDatos);
         if (!pc) return error(res, "Pre-cria no encontrada.", null, 404);
 
@@ -335,7 +341,7 @@ export async function eliminarPrecria(req, res) {
     */
     const { id } = req.params;
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const eliminado = await precriaModel.remove(id, grupoDatos);
         if (!eliminado) return error(res, "Pre-cria no encontrada.", null, 404);
         return exito(res, "Pre-cria eliminada correctamente.", eliminado);
