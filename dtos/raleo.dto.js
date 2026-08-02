@@ -37,11 +37,10 @@ export class RaleoDTO {
         Parametros:
         - id: Identificador unico                                                (requerido)
         - uuid: Identificador global usado para futura sincronizacion offline
-        - grupoDatos: Codigo del grupo de datos al que pertenece el raleo   
-        - creadoPorUsuarioId: Identificador del usuario                           
-        - creadoPorColaboradorId: Identificador del colaborador                    
+        - grupoDatos: Codigo del grupo de datos al que pertenece el raleo        
         - idFinca: Identificador de la finca                                     (requerido)
-        - idEstanque: Identificador del estanque                                 (requerido)  
+        - idEstanque: Identificador del estanque                                 (requerido)
+        - idColaborador: Identificador del colaborador                           (opcional)
         - fecha: La fecha en la cual se realiza el raleo                         (requerido)
         - porcentaje: Porcentaje del raleo                                       (requerido)
         - pesoEstimado: El peso estimado                                         (requerido)
@@ -61,10 +60,9 @@ export class RaleoDTO {
         id,
         uuid,
         grupoDatos,
-        creadoPorUsuarioId,
-        creadoPorColaboradorId,
         idFinca,
         idEstanque,
+        idColaborador,
         fecha,
         porcentaje,
         pesoEstimado,
@@ -79,20 +77,26 @@ export class RaleoDTO {
         version
 
     }) {
-        this.id                      = id;
-        this.uuid                    = uuid;
-        this.grupoDatos              = grupoDatos;
-        this.creadoPorUsuarioId      = creadoPorUsuarioId ?? null;
-        this.creadoPorColaboradorId  = creadoPorColaboradorId ?? null;
-        this.idFinca                 = Number(idFinca);
-        this.idEstanque              = Number(idEstanque);
-        this.fecha                   = normalizarTexto(fecha);
-        this.porcentaje              = Number(porcentaje);
-        this.pesoEstimado            = Number(pesoEstimado);
-        this.biomasaEstimado         = Number(biomasaEstimado);
-        this.objetivo                = normalizarTexto(objetivo);
-        this.metodo                  = normalizarTexto(metodo);
-        this.observaciones           = normalizarTextoOpcional(observaciones);
+        this.id              = id;
+        this.uuid            = uuid;
+        this.grupoDatos      = grupoDatos;
+        this.idFinca         = Number(idFinca);
+        this.idEstanque      = Number(idEstanque);
+        /*
+        idColaborador es opcional (columna colaborador_id es NULL en
+        la base de datos, igual que en crecimientos): representa el
+        colaborador que realizo fisicamente el raleo, elegido en un
+        Select por quien llena el formulario. Si no viene, queda en
+        null en vez de forzar Number(undefined) = NaN.
+        */
+        this.idColaborador   = normalizarNumeroOpcional(idColaborador);
+        this.fecha           = normalizarTexto(fecha);
+        this.porcentaje      = Number(porcentaje);
+        this.pesoEstimado    = Number(pesoEstimado);
+        this.biomasaEstimado = Number(biomasaEstimado);
+        this.objetivo        = normalizarTexto(objetivo);
+        this.metodo          = normalizarTexto(metodo);
+        this.observaciones   = normalizarTextoOpcional(observaciones);
         /*
         Si activo no viene definido, el registro se considera activo
         por defecto.
@@ -117,6 +121,28 @@ Contiene funciones internas para normalizar datos.
 */
 function normalizarTexto(valor) {
     return String(valor).trim();
+}
+
+function normalizarNumeroOpcional(valor) {
+    /*
+    Descripcion:
+    Convierte un valor a numero, permitiendo que quede en null si
+    no viene definido. A diferencia de Number(undefined) (que da
+    NaN), esto evita insertar NaN en columnas nullable.
+
+    Parametros:
+    - valor: Valor recibido.
+
+    Retorna:
+    - Numero si el valor es valido, null si no vino definido/vacio.
+    */
+    if (valor === undefined || valor === null || String(valor).trim() === "") {
+        return null;
+    }
+
+    const numero = Number(valor);
+
+    return Number.isNaN(numero) ? null : numero;
 }
 function normalizarTextoOpcional(valor) {
     if (valor === undefined) {

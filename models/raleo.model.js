@@ -174,6 +174,70 @@ export async function create(dto, grupoDatos) {
     return await findById(result.insertId, grupoDatos);
 }
 
+export async function update(id, dto, grupoDatos, idColaborador) {
+    /*
+    Descripcion:
+    Actualiza un raleo existente en la base de datos.
+    Tambien incrementa la version del registro para control de cambios.
+
+    Parametros:
+    - id: Identificador del raleo que se desea actualizar.
+    - dto: Objeto RaleoDTO con los datos actualizados del raleo.
+    - grupoDatos: Grupo de datos del usuario en sesion.
+    - idColaborador: Colaborador que realizo el raleo (viene del
+      body/dto, no de req.user; ver createRaleo en el controller).
+      Puede ser null (campo opcional).
+
+    Retorna:
+    - El raleo actualizado.
+    - null si el raleo no existe, no pertenece al grupo, o fue eliminado logicamente.
+    */
+
+    const actual = await findById(id, grupoDatos);
+
+    if (!actual) {
+        return null;
+    }
+
+    await pool.execute(
+        `
+        UPDATE raleos
+        SET
+            finca_id = ?,
+            estanque_id = ?,
+            colaborador_id = ?,
+            fecha = ?,
+            porcentaje = ?,
+            peso_estimado = ?,
+            biomasa_estimada = ?,
+            objetivo = ?,
+            metodos = ?,
+            observaciones = ?,
+            version = version + 1
+        WHERE id = ?
+        AND grupo_datos = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        `,
+        [
+            dto.idFinca,
+            dto.idEstanque,
+            idColaborador,
+            dto.fecha,
+            dto.porcentaje,
+            dto.pesoEstimado,
+            dto.biomasaEstimado,
+            dto.objetivo,
+            dto.metodo,
+            dto.observaciones,
+            id,
+            grupoDatos
+        ]
+    );
+
+    return await findById(id, grupoDatos);
+}
+
 export async function remove(id, grupoDatos) {
     /*
     Descripcion:
