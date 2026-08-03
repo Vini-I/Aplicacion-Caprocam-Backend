@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantCrecimiento.dto.js
 Autor: Greivin Arguedas
-Fecha: 01/08/2026
+Fecha: 03/08/2026
 Modulo: Crecimiento
 Descripcion:
 Archivo de transferencia de datos para crecimiento.
@@ -23,7 +23,6 @@ export class MantCrecimientoDto {
         grupoDatos,
         finca,
         estanque,
-        colaborador,
         fechaRegistro,
         pesoActual,
         creadoPorUsuarioId,
@@ -37,7 +36,6 @@ export class MantCrecimientoDto {
         - grupoDatos: Identificador del grupo de datos.
         - finca: Identificador de la finca.
         - estanque: Identificador del estanque.
-        - colaborador: Identificador del colaborador.
         - fechaRegistro: Fecha del registro.
         - pesoActual: Peso actual registrado.
         - creadoPorUsuarioId: Identificador del usuario que creó el registro.
@@ -47,7 +45,6 @@ export class MantCrecimientoDto {
         this.grupoDatos = grupoDatos;
         this.finca = finca;
         this.estanque = estanque;
-        this.colaborador = colaborador;
         this.fechaRegistro = fechaRegistro;
         this.pesoActual = pesoActual;
         this.creadoPorUsuarioId     = creadoPorUsuarioId ?? null;
