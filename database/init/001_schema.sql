@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS fincas (
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
     propietario_usuario_id INT NULL,
-    codigo_cbo VARCHAR(40) NULL,
+    codigo_cbo VARCHAR(40) NOT NULL UNIQUE,
     nombre_finca VARCHAR(80) NOT NULL,
     provincia VARCHAR(40) NULL,
     canton VARCHAR(60) NULL,
@@ -702,7 +702,6 @@ CREATE TABLE IF NOT EXISTS crecimientos (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
-    colaborador_id INT NULL,
     fecha_registro DATE NOT NULL,
     peso_actual DECIMAL(10,2) NOT NULL,
     creado_por_usuario_id INT NULL,
@@ -721,9 +720,6 @@ CREATE TABLE IF NOT EXISTS crecimientos (
 
     CONSTRAINT fk_crecimientos_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
-
-    CONSTRAINT fk_crecimientos_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
 
     CONSTRAINT fk_crecimientos_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
@@ -767,7 +763,6 @@ CREATE TABLE IF NOT EXISTS ventas (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
-    colaborador_id INT NULL,
     comprador_id INT NULL,
     peso_promedio DECIMAL(10,2) NULL,
     tamano_promedio DECIMAL(10,2) NULL,
@@ -791,9 +786,6 @@ CREATE TABLE IF NOT EXISTS ventas (
 
     CONSTRAINT fk_ventas_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
-
-    CONSTRAINT fk_ventas_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
 
     CONSTRAINT fk_ventas_compradores
     FOREIGN KEY (comprador_id) REFERENCES compradores(id),
