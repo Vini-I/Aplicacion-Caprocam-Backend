@@ -35,7 +35,8 @@ export class LoteLarvaDTO {
         codigo_lote,
         proveedor_id,
         proveedorId,
-        laboratorio,
+        laboratorio_id,
+        laboratorioId,
         lugar_procedencia,
         procedencia,
         certificado_larva,
@@ -61,7 +62,7 @@ export class LoteLarvaDTO {
         Parametros:
         - codigo_lote:       Codigo de identificacion (requerido).
         - proveedor_id:      ID del proveedor (opcional, FK nullable).
-        - laboratorio:       Laboratorio de origen (opcional).
+        - laboratorio_id:    ID del laboratorio (opcional, FK nullable).
         - lugar_procedencia: Procedencia de la larva (opcional).
         - certificado_larva: Certificado sanitario (opcional).
         - pl_inicial:        PL inicial (opcional).
@@ -74,11 +75,12 @@ export class LoteLarvaDTO {
         */
         const proveedorDb   = proveedor_id ?? proveedorId;
         const procedenciaDb = lugar_procedencia ?? procedencia;
+        const laboratorioDb  = laboratorio_id ?? laboratorioId;
  
         this.codigo_lote       = String(codigo_lote).trim();
         this.proveedor_id      = proveedorDb ? Number(proveedorDb) : null;
-        this.laboratorio       = laboratorio ? String(laboratorio).trim() : null;
-        this.lugar_procedencia = procedenciaDb ? String(procedenciaDb).trim() : null;
+        this.laboratorio_id    = laboratorioDb ? Number(laboratorioDb) : null;
+        this.procedencia_id    = procedenciaDb ? Number(procedenciaDb) : null;
         this.certificado_larva = certificado_larva ? String(certificado_larva).trim() : null;
         this.pl_inicial        = pl_inicial !== undefined && pl_inicial !== null
             ? Number(pl_inicial) : null;

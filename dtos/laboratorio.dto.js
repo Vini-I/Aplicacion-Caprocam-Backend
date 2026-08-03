@@ -12,7 +12,7 @@ DTO para transferir y normalizar datos del modulo de laboratorio.
 */
 
 export class LaboratorioDTO {
-    constructor({ id, uuid, grupo_datos, nombre, descripcion,creadoPorUsuarioId,creadoPorColaboradorId, activo, fecha_creacion, fecha_actualizacion }) {
+    constructor({ id, uuid, grupo_datos, grupoDatos, nombre, descripcion, creado_por_usuario_id, creadoPorUsuarioId, creado_por_colaborador_id, creadoPorColaboradorId, activo, fecha_creacion, fecha_actualizacion }) {
         /*
         Descripcion:
         Constructor del Data Transfer Object (DTO) para laboratorio. Se encarga de recibir datos crudos (ya sea del request del cliente o de una fila cruda de base de datos) y normalizarlos en una estructura segura, aplicando transformaciones de tipo, resolviendo llaves foraneas y seteando valores por defecto (ej. estados predeterminados).
@@ -22,11 +22,11 @@ export class LaboratorioDTO {
         */
         this.id = id;
         this.uuid = uuid;
-        this.grupoDatos = grupo_datos;
+        this.grupoDatos = grupo_datos ?? grupoDatos;
         this.nombre = String(nombre ?? "").trim();
         this.descripcion = descripcion ? String(descripcion).trim() : null;
-        this.creado_por_usuario_id = creadoPorUsuarioId ?? null;
-        this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
+        this.creado_por_usuario_id = creado_por_usuario_id ?? creadoPorUsuarioId ?? null;
+        this.creado_por_colaborador_id = creado_por_colaborador_id ?? creadoPorColaboradorId ?? null;
         this.activo = Boolean(activo);
         this.fechaCreacion = fecha_creacion;
         this.fechaActualizacion = fecha_actualizacion;

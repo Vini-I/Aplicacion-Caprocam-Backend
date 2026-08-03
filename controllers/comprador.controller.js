@@ -8,7 +8,7 @@ Fecha: 26/07/2026
 Modulo: Compradores
 Descripcion:
 Recibe las peticiones HTTP de compradores, delega al modelo
-y devuelve la respuesta al cliente.
+y devuelve la respuesta al cliente soportando contexto dual.
 //////////////////////////////////////////////////////////
 */
 
@@ -17,13 +17,39 @@ y devuelve la respuesta al cliente.
 IMPORTS
 //////////////////////////////////////////////////////////
 
-Modelos
+Modelos y DTOs
 */
 
 import * as CompradorModel from '../models/comprador.model.js';
+import { CompradorDTO } from '../dtos/comprador.dto.js';
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+*/
+
+function obtenerContextoPeticion(req) {
+    /*
+    Descripcion:
+    Extrae grupoDatos e identificadores de auditoria independientemente
+    de si la peticion proviene de un Usuario Web o Colaborador Mobil.
+
+    Parametros:
+    - req: Objeto request de Express.
+
+    Retorna:
+    - Objeto con { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId }
+    */
+    const grupoDatos = req.user?.grupoDatos || req.colaborador?.grupoDatos;
+    const creadoPorUsuarioId = req.user?.id || null;
+    const creadoPorColaboradorId = req.colaborador?.id || null;
+
+    return { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId };
+}
 
 /*
 //////////////////////////////////////////////////////////
@@ -44,8 +70,8 @@ export async function getCompradores(req, res) {
     - 200 con lista de compradores
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const data       = await CompradorModel.findAll(grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const data = await CompradorModel.findAll(grupoDatos);
         return exito(res, 'Compradores obtenidos correctamente.', data);
     } catch (err) {
         return error(res, 'Error al obtener compradores.', err);
@@ -66,8 +92,8 @@ export async function getCompradorById(req, res) {
     - 404 si no existe
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const comprador  = await CompradorModel.findById(req.params.id, grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const comprador = await CompradorModel.findById(req.params.id, grupoDatos);
 
         if (!comprador)
             return error(res, 'Comprador no encontrado.', null, 404);
@@ -91,8 +117,14 @@ export async function createComprador(req, res) {
     - 201 con el comprador creado
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const nuevo      = await CompradorModel.create(req.body, grupoDatos);
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } = obtenerContextoPeticion(req);
+        const dto = new CompradorDTO({
+            ...req.body,
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
+        });
+        const nuevo = await CompradorModel.create(dto, grupoDatos);
 
         return exito(res, 'Comprador creado correctamente.', nuevo, 201);
     } catch (err) {
@@ -114,10 +146,11 @@ export async function updateComprador(req, res) {
     - 404 si no existe
     */
     try {
-        const grupoDatos  = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const dto = new CompradorDTO({ ...req.body, grupoDatos });
         const actualizado = await CompradorModel.update(
             req.params.id, 
-            req.body, 
+            dto, 
             grupoDatos
         );
 
@@ -144,8 +177,8 @@ export async function deleteComprador(req, res) {
     - 404 si no existe
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const eliminado  = await CompradorModel.remove(req.params.id, grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const eliminado = await CompradorModel.remove(req.params.id, grupoDatos);
 
         if (!eliminado)
             return error(res, 'Comprador no encontrado.', null, 404);

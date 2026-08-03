@@ -4,15 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantCrecimiento.model.js
 Autor: Greivin Arguedas
-Fecha: 04/07/2026
+Fecha: 01/08/2026
 Modulo: Crecimiento
 Descripcion:
-Capa de datos del modulo de crecimiento.
-Por ahora trabaja con datos mock. Cuando haya DB,
-solo este archivo cambia.
+Modelo para interactuar con la base de datos del modulo de crecimiento.
 //////////////////////////////////////////////////////////
 */
-
 
 /*
 //////////////////////////////////////////////////////////
@@ -40,20 +37,28 @@ export async function findAll(grupoDatos) {
     Obtiene todos los registros de crecimiento.
 
     Parametros:
-    No posee.
+    - grupoDatos: Grupo de datos al que pertenecen los registros.
 
     Retorna:
     - Lista con todos los registros de crecimiento.
     */
 
     const [rows] = await pool.execute(
-        `SELECT *
+        `SELECT 
+            id,
+            grupo_datos AS grupoDatos,
+            finca_id AS finca,
+            estanque_id AS estanque,
+            colaborador_id AS colaborador,
+            fecha_registro AS fechaRegistro,
+            peso_actual AS pesoActual,
+            creado_por_usuario_id AS creadoPorUsuarioId,
+            creado_por_colaborador_id AS creadoPorColaboradorId
         FROM crecimientos
         WHERE grupo_datos = ?
         AND deleted_at IS NULL`,
         [grupoDatos]
     );
-
     return rows;
 }
 
@@ -64,13 +69,23 @@ export async function findById(id, grupoDatos) {
 
     Parametros:
     - id: Identificador del crecimiento.
+    - grupoDatos: Grupo de datos al que pertenece el crecimiento.
 
     Retorna:
     - El registro encontrado o null si no existe.
     */
 
     const [rows] = await pool.execute(
-        `SELECT *
+        `SELECT 
+            id,
+            grupo_datos AS grupoDatos,
+            finca_id AS finca,
+            estanque_id AS estanque,
+            colaborador_id AS colaborador,
+            fecha_registro AS fechaRegistro,
+            peso_actual AS pesoActual,
+            creado_por_usuario_id AS creadoPorUsuarioId,
+            creado_por_colaborador_id AS creadoPorColaboradorId
         FROM crecimientos
         WHERE id = ?
         AND grupo_datos = ?
@@ -100,15 +115,19 @@ export async function create(dto) {
             estanque_id,
             colaborador_id,
             fecha_registro,
-            peso_actual
-        ) VALUES (?,?,?,?,?,?)`,
+            peso_actual,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
+        ) VALUES (?,?,?,?,?,?,?,?)`,
         [
             dto.grupoDatos,
             dto.finca,
             dto.estanque,
             dto.colaborador,
             dto.fechaRegistro,
-            dto.pesoActual
+            dto.pesoActual,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId
         ]
     );
 
@@ -130,10 +149,7 @@ export async function update(id, grupoDatos, dto) {
     */
 
     const registro = await findById(id, grupoDatos);
-
-    if (!registro) {
-        return null;
-    }
+    if (!registro) return null;
 
     await pool.execute(
         `UPDATE crecimientos
@@ -173,9 +189,7 @@ export async function remove(id, grupoDatos) {
 
     const registro = await findById(id, grupoDatos);
 
-    if (!registro) {
-        return null;
-    }
+    if (!registro) return null;
 
     await pool.execute(
         `UPDATE crecimientos

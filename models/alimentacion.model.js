@@ -3,7 +3,7 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: alimentacion.model.js
-Autor: Felipe Salas
+Autor: Wendy Martinez
 Fecha: 06/07/2026
 Modulo: Alimentacion
 Descripcion:
@@ -57,6 +57,7 @@ export async function findAll(filtros) {
             grupo_datos,
             finca_id,
             estanque_id,
+            colaborador_id,
             proveedor_id,
             producto_id,
             fecha,
@@ -67,6 +68,8 @@ export async function findAll(filtros) {
             proveedor,
             tipo_alimento,
             observaciones,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -125,6 +128,7 @@ export async function findById(id, grupoDatos) {
             grupo_datos,
             finca_id,
             estanque_id,
+            colaborador_id,
             proveedor_id,
             producto_id,
             fecha,
@@ -135,6 +139,8 @@ export async function findById(id, grupoDatos) {
             proveedor,
             tipo_alimento,
             observaciones,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -183,6 +189,7 @@ export async function findByFechaHoraEstanque(fecha, hora, idEstanque, idIgnorad
             grupo_datos,
             finca_id,
             estanque_id,
+            colaborador_id,
             proveedor_id,
             producto_id,
             fecha,
@@ -193,6 +200,8 @@ export async function findByFechaHoraEstanque(fecha, hora, idEstanque, idIgnorad
             proveedor,
             tipo_alimento,
             observaciones,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -233,19 +242,49 @@ export async function findByFechaHoraEstanque(fecha, hora, idEstanque, idIgnorad
     return mapearFila(rows[0]);
 }
 
-export async function create(dto, idProveedor) {
+export async function create(dto) {
     /*
     Descripcion:
     Inserta un nuevo registro de alimentacion en la base de datos.
+    grupoDatos debe venir ya resuelto desde el JWT (ver controller y
+    dto): si falta o es invalido, se rechaza la insercion en vez de
+    asumir un grupo por defecto. De creadoPorUsuarioId/
+    creadoPorColaboradorId debe venir presente exactamente uno.
 
     Parametros:
     - dto: Objeto AlimentacionDTO con los datos normalizados.
 
     Retorna:
     - El registro creado consultado nuevamente desde la base de datos.
+
+    Lanza:
+    - Error si dto.grupoDatos no es valido.
+    - Error si dto.creadoPorUsuarioId y dto.creadoPorColaboradorId
+      estan ambos ausentes.
     */
 
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
+    const grupoDatos = obtenerNumeroValido(dto.grupoDatos);
+    const creadoPorUsuarioId = obtenerNumeroValido(dto.creadoPorUsuarioId);
+    const creadoPorColaboradorId = obtenerNumeroValido(dto.creadoPorColaboradorId);
+
+    if (grupoDatos === null) {
+        throw new Error("No se pudo determinar el grupo de datos del usuario autenticado.");
+    }
+
+    if (creadoPorUsuarioId === null && creadoPorColaboradorId === null) {
+        throw new Error("No se pudo determinar quien hizo el registro (usuario o colaborador autenticado).");
+    }
+
+    /*
+    colaborador_id (quien aplico la alimentacion) es distinto de
+    creado_por_colaborador_id (quien autentico la peticion). Si el
+    formulario envio un colaborador especifico (dto.idColaborador),
+    se usa ese; si no, se asume por defecto el colaborador que
+    autentico la peticion (cuando fue registrado desde la APK).
+    */
+    const idColaboradorEnviado = obtenerNumeroValido(dto.idColaborador);
+    const colaboradorId = idColaboradorEnviado !== null ? idColaboradorEnviado : creadoPorColaboradorId;
+
     const fecha = normalizarFechaMysql(dto.fecha);
 
     const [result] = await pool.execute(
@@ -254,6 +293,7 @@ export async function create(dto, idProveedor) {
             grupo_datos,
             finca_id,
             estanque_id,
+            colaborador_id,
             proveedor_id,
             producto_id,
             fecha,
@@ -263,15 +303,18 @@ export async function create(dto, idProveedor) {
             presentacion,
             proveedor,
             tipo_alimento,
-            observaciones
+            observaciones,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
-            idProveedor,
+            colaboradorId,
+            dto.idProveedor,
             dto.idProducto,
             fecha,
             dto.hora,
@@ -280,7 +323,9 @@ export async function create(dto, idProveedor) {
             dto.presentacion,
             dto.proveedor,
             dto.tipoAlimento,
-            dto.observaciones
+            dto.observaciones,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
         ]
     );
 
@@ -310,6 +355,14 @@ export async function update(id, dto, grupoDatos) {
 
     const fecha = normalizarFechaMysql(dto.fecha);
 
+    /*
+    Si el dto no trae idColaborador (no se reenvio desde el
+    formulario), se conserva el valor que ya tenia el registro en
+    vez de sobreescribirlo con null.
+    */
+    const idColaboradorEnviado = obtenerNumeroValido(dto.idColaborador);
+    const colaboradorId = idColaboradorEnviado !== null ? idColaboradorEnviado : actual.idColaborador;
+
     await pool.execute(
         `
         UPDATE alimentaciones
@@ -317,6 +370,7 @@ export async function update(id, dto, grupoDatos) {
             grupo_datos = ?,
             finca_id = ?,
             estanque_id = ?,
+            colaborador_id = ?,
             proveedor_id = ?,
             producto_id = ?,
             fecha = ?,
@@ -336,6 +390,7 @@ export async function update(id, dto, grupoDatos) {
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
+            colaboradorId,
             dto.idProveedor,
             dto.idProducto,
             fecha,
@@ -429,6 +484,9 @@ function mapearFila(row) {
     Descripcion:
     Convierte una fila de MySQL en un objeto con formato camelCase.
     Tambien convierte tipos de datos como numeros, fechas y booleanos.
+    Incluye creadoPorUsuarioId/creadoPorColaboradorId (quien hizo el
+    registro: exactamente uno de los dos, segun si fue un Usuario Web
+    o un Colaborador APK).
 
     Parametros:
     - row: Fila obtenida desde MySQL.
@@ -443,6 +501,7 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         idFinca: row.finca_id,
         idEstanque: row.estanque_id,
+        idColaborador: row.colaborador_id,
         idProveedor: row.proveedor_id,
         idProducto: row.producto_id,
         fecha: formatearFecha(row.fecha),
@@ -453,6 +512,8 @@ function mapearFila(row) {
         proveedor: row.proveedor,
         tipoAlimento: row.tipo_alimento,
         observaciones: row.observaciones,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         activo: Boolean(row.activo),
         fechaCreacion: row.fecha_creacion,
         fechaActualizacion: row.fecha_actualizacion,
@@ -461,33 +522,32 @@ function mapearFila(row) {
     };
 }
 
-function obtenerGrupoDatos(valor) {
+function obtenerNumeroValido(valor) {
     /*
     Descripcion:
-    Obtiene el grupo de datos del registro.
-    Si no viene definido, utiliza el grupo 1 como valor temporal
-    para pruebas mientras se implementa la autenticacion.
+    Valida que un valor sea numerico y mayor que cero.
+    Se usa para grupoDatos, creadoPorUsuarioId y creadoPorColaboradorId
+    antes de insertar: todos deben venir del JWT (nunca del body).
 
     Parametros:
-    - valor: Valor recibido como grupo de datos.
+    - valor: Valor recibido.
 
     Retorna:
-    - Numero del grupo de datos.
+    - Numero valido cuando el valor es numerico y mayor que cero.
+    - null si el valor no existe, no es numerico o es menor o igual a cero.
     */
 
-    if (valor === undefined) {
-        return 1;
+    if (valor === undefined || valor === null) {
+        return null;
     }
 
-    if (valor === null) {
-        return 1;
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero) || numero <= 0) {
+        return null;
     }
 
-    if (String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
+    return numero;
 }
 
 function normalizarFechaMysql(valor) {

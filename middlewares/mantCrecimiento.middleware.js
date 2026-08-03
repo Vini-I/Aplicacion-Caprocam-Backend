@@ -4,13 +4,22 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantCrecimiento.middleware.js
 Autor: Greivin Arguedas
-Fecha: 28/06/2026
+Fecha: 01/08/2026
 Modulo: Crecimiento
 Descripcion:
 Archivo de middleware para el modulo de crecimiento.
 Se encarga de validar los datos recibidos en las solicitudes HTTP.
 //////////////////////////////////////////////////////////
 */
+
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+*/
+
+import { error } from "../common/respuestaJson.js";
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
@@ -30,42 +39,34 @@ export async function validarMantCrecimiento(req, res, next) {
     - 400 si los datos son invalidos
     */
     
-    const { finca, estanque, pesoActual } = req.body;
+    const { 
+        finca, 
+        estanque, 
+        pesoActual,
+    } = req.body;
+
     if (!finca) {
-        return res.status(400).json({
-            success: false,
-            message: "La finca es obligatoria."
-        });
+        return error(res, "La finca es obligatoria.", null, 400);
     }
     if (!estanque) {
-        return res.status(400).json({
-            success: false,
-            message: "El estanque es obligatorio."
-        });
+        return error(res, "El estanque es obligatorio.", null, 400);
     }
     if (pesoActual === undefined || pesoActual === null || pesoActual === "") {
-        return res.status(400).json({
-            success: false,
-            message: "El peso actual es obligatorio."
-        });
+        return error(res, "El peso actual es obligatorio.", null, 400);
     }
     if (isNaN(pesoActual)) {
-        return res.status(400).json({
-            success: false,
-            message: "El peso actual debe ser numérico."
-        });
+        return error(res, "El peso actual debe ser numérico.", null, 400);
     }
     if (Number(pesoActual) <= 0) {
-        return res.status(400).json({
-            success: false,
-            message: "El peso actual debe ser mayor que cero."
-        });
+        return error(res, "El peso actual debe ser mayor que cero.", null, 400);
     }
     if (Number(pesoActual) > 1000) {
-        return res.status(400).json({
-            success: false,
-            message: "El peso actual no puede ser mayor a 1000 gramos."
-        });
+        return error(
+            res, 
+            "El peso actual no puede ser mayor a 1000 gramos.", 
+            null, 
+            400
+        );
     }
     next();
 }
