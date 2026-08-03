@@ -40,7 +40,6 @@ export class RaleoDTO {
         - grupoDatos: Codigo del grupo de datos al que pertenece el raleo        
         - idFinca: Identificador de la finca                                     (requerido)
         - idEstanque: Identificador del estanque                                 (requerido)
-        - idColaborador: Identificador del colaborador                           (opcional)
         - fecha: La fecha en la cual se realiza el raleo                         (requerido)
         - porcentaje: Porcentaje del raleo                                       (requerido)
         - pesoEstimado: El peso estimado                                         (requerido)
@@ -48,6 +47,8 @@ export class RaleoDTO {
         - objetivo: El objetivo del raleo                                        (requerido)
         - metodo: Mtodo de extraccion del raleo                                  (requerido)
         - observaciones: Apuntes adicionales del raleo                           (opcional)
+        - creadoPorUsuarioId: Identificador del usuario que creó el registro.
+        - creadoPorColaboradorId: Identificador del colaborador que realizó el raleo.        
         - activo: Estado logico del registro.
         - fechaCreacion: Fecha de creacion del registro.
         - fechaActualizacion: Fecha de ultima actualizacion.
@@ -62,7 +63,6 @@ export class RaleoDTO {
         grupoDatos,
         idFinca,
         idEstanque,
-        idColaborador,
         fecha,
         porcentaje,
         pesoEstimado,
@@ -70,6 +70,8 @@ export class RaleoDTO {
         objetivo,
         metodo,
         observaciones,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,        
         activo,
         fechaCreacion,
         fechaActualizacion, 
@@ -82,14 +84,6 @@ export class RaleoDTO {
         this.grupoDatos      = grupoDatos;
         this.idFinca         = Number(idFinca);
         this.idEstanque      = Number(idEstanque);
-        /*
-        idColaborador es opcional (columna colaborador_id es NULL en
-        la base de datos, igual que en crecimientos): representa el
-        colaborador que realizo fisicamente el raleo, elegido en un
-        Select por quien llena el formulario. Si no viene, queda en
-        null en vez de forzar Number(undefined) = NaN.
-        */
-        this.idColaborador   = normalizarNumeroOpcional(idColaborador);
         this.fecha           = normalizarTexto(fecha);
         this.porcentaje      = Number(porcentaje);
         this.pesoEstimado    = Number(pesoEstimado);
@@ -97,6 +91,8 @@ export class RaleoDTO {
         this.objetivo        = normalizarTexto(objetivo);
         this.metodo          = normalizarTexto(metodo);
         this.observaciones   = normalizarTextoOpcional(observaciones);
+        this.creadoPorUsuarioId = normalizarNumeroOpcional(creadoPorUsuarioId);
+        this.creadoPorColaboradorId = normalizarNumeroOpcional(creadoPorColaboradorId);        
         /*
         Si activo no viene definido, el registro se considera activo
         por defecto.
