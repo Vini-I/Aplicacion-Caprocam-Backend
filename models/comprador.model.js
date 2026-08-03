@@ -8,7 +8,7 @@ Fecha: 26/07/2026
 Modulo: Compradores
 Descripcion:
 Capa de datos del modulo de compradores.
-Conectado a MySQL via pool. Usa borrado logico.
+Conectado a MySQL via pool. Usa borrado logico y auditoria dual.
 //////////////////////////////////////////////////////////
 */
 
@@ -26,32 +26,32 @@ import pool from '../config/database.js';
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
-
-Todas las funciones principales dependen de mapearComprador().
 */
 
-/**
- * Descripcion:
- * Convierte una fila MySQL (snake_case) a camelCase para el frontend.
- *
- * Parametros:
- * - fila: Objeto crudo recuperado de MySQL.
- *
- * Retorna:
- * - Objeto comprador mapeado a camelCase o null.
- */
 function mapearComprador(fila) {
+    /*
+    Descripcion:
+    Convierte una fila MySQL (snake_case) a camelCase para el frontend.
+
+    Parametros:
+    - fila: Objeto crudo recuperado de MySQL.
+
+    Retorna:
+    - Objeto comprador mapeado a camelCase o null.
+    */
     if (!fila) return null;
     return {
-        id:         fila.id,
-        grupoDatos: fila.grupo_datos,
-        nombre:     fila.nombre,
-        contacto:   fila.contacto,
-        telefono:   fila.telefono,
-        correo:     fila.correo,
-        direccion:  fila.direccion,
-        notas:      fila.notas,
-        estado:     fila.estado,
+        id:                     fila.id,
+        grupoDatos:             fila.grupo_datos,
+        nombre:                 fila.nombre,
+        cedula:                 fila.cedula,
+        telefono:               fila.telefono,
+        correo:                 fila.correo,
+        direccion:              fila.direccion,
+        notas:                  fila.notas,
+        estado:                 fila.estado,
+        creadoPorUsuarioId:     fila.creado_por_usuario_id || null,
+        creadoPorColaboradorId: fila.creado_por_colaborador_id || null,
     };
 }
 
@@ -61,19 +61,20 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-/**
- * Descripcion:
- * Obtiene todos los compradores activos del grupo de datos.
- *
- * Parametros:
- * - grupoDatos: Grupo de datos del usuario en sesion.
- *
- * Retorna:
- * - Lista de compradores mapeados a camelCase.
- */
 export async function findAll(grupoDatos) {
+    /*
+    Descripcion:
+    Obtiene todos los compradores activos del grupo de datos.
+
+    Parametros:
+    - grupoDatos: Grupo de datos de la sesion actual.
+
+    Retorna:
+    - Lista de compradores mapeados a camelCase.
+    */
     const [filas] = await pool.query(
-        `SELECT id, grupo_datos, nombre, contacto, telefono, correo, direccion, notas, estado
+        `SELECT id, grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado,
+                creado_por_usuario_id, creado_por_colaborador_id
          FROM compradores
          WHERE grupo_datos = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
         [grupoDatos]
@@ -81,20 +82,21 @@ export async function findAll(grupoDatos) {
     return filas.map(mapearComprador);
 }
 
-/**
- * Descripcion:
- * Busca un comprador activo por ID dentro del grupo.
- *
- * Parametros:
- * - id: ID unico del comprador.
- * - grupoDatos: Grupo de datos del usuario en sesion.
- *
- * Retorna:
- * - El comprador encontrado o null.
- */
 export async function findById(id, grupoDatos) {
+    /*
+    Descripcion:
+    Busca un comprador activo por ID dentro del grupo.
+
+    Parametros:
+    - id: ID unico del comprador.
+    - grupoDatos: Grupo de datos de la sesion actual.
+
+    Retorna:
+    - El comprador encontrado o null.
+    */
     const [filas] = await pool.query(
-        `SELECT id, grupo_datos, nombre, contacto, telefono, correo, direccion, notas, estado
+        `SELECT id, grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado,
+                creado_por_usuario_id, creado_por_colaborador_id
          FROM compradores
          WHERE id = ? AND grupo_datos = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
         [id, grupoDatos]
@@ -102,54 +104,58 @@ export async function findById(id, grupoDatos) {
     return filas.length > 0 ? mapearComprador(filas[0]) : null;
 }
 
-/**
- * Descripcion:
- * Inserta un nuevo comprador en la base de datos.
- *
- * Parametros:
- * - dto: Objeto CompradorDTO con la informacion a crear.
- * - grupoDatos: Grupo de datos del usuario en sesion.
- *
- * Retorna:
- * - El comprador recien creado.
- */
 export async function create(dto, grupoDatos) {
+    /*
+    Descripcion:
+    Inserta un nuevo comprador registrando auditoria.
+
+    Parametros:
+    - dto: Objeto CompradorDTO con la informacion a crear.
+    - grupoDatos: Grupo de datos de la sesion actual.
+
+    Retorna:
+    - El comprador recien creado.
+    */
     const [result] = await pool.query(
-        `INSERT INTO compradores (grupo_datos, nombre, contacto, telefono, correo, direccion, notas, estado)
-         VALUES (?, ?, ?, ?, ?, ?, ?, "ACTIVO")`,
+        `INSERT INTO compradores 
+            (grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado,
+             creado_por_usuario_id, creado_por_colaborador_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, "ACTIVO", ?, ?)`,
         [
             grupoDatos,
             dto.nombre,
-            dto.contacto || null,
+            dto.cedula || null,
             dto.telefono || null,
             dto.correo || null,
             dto.direccion || null,
-            dto.notas || null
+            dto.notas || null,
+            dto.creadoPorUsuarioId || null,
+            dto.creadoPorColaboradorId || null
         ]
     );
     return findById(result.insertId, grupoDatos);
 }
 
-/**
- * Descripcion:
- * Actualiza un comprador existente en la base de datos.
- *
- * Parametros:
- * - id: ID del comprador a modificar.
- * - dto: Objeto CompradorDTO con los datos actualizados.
- * - grupoDatos: Grupo de datos del usuario en sesion.
- *
- * Retorna:
- * - El comprador actualizado o null si no existe.
- */
 export async function update(id, dto, grupoDatos) {
+    /*
+    Descripcion:
+    Actualiza un comprador existente en la base de datos.
+
+    Parametros:
+    - id: ID del comprador a modificar.
+    - dto: Objeto CompradorDTO con los datos actualizados.
+    - grupoDatos: Grupo de datos de la sesion actual.
+
+    Retorna:
+    - El comprador actualizado o null si no existe.
+    */
     const [result] = await pool.query(
         `UPDATE compradores
-         SET nombre = ?, contacto = ?, telefono = ?, correo = ?, direccion = ?, notas = ?
+         SET nombre = ?, cedula = ?, telefono = ?, correo = ?, direccion = ?, notas = ?
          WHERE id = ? AND grupo_datos = ? AND estado = "ACTIVO" AND deleted_at IS NULL`,
         [
             dto.nombre,
-            dto.contacto || null,
+            dto.cedula || null,
             dto.telefono || null,
             dto.correo || null,
             dto.direccion || null,
@@ -162,18 +168,18 @@ export async function update(id, dto, grupoDatos) {
     return findById(id, grupoDatos);
 }
 
-/**
- * Descripcion:
- * Ejecuta un borrado logico del comprador desactivando su estado.
- *
- * Parametros:
- * - id: ID del comprador a desactivar.
- * - grupoDatos: Grupo de datos del usuario en sesion.
- *
- * Retorna:
- * - Objeto comprador previo al borrado o null si no existia.
- */
 export async function remove(id, grupoDatos) {
+    /*
+    Descripcion:
+    Ejecuta un borrado logico del comprador desactivando su estado.
+
+    Parametros:
+    - id: ID del comprador a desactivar.
+    - grupoDatos: Grupo de datos de la sesion actual.
+
+    Retorna:
+    - Objeto comprador previo al borrado o null si no existia.
+    */
     const comprador = await findById(id, grupoDatos);
     if (!comprador) return null;
 

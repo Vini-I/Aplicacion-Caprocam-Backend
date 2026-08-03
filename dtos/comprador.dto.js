@@ -14,7 +14,8 @@ Archivo de transferencia de datos para compradores.
 export class CompradorDTO {
     /**
      * Descripcion:
-     * Construye un objeto CompradorDTO mapeando campos del frontend.
+     * Construye un objeto CompradorDTO mapeando campos del frontend
+     * e incorporando auditoria dual.
      *
      * Parametros:
      * - data: Objeto con los datos recibidos del request.
@@ -35,15 +36,19 @@ export class CompradorDTO {
         direccion,
         notas,
         estado,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
     } = {}) {
-        this.id         = id;
-        this.grupoDatos = grupoDatos;
-        this.nombre     = nombre;
-        this.contacto   = cedula ?? contacto ?? identificacion ?? null;
-        this.telefono   = telefono ?? null;
-        this.correo     = email ?? correo ?? null;
-        this.direccion  = direccion ?? null;
-        this.notas      = notas ?? null;
-        this.estado     = estado ?? 'ACTIVO';
+        this.id                     = id;
+        this.grupoDatos             = grupoDatos;
+        this.nombre                 = nombre;
+        this.cedula                 = cedula ?? contacto ?? identificacion ?? null;
+        this.telefono               = telefono ?? null;
+        this.correo                 = email ?? correo ?? null;
+        this.direccion              = direccion ?? null;
+        this.notas                  = notas ?? null;
+        this.estado                 = estado ?? 'ACTIVO';
+        this.creadoPorUsuarioId     = creadoPorUsuarioId ?? null;
+        this.creadoPorColaboradorId = creadoPorColaboradorId ?? null;
     }
 }

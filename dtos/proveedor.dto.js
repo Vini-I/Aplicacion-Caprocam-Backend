@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: proveedor.dto.js
 Autor: Oscar Mario Alvarez
-Fecha: 29/06/2026
+Fecha: 01/08/2026
 Modulo: proveedores
 Descripcion:
 Modulo de transferencia de datos dto para proveedor.
@@ -34,7 +34,11 @@ DTO
 */
 
 export class proveedorDto {
-    constructor({ nombre_empresa, nombre, tipo_producto, tipoProducto, telefono, correo_electronico, correo, direccion, notas}) {
+    constructor({
+        nombre_empresa, nombre, tipo_producto, tipoProducto, telefono,
+        correo_electronico, correo, direccion, notas,
+        creadoPorUsuarioId, creadoPorColaboradorId,
+    }) {
         /*
         Descripcion:
         Construye un objeto proveedorDto con los datos recibidos.
@@ -49,6 +53,9 @@ export class proveedorDto {
         - correo_electronico / correo:          Correo de contacto (opcional).
         - direccion:                            Direccion (opcional).
         - notas:                                Notas adicionales (opcional).
+        - creadoPorUsuarioId:                   FK a usuarios - web (resuelto por
+          obtenerContextoPeticion, nunca por el body del cliente).
+        - creadoPorColaboradorId:               FK a colaboradores - movil (idem).
         */
 
         const nombreDb = nombre_empresa ?? nombre;
@@ -61,6 +68,8 @@ export class proveedorDto {
         this.correo_electronico = correo_electronico ? String(correoDb).trim() : null;
         this.direccion = direccion ? String(direccion).trim() : null;
         this.notas = notas ? String(notas).trim() : null; 
+        this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
+        this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
         
     }
 }
@@ -92,6 +101,8 @@ export function proveedorDTO(proveedor) {
         correoElectronico:  proveedor.correo_electronico,
         direccion:          proveedor.direccion,
         notas:              proveedor.notas,
+        creadoPorUsuarioId:     proveedor.creado_por_usuario_id,
+        creadoPorColaboradorId: proveedor.creado_por_colaborador_id,
         activo:             Boolean(proveedor.activo),
         fechaCreacion:      proveedor.fecha_creacion,
         fechaActualizacion: proveedor.fecha_actualizacion,

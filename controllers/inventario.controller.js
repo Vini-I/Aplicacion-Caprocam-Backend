@@ -3,12 +3,11 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: inventario.controller.js
-Autor: Brayan / Joan
-Fecha: 30/06/2026 adaptado a MySQL: 06/07/2026
+Autor: Oscar Mario
+Fecha: 1/08/2026
 Modulo: Inventario
 Descripcion:
-Controlador CRUD (sin cantidad) para inventario. La cantidad
-se maneja desde movimientoInventario.controller.js.  
+Controlador CRUD  para inventario.   
 //////////////////////////////////////////////////////////
 */
 
@@ -31,6 +30,7 @@ import * as InventarioModel from "../models/inventario.model.js";
 
 // Common
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -128,7 +128,7 @@ export async function getInventarios(req, res) {
   */
 
   try {
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const data = await InventarioModel.findAll(grupoDatos);
     return exito(res, "Inventario obtenido correctamente.", data);
   } catch (err) {
@@ -153,7 +153,7 @@ export async function getInventarioById(req, res) {
   if (errId) return errId;
 
   try {
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const item = await InventarioModel.findById(req.params.id, grupoDatos);
     if (!item)
       return error(res, "Registro de inventario no encontrado.", null, 404);
@@ -180,7 +180,8 @@ export async function createInventario(req, res) {
   if (err) return err;
 
   try {
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+      obtenerContextoPeticion(req);
 
     const productoExiste = await InventarioModel.verificarProductoExiste(
       req.body.producto_id,
@@ -213,7 +214,11 @@ export async function createInventario(req, res) {
       }
     }
 
-    const dto = new InventarioCreateDTO(req.body);
+    const dto = new InventarioCreateDTO({
+      ...req.body,
+      creadoPorUsuarioId,
+      creadoPorColaboradorId,
+    });
     const nuevo = await InventarioModel.create(dto, grupoDatos);
 
     return exito(
@@ -257,7 +262,7 @@ export async function updateInventario(req, res) {
   }
 
   try {
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     
     if (!isEmpty(req.body.proveedor_id)) {
       const idNumero = Number(req.body.proveedor_id);
@@ -321,7 +326,7 @@ export async function deleteInventario(req, res) {
   if (errId) return errId;
 
   try {
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const eliminado = await InventarioModel.remove(req.params.id, grupoDatos);
     if (!eliminado)
       return error(res, "Registro de inventario no encontrado.", null, 404);

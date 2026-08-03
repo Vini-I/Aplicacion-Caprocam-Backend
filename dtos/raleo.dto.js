@@ -37,10 +37,11 @@ export class RaleoDTO {
         Parametros:
         - id: Identificador unico                                                (requerido)
         - uuid: Identificador global usado para futura sincronizacion offline
-        - grupoDatos: Codigo del grupo de datos al que pertenece el raleo        
+        - grupoDatos: Codigo del grupo de datos al que pertenece el raleo   
+        - creadoPorUsuarioId: Identificador del usuario                           
+        - creadoPorColaboradorId: Identificador del colaborador                    
         - idFinca: Identificador de la finca                                     (requerido)
-        - idEstanque: Identificador del estanque                                 (requerido)
-        - idColaborador: Identificador del colaborador                           (requerido)
+        - idEstanque: Identificador del estanque                                 (requerido)  
         - fecha: La fecha en la cual se realiza el raleo                         (requerido)
         - porcentaje: Porcentaje del raleo                                       (requerido)
         - pesoEstimado: El peso estimado                                         (requerido)
@@ -60,9 +61,10 @@ export class RaleoDTO {
         id,
         uuid,
         grupoDatos,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
         idFinca,
         idEstanque,
-        idColaborador,
         fecha,
         porcentaje,
         pesoEstimado,
@@ -77,19 +79,20 @@ export class RaleoDTO {
         version
 
     }) {
-        this.id              = id;
-        this.uuid            = uuid;
-        this.grupoDatos      = grupoDatos;
-        this.idFinca         = Number(idFinca);
-        this.idEstanque      = Number(idEstanque);
-        this.idColaborador   = Number(idColaborador);
-        this.fecha           = normalizarTexto(fecha);
-        this.porcentaje      = Number(porcentaje);
-        this.pesoEstimado    = Number(pesoEstimado);
-        this.biomasaEstimado = Number(biomasaEstimado);
-        this.objetivo        = normalizarTexto(objetivo);
-        this.metodo          = normalizarTexto(metodo);
-        this.observaciones   = normalizarTextoOpcional(observaciones);
+        this.id                      = id;
+        this.uuid                    = uuid;
+        this.grupoDatos              = grupoDatos;
+        this.creadoPorUsuarioId      = creadoPorUsuarioId ?? null;
+        this.creadoPorColaboradorId  = creadoPorColaboradorId ?? null;
+        this.idFinca                 = Number(idFinca);
+        this.idEstanque              = Number(idEstanque);
+        this.fecha                   = normalizarTexto(fecha);
+        this.porcentaje              = Number(porcentaje);
+        this.pesoEstimado            = Number(pesoEstimado);
+        this.biomasaEstimado         = Number(biomasaEstimado);
+        this.objetivo                = normalizarTexto(objetivo);
+        this.metodo                  = normalizarTexto(metodo);
+        this.observaciones           = normalizarTextoOpcional(observaciones);
         /*
         Si activo no viene definido, el registro se considera activo
         por defecto.

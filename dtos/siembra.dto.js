@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: siembra.dto.js
-Autor: Joan
-Fecha: 04/07/2026
+Autor:  Oscar Mario
+Fecha: 01/08/2026
 Modulo: Siembra
 Descripcion:
 DTOs para transferir y normalizar datos del modulo de siembra.
@@ -44,6 +44,8 @@ export class SiembraDTO {
         pl_siembra,
         duracion_ciclo,
         estado,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
     }) {
         /*
         Descripcion:
@@ -51,6 +53,9 @@ export class SiembraDTO {
 
         Parametros:
         - Objeto literal destructurado con las propiedades originales a mapear (incluyendo snake_case desde BD o camelCase desde JSON).
+        - creadoPorUsuarioId:     FK a usuarios - web (resuelto por
+          obtenerContextoPeticion, nunca por el body del cliente).
+        - creadoPorColaboradorId: FK a colaboradores - movil (idem).
         */
         const loteIdDb    = lote_larva_id ?? id_lote_larva;
         const precriaIdDb = precria_id ?? id_precria;
@@ -70,5 +75,7 @@ export class SiembraDTO {
         this.duracion_ciclo = duracion_ciclo !== undefined && duracion_ciclo !== null
             ? Number(duracion_ciclo) : null;
         this.estado = estado ? String(estado).trim() : EstadoSiembra.ACTIVA;
+        this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
+        this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
     }
 }

@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loteLarva.controller.js
-Autor: Joan
-Fecha: 04/07/2026
+Autor: oscar mario
+Fecha: 1/08/2026
 Modulo: loteLarva
 Descripcion:
 Maneja las peticiones HTTP y la logica de loteLarva.
@@ -21,9 +21,11 @@ import {
     isEmpty,
     isFechaValida,
     isEnteroPositivo,
+    isCodigoLarvaValido,
 } from "../services/loteLarva.service.js";
 import * as loteLarvaModel from "../models/loteLarvas.model.js";
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
  
 /*
 //////////////////////////////////////////////////////////
@@ -37,6 +39,15 @@ function validarCuerpo(body, res) {
  
     if (isEmpty(body.codigo_lote)) {
         errores.push("El campo codigo_lote es requerido.");
+    } else if (!isCodigoLarvaValido(body.codigo_lote)) {
+        errores.push(
+            "El campo codigo_lote solo puede contener letras y numeros, con un maximo de 14 caracteres."
+        );
+    }
+    if (!isEmpty(body.certificado_larva) && !isCodigoLarvaValido(body.certificado_larva)) {
+        errores.push(
+            "El campo certificado_larva solo puede contener letras y numeros, con un maximo de 14 caracteres."
+        );
     }
     if (!isEnteroPositivo(body.cantidad_inicial)) {
         errores.push("El campo cantidad_inicial debe ser un entero positivo.");
@@ -78,7 +89,7 @@ export async function listarLotes(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
 try {
-        const grupoDatos = req.user.grupoDatos
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const lotes = await loteLarvaModel.findAll(grupoDatos);
         return exito(res, "Lotes de larva obtenidos correctamente.", lotes);
     } catch (err) {
@@ -98,7 +109,7 @@ export async function obtenerLote(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
 try {
-        const grupoDatos = req.user.grupoDatos
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const { id } = req.params;
         const lote = await loteLarvaModel.findById(id, grupoDatos);
         if (!lote) return error(res, "Lote de larva no encontrado.", null, 404);
@@ -123,7 +134,8 @@ const err = validarCuerpo(req.body, res);
     if (err) return err;
  
     try {
-        const grupoDatos = req.user.grupoDatos
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
         const existente = await loteLarvaModel.findByCodigo(req.body.codigo_lote, grupoDatos);
         if (existente) {
             return error(res, "Ya existe un lote con ese codigo.", null, 409);
@@ -137,7 +149,11 @@ const err = validarCuerpo(req.body, res);
             }
         }
  
-        const dto = new LoteLarvaDTO(req.body);
+        const dto = new LoteLarvaDTO({
+            ...req.body,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        });
         const nuevo = await loteLarvaModel.createLote(dto, grupoDatos);
         return exito(res, "Lote de larva creado correctamente.", nuevo, 201);
     } catch (err) {
@@ -164,7 +180,7 @@ const { id } = req.params;
     if (err) return err;
  
     try {
-        const grupoDatos = req.user.grupoDatos
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const actual = await loteLarvaModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Lote de larva no encontrado.", null, 404);
  
@@ -207,7 +223,7 @@ export async function eliminarLote(req, res) {
     */
 const { id } = req.params;
     try {
-        const grupoDatos = req.user.grupoDatos
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const eliminado = await loteLarvaModel.remove(id, grupoDatos);
         if (!eliminado) return error(res, "Lote de larva no encontrado.", null, 404);
         return exito(res, "Lote de larva eliminado correctamente.", eliminado);

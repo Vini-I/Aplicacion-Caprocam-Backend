@@ -36,6 +36,7 @@ import * as RaleoModel from "../models/raleo.model.js";
 
 // Common
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -73,10 +74,6 @@ function validarCuerpo(body, res) {
         errores.push("El campo idEstanque es requerido.");
     }
 
-    if (isEmpty(body.idColaborador)) {
-        errores.push("El campo idColaborador es requerido.");
-    }
-
     if (isEmpty(body.fecha)) {
         errores.push("El campo fecha es requerido.");
     }
@@ -107,10 +104,6 @@ function validarCuerpo(body, res) {
 
     if (!isNumeroMayorCero(body.idEstanque)) {
         errores.push("El campo idEstanque debe ser numerico y mayor que cero.");
-    }
-
-    if (!isNumeroMayorCero(body.idColaborador)) {
-        errores.push("El campo idColaborador debe ser numerico y mayor que cero.");
     }
 
     if (!isNumeroMayorCero(body.porcentaje)) {
@@ -179,11 +172,8 @@ export async function getRaleo(req, res) {
     Retorna:
     - 200 con lista de raleos
     */
-   const grupoDatos = req.user.grupoDatos;
    try {
-    const filtros = {
-        idFinca: req.query.idFinca
-    };
+    const { grupoDatos } = obtenerContextoPeticion(req);
 
     const data = await RaleoModel.findAll(grupoDatos);
 
@@ -206,8 +196,8 @@ export async function getRaleoById(req, res) {
     - 200 con el raleo encontrado
     - 404 si no existe
     */
-   const grupoDatos = req.user.grupoDatos;
    try {
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const errId = validarIdParametro(req.params.id, res);
 
     if (errId) {
@@ -239,15 +229,25 @@ export async function createRaleo(req, res) {
     - 201 con el raleo creado
     - 400/422 si hay errores de validacion
     */
-   const grupoDatos = req.user.grupoDatos;
-   const idColaborador = req.user.idColaborador;
    try {
+    const {
+        grupoDatos,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
+    } = obtenerContextoPeticion(req);
+
     const err = validarCuerpo(req.body, res);
 
     if (err) {
         return err;
     }
-    const dto = new RaleoDTO(req.body);
+
+    const dto = new RaleoDTO({
+        ...req.body,
+        grupoDatos,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
+    });
 
     const existente = await RaleoModel.findByEstanqueYFecha(
         grupoDatos,
@@ -264,11 +264,11 @@ export async function createRaleo(req, res) {
         );
     }
     
-    const nuevo = await RaleoModel.create(dto, grupoDatos, idColaborador);
+    const nuevo = await RaleoModel.create(dto, grupoDatos);
 
     return exito(res, "Raleo creado correctamente.", nuevo, 201);
     } catch (err) {
-        console.error("=== ERROR CREATE RALEO ===");
+    console.error("=== ERROR CREATE RALEO ===");
     console.error(err);
     console.error("==========================");
 
@@ -291,8 +291,8 @@ export async function deleteRaleo(req, res) {
     - 200 con el raleo eliminado
     - 404 si no existe
     */
-   const grupoDatos = req.user.grupoDatos;
    try {
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const errId = validarIdParametro(req.params.id, res);
 
     if (errId) {

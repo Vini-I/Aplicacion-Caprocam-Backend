@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: fisicoQuimica.middleware.js
 Autor: Samuel Cerdas
-Fecha: 27/07/2026
+Fecha: 31/07/2026
 Modulo: Fisico Quimica
 Descripcion:
 Middleware de validacion de body para lecturas
@@ -37,13 +37,21 @@ import { error } from '../common/respuestaJson.js';
 CONSTANTES
 //////////////////////////////////////////////////////////
 
-Campos minimos requeridos en el body para una lectura.
+Campos generales requeridos en el body para una lectura.
 */
 
 const camposRequeridos = [
     'fincaId',
     'estanqueId',
-    'fecha',
+    'fecha'
+];
+
+/*
+Campos de mediciones fisico quimicas.
+Al menos uno debe contener una medicion.
+*/
+
+const camposMedicion = [
     'ph',
     'salinidad',
     'temperatura',
@@ -58,6 +66,25 @@ FUNCIONES SECUNDARIAS
 Contiene las validaciones internas utilizadas por el
 middleware del modulo.
 */
+
+function normalizarMediciones(req) {
+    /*
+    Descripcion:
+    Convierte en arreglos vacios los campos de medicion
+    que no fueron enviados en el body.
+
+    Parametros:
+    - req: Objeto request de Express.
+
+    Retorna:
+    - No retorna un valor.
+    */
+    for (const campo of camposMedicion) {
+        if (req.body[campo] === undefined) {
+            req.body[campo] = [];
+        }
+    }
+}
 
 function validarCampos(req, res) {
     /*
@@ -84,15 +111,45 @@ function validarCampos(req, res) {
     } = req.body;
 
     if (!isIdValido(fincaId)) {
-        return error(res, 'El fincaId no es valido.', null, 400);
+        return error(
+            res,
+            'El fincaId no es valido.',
+            null,
+            400
+        );
     }
 
     if (!isIdValido(estanqueId)) {
-        return error(res, 'El estanqueId no es valido.', null, 400);
+        return error(
+            res,
+            'El estanqueId no es valido.',
+            null,
+            400
+        );
     }
 
     if (!isFechaValida(fecha)) {
-        return error(res, 'La fecha no es valida.', null, 400);
+        return error(
+            res,
+            'La fecha no es valida.',
+            null,
+            400
+        );
+    }
+
+    const totalMediciones =
+        ph.length +
+        salinidad.length +
+        temperatura.length +
+        oxigenoDisuelto.length;
+
+    if (totalMediciones === 0) {
+        return error(
+            res,
+            'Debe incluir al menos una medicion.',
+            null,
+            400
+        );
     }
 
     if (!isPhValido(ph)) {
@@ -125,7 +182,8 @@ function validarCampos(req, res) {
     if (!isOxigeno(oxigenoDisuelto)) {
         return error(
             res,
-            'El oxigeno disuelto debe contener mediciones validas.',
+            'El oxigeno disuelto debe contener ' +
+                'mediciones validas.',
             null,
             400
         );
@@ -147,7 +205,7 @@ export function validarFisicoQuimica(req, res, next) {
     /*
     Descripcion:
     Verifica que el body no este vacio, contenga los campos
-    requeridos y que sus valores sean validos.
+    generales requeridos y al menos una medicion valida.
 
     Parametros:
     - req: Objeto request de Express.
@@ -180,7 +238,12 @@ export function validarFisicoQuimica(req, res, next) {
         );
     }
 
-    const resultadoValidacion = validarCampos(req, res);
+    normalizarMediciones(req);
+
+    const resultadoValidacion = validarCampos(
+        req,
+        res
+    );
 
     if (resultadoValidacion) {
         return resultadoValidacion;

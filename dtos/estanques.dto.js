@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.dto.js
 Autor: Gerald Alfaro
-Fecha: 18/07/2026
+Fecha: 31/07/2026
 Modulo: Estanques
 Descripcion:
 Archivo de transferencia de datos para estanques.
@@ -51,16 +51,10 @@ export class EstanqueDTO {
         ancho,
         profundidad,
         fuenteAgua,
-        especie,
-        fechaSiembra,
-        fechaInicioEngorde,
         fechaMantenimiento,
-        densidadSiembra,
         precria,
-        metodoAlimentacion,
-        proveedorAlimento,
-        numeroAireadores,
-        tieneAlimentadorAutomatico,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
         activo,
         fechaCreacion,
         fechaActualizacion,
@@ -127,67 +121,23 @@ export class EstanqueDTO {
             fuenteAgua
         );
 
-        this.especie = normalizarTextoOpcional(
-            especie
-        );
-
-        this.fechaSiembra = normalizarTextoOpcional(
-            fechaSiembra
-        );
-
-        this.fechaInicioEngorde =
-            normalizarTextoOpcional(
-                fechaInicioEngorde
-            );
-
         this.fechaMantenimiento =
             normalizarTextoOpcional(
                 fechaMantenimiento
             );
 
-        this.densidadSiembra =
-            normalizarNumeroOpcional(
-                densidadSiembra
-            );
-
-        let valorPrecria = precria;
-
-        if (
-            valorPrecria === undefined ||
-            valorPrecria === null
-        ) {
-            valorPrecria = precria;
-        }
-
         this.precria = normalizarBooleano(
-            valorPrecria
+            precria
         );
 
-        /*
-        Alias mantenido para compatibilidad con codigo
-        anterior del frontend.
-        */
-
-        this.precria = this.precria;
-
-        this.metodoAlimentacion =
-            normalizarTextoOpcional(
-                metodoAlimentacion
-            );
-
-        this.proveedorAlimento =
-            normalizarTextoOpcional(
-                proveedorAlimento
-            );
-
-        this.numeroAireadores =
+        this.creadoPorUsuarioId =
             normalizarNumeroOpcional(
-                numeroAireadores
+                creadoPorUsuarioId
             );
 
-        this.tieneAlimentadorAutomatico =
-            normalizarBooleano(
-                tieneAlimentadorAutomatico
+        this.creadoPorColaboradorId =
+            normalizarNumeroOpcional(
+                creadoPorColaboradorId
             );
 
         if (
