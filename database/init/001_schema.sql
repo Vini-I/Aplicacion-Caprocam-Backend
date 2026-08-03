@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS fincas (
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
     propietario_usuario_id INT NULL,
-    codigo_cbo VARCHAR(40) NULL,
+    codigo_cbo VARCHAR(40) NOT NULL UNIQUE,
     nombre_finca VARCHAR(80) NOT NULL,
     provincia VARCHAR(40) NULL,
     canton VARCHAR(60) NULL,
