@@ -156,8 +156,8 @@ export async function createLote(dto, grupoDatos) {
         grupoDatos,
         dto.codigo_lote,
         dto.proveedor_id  || null,
-        dto.laboratorio || null,
-        dto.lugar_procedencia || null,
+        dto.laboratorio_id || null,
+        dto.procedencia_id || null,
         dto.certificado_larva,
         dto.pl_inicial,
         dto.cantidad_inicial,
@@ -201,8 +201,8 @@ export async function update(id, dto, grupoDatos) {
     const [result] = await pool.execute(sql, [
         dto.codigo_lote,
         dto.proveedor_id  || null,
-        dto.laboratorio || null,
-        dto.lugar_procedencia || null,
+        dto.laboratorio_id || null,
+        dto.procedencia_id || null,
         dto.certificado_larva,
         dto.pl_inicial,
         dto.cantidad_inicial,
@@ -288,5 +288,51 @@ export async function verificarProveedorExiste(proveedorId, grupoDatos) {
         AND    activo = TRUE
         AND    deleted_at IS NULL
     `, [Number(proveedorId), grupoDatos]);
+    return rows.length > 0;
+}
+
+export async function verificarLaboratorioExiste(laboratorioId, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica de forma rapida si un laboratorio (catalogo) existe y esta activo.
+    Parametros:
+    - laboratorioId: Identificador del laboratorio a verificar.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - Booleano indicando si el laboratorio existe (true) o no (false).
+    */
+    if (!laboratorioId) return false;
+    const [rows] = await pool.execute(`
+        SELECT id
+        FROM   laboratorios
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(laboratorioId), grupoDatos]);
+    return rows.length > 0;
+}
+
+export async function verificarProcedenciaExiste(procedenciaId, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica de forma rapida si una procedencia (catalogo) existe y esta activa.
+    Parametros:
+    - procedenciaId: Identificador de la procedencia a verificar.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - Booleano indicando si la procedencia existe (true) o no (false).
+    */
+    if (!procedenciaId) return false;
+    const [rows] = await pool.execute(`
+        SELECT id
+        FROM   procedencias
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(procedenciaId), grupoDatos]);
     return rows.length > 0;
 }

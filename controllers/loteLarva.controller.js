@@ -36,6 +36,8 @@ FUNCIONES SECUNDARIAS
 function validarCuerpo(body, res) {
     const errores = [];
     const proveedorIdValor = body.proveedor_id ?? body.proveedorId;
+    const laboratorioIdValor  = body.laboratorio_id ?? body.laboratorioId;
+    const procedenciaIdValor  = body.procedencia_id ?? body.procedenciaId;
  
     if (isEmpty(body.codigo_lote)) {
         errores.push("El campo codigo_lote es requerido.");
@@ -64,7 +66,13 @@ function validarCuerpo(body, res) {
     if (!isEmpty(proveedorIdValor) && !isEnteroPositivo(proveedorIdValor)) {
         errores.push("El proveedor_id debe ser un entero positivo.");
     }
- 
+    if (!isEmpty(laboratorioIdValor) && !isEnteroPositivo(laboratorioIdValor)) {
+        errores.push("El laboratorio_id debe ser un entero positivo.");
+    }
+    if (!isEmpty(procedenciaIdValor) && !isEnteroPositivo(procedenciaIdValor)) {
+        errores.push("El procedencia_id debe ser un entero positivo.");
+    }
+
     if (errores.length > 0) {
         return error(res, "Datos invalidos para el lote.", errores, 422);
     }
@@ -148,12 +156,29 @@ const err = validarCuerpo(req.body, res);
                 return error(res, "El proveedor indicado no existe.", null, 400);
             }
         }
+
+        const laboratorioId = req.body.laboratorio_id ?? req.body.laboratorioId;
+        if (!isEmpty(laboratorioId)) {
+            const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioId, grupoDatos);
+            if (!existe) {
+                return error(res, "El laboratorio indicado no existe.", null, 400);
+            }
+        }
+
+        const procedenciaId = req.body.procedencia_id ?? req.body.procedenciaId;
+        if (!isEmpty(procedenciaId)) {
+            const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaId, grupoDatos);
+            if (!existe) {
+                return error(res, "La procedencia indicada no existe.", null, 400);
+            }
+        }
  
         const dto = new LoteLarvaDTO({
             ...req.body,
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
+
         const nuevo = await loteLarvaModel.createLote(dto, grupoDatos);
         return exito(res, "Lote de larva creado correctamente.", nuevo, 201);
     } catch (err) {
@@ -196,6 +221,22 @@ const { id } = req.params;
             const existe = await loteLarvaModel.verificarProveedorExiste(proveedorId, grupoDatos);
             if (!existe) {
                 return error(res, "El proveedor indicado no existe.", null, 400);
+            }
+        }
+        
+        const laboratorioId = req.body.laboratorio_id ?? req.body.laboratorioId;
+        if (!isEmpty(laboratorioId)) {
+            const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioId, grupoDatos);
+            if (!existe) {
+                return error(res, "El laboratorio indicado no existe.", null, 400);
+            }
+        }
+
+        const procedenciaId = req.body.procedencia_id ?? req.body.procedenciaId;
+        if (!isEmpty(procedenciaId)) {
+            const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaId, grupoDatos);
+            if (!existe) {
+                return error(res, "La procedencia indicada no existe.", null, 400);
             }
         }
  
