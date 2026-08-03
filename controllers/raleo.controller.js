@@ -105,10 +105,6 @@ function validarCuerpo(body, res) {
         errores.push("El campo idEstanque debe ser numerico y mayor que cero.");
     }
 
-    if (!isEmpty(body.idColaborador) && !isNumeroMayorCero(body.idColaborador)) {
-        errores.push("El campo idColaborador debe ser numerico y mayor que cero.");
-    }
-
     if (!isNumeroMayorCero(body.porcentaje)) {
         errores.push("El campo porcentaje debe ser numerico y mayor que cero.");
     }
@@ -246,14 +242,23 @@ export async function createRaleo(req, res) {
     - 201 con el raleo creado
     - 400/422 si hay errores de validacion
     */
-   const grupoDatos = req.user.grupoDatos;
    try {
+    const {
+        grupoDatos,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
+    } = req.user;
+
     const err = validarCuerpo(req.body, res);
 
     if (err) {
         return err;
     }
-    const dto = new RaleoDTO(req.body);
+    const dto = new RaleoDTO({
+    ...req.body,
+    creadoPorUsuarioId,
+    creadoPorColaboradorId
+    });
 
     const existente = await RaleoModel.findByEstanqueYFecha(
         grupoDatos,
@@ -270,7 +275,7 @@ export async function createRaleo(req, res) {
         );
     }
     
-    const nuevo = await RaleoModel.create(dto, grupoDatos, dto.idColaborador);
+    const nuevo = await RaleoModel.create(dto, grupoDatos);
 
     return exito(res, "Raleo creado correctamente.", nuevo, 201);
     } catch (err) {
@@ -296,8 +301,13 @@ export async function updateRaleo(req, res) {
     - 400/422 si hay errores de validacion
     - 404 si no existe
     */
-    const grupoDatos = req.user.grupoDatos;
     try {
+        const {
+        grupoDatos,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
+        } = req.user;
+
         const errId = validarIdParametro(req.params.id, res);
 
         if (errId) {
@@ -310,13 +320,16 @@ export async function updateRaleo(req, res) {
             return err;
         }
 
-        const dto = new RaleoDTO(req.body);
+        const dto = new RaleoDTO({
+        ...req.body,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
+        });
 
         const actualizado = await RaleoModel.update(
             req.params.id,
             dto,
             grupoDatos,
-            dto.idColaborador
         );
 
         if (!actualizado) {
