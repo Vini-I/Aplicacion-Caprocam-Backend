@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantCrecimiento.middleware.js
 Autor: Greivin Arguedas
-Fecha: 01/08/2026
+Fecha: 03/08/2026
 Modulo: Crecimiento
 Descripcion:
 Archivo de middleware para el modulo de crecimiento.
@@ -41,15 +41,23 @@ export async function validarMantCrecimiento(req, res, next) {
     
     const { 
         finca, 
-        estanque, 
+        estanque,
+        fechaRegistro, 
         pesoActual,
     } = req.body;
 
-    if (!finca) {
-        return error(res, "La finca es obligatoria.", null, 400);
+    if (!finca) return error(res, "La finca es obligatoria.", null, 400);
+    if (!estanque) return error(res, "El estanque es obligatorio.", null, 400);
+    if (!fechaRegistro) {
+        return error(res, "La fecha de registro es obligatoria.", null, 400);
     }
-    if (!estanque) {
-        return error(res, "El estanque es obligatorio.", null, 400);
+    const fechaIngresada = new Date(fechaRegistro);
+    if (isNaN(fechaIngresada.getTime())) {
+        return error(res, "La fecha de registro debe ser válida.", null, 400);
+    }
+    const ahora = new Date();
+    if (fechaIngresada.getTime() > ahora.getTime()) {
+        return error(res, "La fecha de registro no puede ser futura.", null, 400);
     }
     if (pesoActual === undefined || pesoActual === null || pesoActual === "") {
         return error(res, "El peso actual es obligatorio.", null, 400);
