@@ -4,13 +4,13 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: preCria.controller.js
 Autor: oscar mario
-Fecha: 02/08/2026
+Fecha: 01/08/2026
 Modulo: Pre-cria
 Descripcion:
 Maneja las peticiones HTTP y la logica de pre-cria.
 //////////////////////////////////////////////////////////
 */
-
+ 
 /*
 //////////////////////////////////////////////////////////
 IMPORTS
@@ -31,13 +31,13 @@ import * as precriaModel from "../models/preCria.model.js";
 import * as loteLarvaModel from "../models/loteLarvas.model.js";
 import { exito, error } from "../common/respuestaJson.js";
 import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
-
+ 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 */
-
+ 
 function validarCuerpo(body, res) {
     /*
     Descripcion:
@@ -45,7 +45,7 @@ function validarCuerpo(body, res) {
     requeridos y con el formato correcto para una pre-cria.
     */
     const errores = [];
-
+ 
     if (!isEnteroPositivo(body.lote_larva_id)) {
         errores.push("El campo lote_larva_id debe ser un entero positivo.");
     }
@@ -68,21 +68,21 @@ function validarCuerpo(body, res) {
         errores.push("El campo fecha_inicio debe ser una fecha valida.");
     }
     if (
-        !isEmpty(body.duracion_dias_esperada) &&
-        !isEnteroPositivo(body.duracion_dias_esperada)
+        !isEmpty(body.duracion_dias) &&
+        !isEnteroPositivo(body.duracion_dias)
     ) {
-        errores.push("El campo duracion_dias_esperada debe ser un entero positivo.");
+        errores.push("El campo duracion_dias debe ser un entero positivo.");
     }
     if (!isEmpty(body.estado) && !isEstadoValido(body.estado)) {
         errores.push("El campo estado debe ser Activa o Finalizada.");
     }
-
+ 
     if (errores.length > 0) {
         return error(res, "Datos invalidos para la pre-cria.", errores, 422);
     }
     return null;
 }
-
+ 
 async function validarReferencias(body, res, grupoDatos, opciones = {}) {
     /*
     Descripcion:
@@ -97,17 +97,17 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
     const { precriaIdActual = null } = opciones;
     const loteId  = body.lote_larva_id ?? body.id_lote_larva;
     const fincaId = body.finca_id ?? body.id_finca;
-
+ 
     const lote = await loteLarvaModel.findById(loteId, grupoDatos);
     if (!lote) {
         return error(res, "El lote de larva indicado no existe.", null, 400);
     }
-
+ 
     const fincaExiste = await precriaModel.verificarFincaExiste(fincaId, grupoDatos);
     if (!fincaExiste) {
         return error(res, "La finca indicada no existe.", null, 400);
     }
-
+ 
     const estanqueExiste = await precriaModel.verificarEstanqueExiste(
         body.estanque_id, fincaId, grupoDatos
     );
@@ -116,7 +116,7 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
             res, "El estanque indicado no existe o no pertenece a la finca.", null, 400
         );
     }
-
+ 
     // Un estanque solo puede tener una pre-cria Activa a la vez.
     const precriaActivaExistente = await precriaModel.findActivaByEstanque(
         body.estanque_id, grupoDatos, precriaIdActual
@@ -124,7 +124,7 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
     if (precriaActivaExistente) {
         return error(res, "El estanque indicado ya tiene una pre-cria activa.", null, 409);
     }
-
+ 
     if (!isEmpty(body.cantidad_inicial) && Number(body.cantidad_inicial) > lote.cantidad_inicial) {
         return error(
             res,
@@ -133,10 +133,10 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
             400
         );
     }
-
+ 
     return null;
 }
-
+ 
 function validarCuerpoLoteYPrecria(body, res) {
     /*
     Descripcion:
@@ -146,7 +146,7 @@ function validarCuerpoLoteYPrecria(body, res) {
     pre-cria (sin lote_larva_id, porque el lote todavia no existe).
     */
     const errores = [];
-
+ 
     // --- Campos del lote ---
     if (isEmpty(body.codigo_lote)) {
         errores.push("El campo codigo_lote es requerido.");
@@ -175,7 +175,7 @@ function validarCuerpoLoteYPrecria(body, res) {
     if (!isEmpty(procedenciaIdValor) && !isEnteroPositivo(procedenciaIdValor)) {
         errores.push("El procedencia_id debe ser un entero positivo.");
     }
-
+ 
     // --- Campos de la pre-cria (sin lote_larva_id: el lote es nuevo) ---
     if (!isEnteroPositivo(body.finca_id)) {
         errores.push("El campo finca_id debe ser un entero positivo.");
@@ -196,24 +196,24 @@ function validarCuerpoLoteYPrecria(body, res) {
         errores.push("El campo fecha_inicio debe ser una fecha valida.");
     }
     if (
-        !isEmpty(body.duracion_dias_esperada) &&
-        !isEnteroPositivo(body.duracion_dias_esperada)
+        !isEmpty(body.duracion_dias) &&
+        !isEnteroPositivo(body.duracion_dias)
     ) {
-        errores.push("El campo duracion_dias_esperada debe ser un entero positivo.");
+        errores.push("El campo duracion_dias debe ser un entero positivo.");
     }
-
+ 
     if (errores.length > 0) {
         return error(res, "Datos invalidos para crear el lote y la pre-cria.", errores, 422);
     }
     return null;
 }
-
+ 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
-
+ 
 export async function listarPrecrias(req, res) {
     /*
     Descripcion:
@@ -221,11 +221,11 @@ export async function listarPrecrias(req, res) {
     Parametros:
     - req: Objeto Request de Express (contiene body, params y user autenticado).
     - res: Objeto Response de Express para envio estructurado de JSON.
-
+ 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-
+ 
 /*
     Descripcion:
     Obtiene todas las pre-crias activas del grupo de datos.
@@ -242,7 +242,7 @@ export async function listarPrecrias(req, res) {
         return error(res, "Error al obtener las pre-crias.", err, 500);
     }
 }
-
+ 
 export async function obtenerPrecria(req, res) {
     /*
     Descripcion:
@@ -250,11 +250,11 @@ export async function obtenerPrecria(req, res) {
     Parametros:
     - req: Objeto Request de Express (contiene body, params y user autenticado).
     - res: Objeto Response de Express para envio estructurado de JSON.
-
+ 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-
+ 
 /*
     Descripcion:
     Obtiene una pre-cria activa por su ID.
@@ -269,7 +269,7 @@ export async function obtenerPrecria(req, res) {
         return error(res, "Error al obtener la pre-cria.", err, 500);
     }
 }
-
+ 
 export async function crearPrecria(req, res) {
     /*
     Descripcion:
@@ -277,11 +277,11 @@ export async function crearPrecria(req, res) {
     Parametros:
     - req: Objeto Request de Express (contiene body, params y user autenticado).
     - res: Objeto Response de Express para envio estructurado de JSON.
-
+ 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-
+ 
 /*
     Descripcion:
     Crea una nueva pre-cria validando que el lote, finca
@@ -289,13 +289,13 @@ export async function crearPrecria(req, res) {
     */
     const errBody = validarCuerpo(req.body, res);
     if (errBody) return errBody;
-
+ 
     try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
             obtenerContextoPeticion(req);
         const errRef = await validarReferencias(req.body, res, grupoDatos);
         if (errRef) return errRef;
-
+ 
         const dto = new PrecriaDTO({
             ...req.body,
             creadoPorUsuarioId,
@@ -307,7 +307,7 @@ export async function crearPrecria(req, res) {
         return error(res, "Error al crear la pre-cria.", err, 500);
     }
 }
-
+ 
 export async function crearPrecriaConLote(req, res) {
     /*
     Descripcion:
@@ -413,11 +413,11 @@ export async function actualizarPrecria(req, res) {
     Parametros:
     - req: Objeto Request de Express (contiene body, params y user autenticado).
     - res: Objeto Response de Express para envio estructurado de JSON.
-
+ 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-
+ 
 /*
     Descripcion:
     Actualiza una pre-cria existente validando referencias.
@@ -425,15 +425,15 @@ export async function actualizarPrecria(req, res) {
     const { id } = req.params;
     const errBody = validarCuerpo(req.body, res);
     if (errBody) return errBody;
-
+ 
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const actual = await precriaModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Pre-cria no encontrada.", null, 404);
-
+ 
         const errRef = await validarReferencias(req.body, res, grupoDatos, { precriaIdActual: id });
         if (errRef) return errRef;
-
+ 
         const dto = new PrecriaDTO(req.body);
         const actualizado = await precriaModel.update(id, grupoDatos, dto);
         return exito(res, "Pre-cria actualizada correctamente.", actualizado);
@@ -441,7 +441,7 @@ export async function actualizarPrecria(req, res) {
         return error(res, "Error al actualizar la pre-cria.", err, 500);
     }
 }
-
+ 
 export async function finalizarPrecria(req, res) {
     /*
     Descripcion:
@@ -449,11 +449,11 @@ export async function finalizarPrecria(req, res) {
     Parametros:
     - req: Objeto Request de Express (contiene body, params y user autenticado).
     - res: Objeto Response de Express para envio estructurado de JSON.
-
+ 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-
+ 
 /*
     Descripcion:
     Finaliza una pre-cria en estado Activa. Valida que la fecha
@@ -465,13 +465,13 @@ export async function finalizarPrecria(req, res) {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const pc = await precriaModel.findById(id, grupoDatos);
         if (!pc) return error(res, "Pre-cria no encontrada.", null, 404);
-
+ 
         if (normalizarEstado(pc.estado) !== EstadoPrecria.ACTIVA) {
             return error(
                 res, "La pre-cria ya no se encuentra en estado Activa.", null, 400
             );
         }
-
+ 
         const { fecha_fin, cantidad_final, pl_final } = req.body;
         const errores = [];
         if (!isFechaValida(fecha_fin)) errores.push("fecha_fin debe ser una fecha valida.");
@@ -480,7 +480,7 @@ export async function finalizarPrecria(req, res) {
         if (errores.length > 0) {
             return error(res, "Datos invalidos para finalizar pre-cria.", errores, 422);
         }
-
+ 
         if (!compararFechas(pc.fecha_inicio, fecha_fin)) {
             return error(res, "fecha_fin no puede ser menor que fecha_inicio.", null, 400);
         }
@@ -489,11 +489,11 @@ export async function finalizarPrecria(req, res) {
                 res, "cantidad_final no puede ser mayor que cantidad_inicial.", null, 400
             );
         }
-
+ 
         const d1 = new Date(pc.fecha_inicio);
         const d2 = new Date(fecha_fin);
         const duracion_dias = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
-
+ 
         const actualizado = await precriaModel.update(id, grupoDatos, {
             estado: EstadoPrecria.FINALIZADA,
             fecha_fin,
@@ -506,7 +506,7 @@ export async function finalizarPrecria(req, res) {
         return error(res, "Error al finalizar la pre-cria.", err, 500);
     }
 }
-
+ 
 export async function eliminarPrecria(req, res) {
     /*
     Descripcion:
@@ -514,11 +514,11 @@ export async function eliminarPrecria(req, res) {
     Parametros:
     - req: Objeto Request de Express (contiene body, params y user autenticado).
     - res: Objeto Response de Express para envio estructurado de JSON.
-
+ 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-
+ 
 /*
     Descripcion:
     Realiza el borrado logico de una pre-cria.

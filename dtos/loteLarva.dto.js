@@ -37,8 +37,8 @@ export class LoteLarvaDTO {
         proveedorId,
         laboratorio_id,
         laboratorioId,
-        lugar_procedencia,
-        procedencia,
+        procedencia_id,
+        procedenciaId,
         certificado_larva,
         pl_inicial,
         cantidad_inicial,
@@ -63,7 +63,7 @@ export class LoteLarvaDTO {
         - codigo_lote:       Codigo de identificacion (requerido).
         - proveedor_id:      ID del proveedor (opcional, FK nullable).
         - laboratorio_id:    ID del laboratorio (opcional, FK nullable).
-        - lugar_procedencia: Procedencia de la larva (opcional).
+        - procedencia_id:    ID de la procedencia (opcional, FK nullable).
         - certificado_larva: Certificado sanitario (opcional).
         - pl_inicial:        PL inicial (opcional).
         - cantidad_inicial:  Cantidad inicial (requerido).
@@ -74,7 +74,7 @@ export class LoteLarvaDTO {
         - creadoPorColaboradorId: FK a colaboradores - movil (idem).
         */
         const proveedorDb   = proveedor_id ?? proveedorId;
-        const procedenciaDb = lugar_procedencia ?? procedencia;
+        const procedenciaDb = procedencia_id ?? procedenciaId;
         const laboratorioDb  = laboratorio_id ?? laboratorioId;
  
         this.codigo_lote       = String(codigo_lote).trim();
@@ -91,5 +91,5 @@ export class LoteLarvaDTO {
             : EstadoLote.DISPONIBLE;
         this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
         this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
-    }
+    }S
 }

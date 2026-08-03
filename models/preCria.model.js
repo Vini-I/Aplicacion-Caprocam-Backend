@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: preCria.model.js
 Autor: oscar mario
-Fecha: 02/08/2026
+Fecha: 03/08/2026
 Modulo: Pre-Cria
 Descripcion:
 Capa de datos para pre-crias.
@@ -100,10 +100,10 @@ export async function create(dto, grupoDatos) {
         const [result] = await connection.execute(`
             INSERT INTO precrias (
                 grupo_datos, lote_larva_id, finca_id, estanque_id,
-                fecha_inicio, fecha_fin, duracion_dias, duracion_dias_esperada,
+                fecha_inicio, fecha_fin, duracion_dias,
                 cantidad_inicial, cantidad_final, pl_inicial, pl_final, estado,
                 creado_por_usuario_id, creado_por_colaborador_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             grupoDatos,
             dto.lote_larva_id,
@@ -112,7 +112,6 @@ export async function create(dto, grupoDatos) {
             dto.fecha_inicio,
             dto.fecha_fin,
             dto.duracion_dias,
-            dto.duracion_dias_esperada,
             dto.cantidad_inicial,
             dto.cantidad_final,
             dto.pl_inicial,
@@ -224,10 +223,10 @@ export async function createConLote(dtoLote, dtoPrecria, grupoDatos) {
         const [result] = await connection.execute(`
             INSERT INTO precrias (
                 grupo_datos, lote_larva_id, finca_id, estanque_id,
-                fecha_inicio, fecha_fin, duracion_dias, duracion_dias_esperada,
+                fecha_inicio, fecha_fin, duracion_dias,
                 cantidad_inicial, cantidad_final, pl_inicial, pl_final, estado,
                 creado_por_usuario_id, creado_por_colaborador_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             grupoDatos,
             dtoPrecria.lote_larva_id,
@@ -236,7 +235,6 @@ export async function createConLote(dtoLote, dtoPrecria, grupoDatos) {
             dtoPrecria.fecha_inicio,
             dtoPrecria.fecha_fin,
             dtoPrecria.duracion_dias,
-            dtoPrecria.duracion_dias_esperada,
             dtoPrecria.cantidad_inicial,
             dtoPrecria.cantidad_final,
             dtoPrecria.pl_inicial,
@@ -291,7 +289,6 @@ export async function update(id, grupoDatos, datos) {
         cantidad_final:   'cantidad_final',
         pl_final:         'pl_final',
         duracion_dias:    'duracion_dias',
-        duracion_dias_esperada: 'duracion_dias_esperada',
     };
  
     const setParts = [];
@@ -430,7 +427,9 @@ export async function finalizarActivasVencidas() {
     /*
     Descripcion:
     Cierre automatico: busca (en TODOS los grupos de datos) las pre-crias
-    Activas cuyo duracion_dias_esperada ya se cumplio y las finaliza.
+    Activas cuyo duracion_dias (duracion esperada, definida al crear la
+    pre-cria) ya se cumplio y las finaliza. Al finalizar, duracion_dias
+    se sobreescribe con la duracion real transcurrida.
     No inventa cantidad_final ni pl_final (quedan NULL); esos valores
     reales el biologo los puede completar despues con un PUT,(el ciclo se puede seguir extendiendo
     si el biologo lo decide, o cerrar antes con el boton manual).
@@ -438,13 +437,13 @@ export async function finalizarActivasVencidas() {
     - Array de IDs de pre-crias finalizadas automaticamente.
     */
     const [vencidas] = await pool.execute(`
-        SELECT id, grupo_datos, fecha_inicio, duracion_dias_esperada
+        SELECT id, grupo_datos, fecha_inicio, duracion_dias
         FROM   precrias
         WHERE  LOWER(TRIM(estado)) = 'activa'
         AND    activo = TRUE
         AND    deleted_at IS NULL
-        AND    duracion_dias_esperada IS NOT NULL
-        AND    DATEDIFF(CURDATE(), fecha_inicio) >= duracion_dias_esperada
+        AND    duracion_dias IS NOT NULL
+        AND    DATEDIFF(CURDATE(), fecha_inicio) >= duracion_dias
     `);
 
     const idsFinalizados = [];

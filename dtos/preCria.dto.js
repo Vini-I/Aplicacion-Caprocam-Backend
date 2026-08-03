@@ -38,7 +38,6 @@ export class PrecriaDTO {
         fecha_inicio,
         fecha_fin,
         duracion_dias,
-        duracion_dias_esperada,
         cantidad_inicial,
         cantidad_final,
         pl_inicial,
@@ -91,8 +90,6 @@ export class PrecriaDTO {
             ? Number(pl_final) : null;
         this.duracion_dias = duracion_dias !== undefined && duracion_dias !== null
             ? Number(duracion_dias) : null;
-        this.duracion_dias_esperada = duracion_dias_esperada !== undefined && duracion_dias_esperada !== null
-            ? Number(duracion_dias_esperada) : null;
         this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
         this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
     }
