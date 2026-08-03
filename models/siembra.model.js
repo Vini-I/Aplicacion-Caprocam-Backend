@@ -102,6 +102,7 @@ export async function create(dto, grupoDatos) {
     en una sola transaccion.
     */
     const connection = await pool.getConnection();
+    let insertId;
     try {
         await connection.beginTransaction();
 
@@ -196,13 +197,20 @@ export async function create(dto, grupoDatos) {
         `, [EstadoEstanque.ENGORDE, dto.fecha_siembra, dto.fecha_siembra, dto.estanque_id, grupoDatos]);
  
         await connection.commit();
-        return findById(result.insertId, grupoDatos);
+        insertId = result.insertId;
     } catch (err) {
         await connection.rollback();
         throw err;
     } finally {
         connection.release();
     }
+
+    // Fuera de la transaccion: el commit() ya se ejecuto, asi que un fallo
+    // en esta lectura de confirmacion no debe reportarse como un fallo de
+    // creacion (eso haria un rollback() que ya no tiene efecto y le
+    // mentiria al frontend diciendole que la siembra no se creo, cuando en
+    // realidad si se creo).
+    return findById(insertId, grupoDatos);
 }
 
 export async function createConLote(dtoLote, dtoSiembra, grupoDatos) {
@@ -236,7 +244,7 @@ export async function createConLote(dtoLote, dtoSiembra, grupoDatos) {
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
- 
+
         // Bloquea la fila del estanque para evitar condiciones de carrera
         // (dos siembras creandose al mismo tiempo sobre el mismo estanque).
         const [estanqueRows] = await connection.execute(`
@@ -417,6 +425,7 @@ export async function finalizarConEstanque(id, grupoDatos, datosFinalizacion) {
     estanque asociado a 'Cosechado', en una sola transaccion.
     */
     const connection = await pool.getConnection();
+    let debeLeerRegistro = false;
     try {
         await connection.beginTransaction();
 
@@ -444,13 +453,18 @@ export async function finalizarConEstanque(id, grupoDatos, datosFinalizacion) {
         `, [EstadoEstanque.COSECHADO, siembra.estanque_id, grupoDatos]);
 
         await connection.commit();
-        return findById(id, grupoDatos);
+        debeLeerRegistro = true;
     } catch (err) {
         await connection.rollback();
         throw err;
     } finally {
         connection.release();
     }
+
+    // Fuera de la transaccion, misma razon que en create(): el commit()
+    // ya se ejecuto, asi que un fallo en esta lectura no debe reportarse
+    // como un fallo de la finalizacion.
+    return debeLeerRegistro ? findById(id, grupoDatos) : null;
 }
 
 export async function finalizarActivasVencidas() {

@@ -73,8 +73,11 @@ function validarCuerpo(body, res) {
     ) {
         errores.push("El campo duracion_dias debe ser un entero positivo.");
     }
-    if (!isEmpty(body.estado) && !isEstadoValido(body.estado)) {
-        errores.push("El campo estado debe ser Activa o Finalizada.");
+    if (!isEmpty(body.estado)) {
+        errores.push(
+            "El campo estado no se puede establecer aqui. Una pre-cria siempre " +
+                "nace 'Activa'; para finalizarla usa POST /precrias/:id/finalizar."
+        );
     }
  
     if (errores.length > 0) {
@@ -431,6 +434,15 @@ export async function actualizarPrecria(req, res) {
         const actual = await precriaModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Pre-cria no encontrada.", null, 404);
  
+        if (normalizarEstado(actual.estado) === EstadoPrecria.FINALIZADA) {
+            return error(
+                res,
+                "No se puede actualizar una pre-cria que ya fue finalizada.",
+                null,
+                409
+            );
+        }
+
         const errRef = await validarReferencias(req.body, res, grupoDatos, { precriaIdActual: id });
         if (errRef) return errRef;
  

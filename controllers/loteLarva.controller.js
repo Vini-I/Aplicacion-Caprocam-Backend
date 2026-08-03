@@ -16,7 +16,7 @@ Maneja las peticiones HTTP y la logica de loteLarva.
 IMPORTS
 //////////////////////////////////////////////////////////
 */
-import { LoteLarvaDTO } from "../dtos/loteLarva.dto.js";
+import { LoteLarvaDTO, EstadoLote } from "../dtos/loteLarva.dto.js";
 import {
     isEmpty,
     isFechaValida,
@@ -209,6 +209,17 @@ const { id } = req.params;
         const actual = await loteLarvaModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Lote de larva no encontrado.", null, 404);
  
+        if (actual.estado_lote !== EstadoLote.DISPONIBLE) {
+            return error(
+                res,
+                "No se puede actualizar un lote que ya no esta Disponible " +
+                    `(estado actual: ${actual.estado_lote}). Una vez que un lote ` +
+                    "entra a pre-cria o se siembra, sus datos de origen quedan fijos.",
+                null,
+                409
+            );
+        }
+
         const existente = await loteLarvaModel.findByCodigoIgnorandoId(
             req.body.codigo_lote, id, grupoDatos
         );

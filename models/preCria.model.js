@@ -94,6 +94,7 @@ export async function create(dto, grupoDatos) {
     transaccion.
     */
     const connection = await pool.getConnection();
+    let insertId;
     try {
         await connection.beginTransaction();
  
@@ -138,13 +139,18 @@ export async function create(dto, grupoDatos) {
         ]);
  
         await connection.commit();
-        return findById(result.insertId, grupoDatos);
+        insertId = result.insertId;
     } catch (err) {
         await connection.rollback();
         throw err;
     } finally {
         connection.release();
     }
+
+    // Fuera de la transaccion: el commit() ya se ejecuto, asi que un fallo
+    // en esta lectura de confirmacion no debe reportarse como un fallo de
+    // creacion.
+    return findById(insertId, grupoDatos);
 }
  
 export async function createConLote(dtoLote, dtoPrecria, grupoDatos) {
@@ -169,7 +175,7 @@ export async function createConLote(dtoLote, dtoPrecria, grupoDatos) {
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
- 
+
         // Bloquea la fila del estanque para evitar condiciones de carrera
         // (dos pre-crias creandose al mismo tiempo sobre el mismo estanque).
         const [estanqueRows] = await connection.execute(`

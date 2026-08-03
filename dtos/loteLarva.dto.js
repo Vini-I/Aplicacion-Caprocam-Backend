@@ -91,5 +91,5 @@ export class LoteLarvaDTO {
             : EstadoLote.DISPONIBLE;
         this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
         this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
-    }S
+    }
 }

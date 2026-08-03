@@ -263,13 +263,23 @@ export async function update(id, dto, grupoDatos) {
                pl_inicial        = ?,
                cantidad_inicial   = ?,
                fecha_ingreso      = ?,
-               estado_lote        = ?,
                version           = version + 1
         WHERE  id = ?
         AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
     `;
+    // estado_lote NO esta en este UPDATE a proposito, aunque el DTO lo
+    // acepte como input: este endpoint es de edicion libre de datos del
+    // lote y NUNCA debe poder mover su estado (Disponible / En PreCria /
+    // Sembrado / Agotado) directamente desde el body. Las unicas
+    // transiciones de estado validas son las que ejecutan, en su propia
+    // transaccion, preCria.model.js (al crear una pre-cria) y
+    // siembra.model.js (al crear una siembra) - cada una con sus propias
+    // validaciones de negocio (estanque activo, sin siembra/precria
+    // activa, etc.). El controlador ademas bloquea por completo este
+    // endpoint si el lote ya no esta 'Disponible', pero se deja tambien
+    // fuera del UPDATE aqui como segunda capa de defensa.
     const [result] = await pool.execute(sql, [
         dto.codigo_lote,
         dto.proveedor_id  || null,
@@ -279,7 +289,6 @@ export async function update(id, dto, grupoDatos) {
         dto.pl_inicial,
         dto.cantidad_inicial,
         dto.fecha_ingreso,
-        dto.estado_lote || 'Disponible',
         Number(id),
         grupoDatos
     ]);

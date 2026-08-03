@@ -1,3 +1,4 @@
+
 /*
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
@@ -543,6 +544,15 @@ export async function actualizarSiembra(req, res) {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const actual = await siembraModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Siembra no encontrada.", null, 404);
+
+        if (normalizarEstado(actual.estado) === EstadoSiembra.FINALIZADA) {
+            return error(
+                res,
+                "No se puede actualizar una siembra que ya fue finalizada.",
+                null,
+                409
+            );
+        }
 
         const errRef = await validarReferencias(req.body, res, grupoDatos, {
             esCreacion: false,
