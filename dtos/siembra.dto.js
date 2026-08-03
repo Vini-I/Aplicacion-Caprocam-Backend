@@ -30,22 +30,19 @@ DTOs
 
 export class SiembraDTO {
     constructor({
-        lote_larva_id,
-        id_lote_larva,
-        precria_id,
-        id_precria,
-        finca_id,
-        id_finca,
-        estanque_id,
-        fecha_siembra,
-        tecnica_cultivo,
-        densidad_poblacional,
-        cantidad_sembrada,
-        pl_siembra,
-        duracion_ciclo,
+        lote_larva_id, loteLarvaId, id_lote_larva,
+        precria_id, precriaId, id_precria,
+        finca_id, fincaId, id_finca,
+        estanque_id, estanqueId,
+        fecha_siembra, fechaSiembra,
+        tecnica_cultivo, tecnicaCultivo,
+        densidad_poblacional, densidadPoblacional,
+        cantidad_sembrada, cantidadSembrada,
+        pl_siembra, plSiembra,
+        duracion_ciclo, duracionCiclo,
         estado,
-        creadoPorUsuarioId,
-        creadoPorColaboradorId,
+        creado_por_usuario_id, creadoPorUsuarioId,
+        creado_por_colaborador_id, creadoPorColaboradorId,
     }) {
         /*
         Descripcion:
@@ -57,25 +54,39 @@ export class SiembraDTO {
           obtenerContextoPeticion, nunca por el body del cliente).
         - creadoPorColaboradorId: FK a colaboradores - movil (idem).
         */
-        const loteIdDb    = lote_larva_id ?? id_lote_larva;
-        const precriaIdDb = precria_id ?? id_precria;
-        const fincaIdDb   = finca_id ?? id_finca;
+        const loteIdDb    = lote_larva_id ?? loteLarvaId ?? id_lote_larva;
+        const precriaIdDb = precria_id ?? precriaId ?? id_precria;
+        const fincaIdDb   = finca_id ?? fincaId ?? id_finca;
+        const estanqueIdDb = estanque_id ?? estanqueId;
  
         this.lote_larva_id = Number(loteIdDb);
         this.precria_id    = precriaIdDb ? Number(precriaIdDb) : null;
         this.finca_id      = Number(fincaIdDb);
-        this.estanque_id   = Number(estanque_id);
-        this.fecha_siembra = String(fecha_siembra).trim();
-        this.tecnica_cultivo = tecnica_cultivo ? String(tecnica_cultivo).trim() : null;
-        this.densidad_poblacional = densidad_poblacional !== undefined && densidad_poblacional !== null
-            ? Number(densidad_poblacional) : null;
-        this.cantidad_sembrada = Number(cantidad_sembrada);
-        this.pl_siembra = pl_siembra !== undefined && pl_siembra !== null
-            ? Number(pl_siembra) : null;
-        this.duracion_ciclo = duracion_ciclo !== undefined && duracion_ciclo !== null
-            ? Number(duracion_ciclo) : null;
+        this.estanque_id   = Number(estanqueIdDb);
+        
+        const fec = fecha_siembra ?? fechaSiembra;
+        this.fecha_siembra = String(fec).trim();
+        
+        const tec = tecnica_cultivo ?? tecnicaCultivo;
+        this.tecnica_cultivo = tec ? String(tec).trim() : null;
+        
+        const dens = densidad_poblacional ?? densidadPoblacional;
+        this.densidad_poblacional = dens !== undefined && dens !== null
+            ? Number(dens) : null;
+            
+        const cant = cantidad_sembrada ?? cantidadSembrada;
+        this.cantidad_sembrada = Number(cant);
+        
+        const pl = pl_siembra ?? plSiembra;
+        this.pl_siembra = pl !== undefined && pl !== null
+            ? Number(pl) : null;
+            
+        const ciclo = duracion_ciclo ?? duracionCiclo;
+        this.duracion_ciclo = ciclo !== undefined && ciclo !== null
+            ? Number(ciclo) : null;
+            
         this.estado = estado ? String(estado).trim() : EstadoSiembra.ACTIVA;
-        this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
-        this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
+        this.creado_por_usuario_id     = creado_por_usuario_id ?? creadoPorUsuarioId ?? null;
+        this.creado_por_colaborador_id = creado_por_colaborador_id ?? creadoPorColaboradorId ?? null;
     }
 }

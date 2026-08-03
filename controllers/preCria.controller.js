@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: preCria.controller.js
 Autor: oscar mario
-Fecha: 01/08/2026
+Fecha: 02/08/2026
 Modulo: Pre-cria
 Descripcion:
 Maneja las peticiones HTTP y la logica de pre-cria.
@@ -17,6 +17,7 @@ IMPORTS
 //////////////////////////////////////////////////////////
 */
 import { PrecriaDTO, EstadoPrecria } from "../dtos/preCria.dto.js";
+import { LoteLarvaDTO } from "../dtos/loteLarva.dto.js";
 import {
     isEmpty,
     isFechaValida,
@@ -25,6 +26,7 @@ import {
     normalizarEstado,
     compararFechas,
 } from "../services/preCria.service.js";
+import { isCodigoLarvaValido } from "../services/loteLarva.service.js";
 import * as precriaModel from "../models/preCria.model.js";
 import * as loteLarvaModel from "../models/loteLarvas.model.js";
 import { exito, error } from "../common/respuestaJson.js";
@@ -81,13 +83,18 @@ function validarCuerpo(body, res) {
     return null;
 }
 
-async function validarReferencias(body, res, grupoDatos) {
+async function validarReferencias(body, res, grupoDatos, opciones = {}) {
     /*
     Descripcion:
     Verifica que el lote de larva, la finca y el estanque
     indicados en el body existan y sean validos en la base
     de datos para el grupo de datos actual.
+    Parametros:
+    - opciones.precriaIdActual: id de la pre-cria que se esta
+      actualizando (para excluirla de la validacion de "estanque
+      con pre-cria activa"). null cuando se esta creando.
     */
+    const { precriaIdActual = null } = opciones;
     const loteId  = body.lote_larva_id ?? body.id_lote_larva;
     const fincaId = body.finca_id ?? body.id_finca;
 
@@ -110,6 +117,14 @@ async function validarReferencias(body, res, grupoDatos) {
         );
     }
 
+    // Un estanque solo puede tener una pre-cria Activa a la vez.
+    const precriaActivaExistente = await precriaModel.findActivaByEstanque(
+        body.estanque_id, grupoDatos, precriaIdActual
+    );
+    if (precriaActivaExistente) {
+        return error(res, "El estanque indicado ya tiene una pre-cria activa.", null, 409);
+    }
+
     if (!isEmpty(body.cantidad_inicial) && Number(body.cantidad_inicial) > lote.cantidad_inicial) {
         return error(
             res,
@@ -119,6 +134,77 @@ async function validarReferencias(body, res, grupoDatos) {
         );
     }
 
+    return null;
+}
+
+function validarCuerpoLoteYPrecria(body, res) {
+    /*
+    Descripcion:
+    Valida el body combinado del endpoint POST /precrias/con-lote,
+    que crea un lote de larva NUEVO junto con la pre-cria que lo
+    consume. Valida tanto los campos del lote como los de la
+    pre-cria (sin lote_larva_id, porque el lote todavia no existe).
+    */
+    const errores = [];
+
+    // --- Campos del lote ---
+    if (isEmpty(body.codigo_lote)) {
+        errores.push("El campo codigo_lote es requerido.");
+    } else if (!isCodigoLarvaValido(body.codigo_lote)) {
+        errores.push(
+            "El campo codigo_lote solo puede contener letras y numeros, con un maximo de 14 caracteres."
+        );
+    }
+    if (!isEmpty(body.certificado_larva) && !isCodigoLarvaValido(body.certificado_larva)) {
+        errores.push(
+            "El campo certificado_larva solo puede contener letras y numeros, con un maximo de 14 caracteres."
+        );
+    }
+    if (!isFechaValida(body.fecha_ingreso)) {
+        errores.push("El campo fecha_ingreso (del lote) debe ser una fecha valida.");
+    }
+    const proveedorIdValor = body.proveedor_id ?? body.proveedorId;
+    if (!isEmpty(proveedorIdValor) && !isEnteroPositivo(proveedorIdValor)) {
+        errores.push("El proveedor_id debe ser un entero positivo.");
+    }
+    const laboratorioIdValor = body.laboratorio_id ?? body.laboratorioId;
+    if (!isEmpty(laboratorioIdValor) && !isEnteroPositivo(laboratorioIdValor)) {
+        errores.push("El laboratorio_id debe ser un entero positivo.");
+    }
+    const procedenciaIdValor = body.procedencia_id ?? body.procedenciaId;
+    if (!isEmpty(procedenciaIdValor) && !isEnteroPositivo(procedenciaIdValor)) {
+        errores.push("El procedencia_id debe ser un entero positivo.");
+    }
+
+    // --- Campos de la pre-cria (sin lote_larva_id: el lote es nuevo) ---
+    if (!isEnteroPositivo(body.finca_id)) {
+        errores.push("El campo finca_id debe ser un entero positivo.");
+    }
+    if (!isEnteroPositivo(body.estanque_id)) {
+        errores.push("El campo estanque_id debe ser un entero positivo.");
+    }
+    if (!isEnteroPositivo(body.cantidad_inicial)) {
+        errores.push("El campo cantidad_inicial debe ser un entero positivo.");
+    }
+    if (
+        body.pl_inicial !== undefined && body.pl_inicial !== null &&
+        !isEnteroPositivo(body.pl_inicial)
+    ) {
+        errores.push("El campo pl_inicial debe ser un entero positivo.");
+    }
+    if (!isFechaValida(body.fecha_inicio)) {
+        errores.push("El campo fecha_inicio debe ser una fecha valida.");
+    }
+    if (
+        !isEmpty(body.duracion_dias_esperada) &&
+        !isEnteroPositivo(body.duracion_dias_esperada)
+    ) {
+        errores.push("El campo duracion_dias_esperada debe ser un entero positivo.");
+    }
+
+    if (errores.length > 0) {
+        return error(res, "Datos invalidos para crear el lote y la pre-cria.", errores, 422);
+    }
     return null;
 }
 
@@ -222,6 +308,104 @@ export async function crearPrecria(req, res) {
     }
 }
 
+export async function crearPrecriaConLote(req, res) {
+    /*
+    Descripcion:
+    Crea, en una unica operacion atomica, un lote de larva NUEVO
+    junto con la pre-cria que lo consume. Reemplaza el flujo del
+    frontend que hacia 2 peticiones separadas (POST /lotes-larva
+    y luego POST /precrias), flujo que dejaba un "lote huerfano"
+    en la base de datos cuando la segunda peticion fallaba.
+ 
+    Parametros:
+    - req: Objeto Request de Express (contiene body, params y user autenticado).
+    - res: Objeto Response de Express para envio estructurado de JSON.
+ 
+    Retorna:
+    - Resuelve la peticion HTTP enviando un JSON usando los helpers
+      exito() o error(), con { lote, precria } en la data si todo
+      salio bien (201), o un error sin dejar ningun rastro en la
+      base de datos si algo fallo.
+    */
+    const errBody = validarCuerpoLoteYPrecria(req.body, res);
+    if (errBody) return errBody;
+ 
+    try {
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
+ 
+        // --- Validaciones previas (fuera de la transaccion, para dar
+        // mensajes de error claros). La validacion definitiva ocurre
+        // dentro de precriaModel.createConLote(). ---
+ 
+        const existente = await loteLarvaModel.findByCodigo(req.body.codigo_lote, grupoDatos);
+        if (existente) {
+            return error(res, "Ya existe un lote con ese codigo.", null, 409);
+        }
+ 
+        const proveedorId = req.body.proveedor_id ?? req.body.proveedorId;
+        if (!isEmpty(proveedorId)) {
+            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorId, grupoDatos);
+            if (!existe) return error(res, "El proveedor indicado no existe.", null, 400);
+        }
+ 
+        const laboratorioId = req.body.laboratorio_id ?? req.body.laboratorioId;
+        if (!isEmpty(laboratorioId)) {
+            const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioId, grupoDatos);
+            if (!existe) return error(res, "El laboratorio indicado no existe.", null, 400);
+        }
+ 
+        const procedenciaId = req.body.procedencia_id ?? req.body.procedenciaId;
+        if (!isEmpty(procedenciaId)) {
+            const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaId, grupoDatos);
+            if (!existe) return error(res, "La procedencia indicada no existe.", null, 400);
+        }
+ 
+        const fincaExiste = await precriaModel.verificarFincaExiste(req.body.finca_id, grupoDatos);
+        if (!fincaExiste) return error(res, "La finca indicada no existe.", null, 400);
+ 
+        const estanqueExiste = await precriaModel.verificarEstanqueExiste(
+            req.body.estanque_id, req.body.finca_id, grupoDatos
+        );
+        if (!estanqueExiste) {
+            return error(
+                res, "El estanque indicado no existe o no pertenece a la finca.", null, 400
+            );
+        }
+ 
+        // Un estanque solo puede tener una pre-cria Activa a la vez.
+        const precriaActivaExistente = await precriaModel.findActivaByEstanque(
+            req.body.estanque_id, grupoDatos
+        );
+        if (precriaActivaExistente) {
+            return error(res, "El estanque indicado ya tiene una pre-cria activa.", null, 409);
+        }
+ 
+        const dtoLote = new LoteLarvaDTO({
+            ...req.body,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        });
+        const dtoPrecria = new PrecriaDTO({
+            ...req.body,
+            lote_larva_id: 0, // placeholder: el modelo lo sobreescribe con el id del lote recien creado
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        });
+ 
+        const { lote, precria } = await precriaModel.createConLote(dtoLote, dtoPrecria, grupoDatos);
+        return exito(res, "Lote y pre-cria creados correctamente.", { lote, precria }, 201);
+    } catch (err) {
+        if (err.codigoNegocio) {
+            return error(res, err.message, null, 409);
+        }
+        if (err.code === 'ER_DUP_ENTRY') {
+            return error(res, 'Ya existe un lote con ese codigo.', err, 409);
+        }
+        return error(res, "Error al crear el lote y la pre-cria.", err, 500);
+    }
+}
+ 
 export async function actualizarPrecria(req, res) {
     /*
     Descripcion:
@@ -247,7 +431,7 @@ export async function actualizarPrecria(req, res) {
         const actual = await precriaModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Pre-cria no encontrada.", null, 404);
 
-        const errRef = await validarReferencias(req.body, res, grupoDatos);
+        const errRef = await validarReferencias(req.body, res, grupoDatos, { precriaIdActual: id });
         if (errRef) return errRef;
 
         const dto = new PrecriaDTO(req.body);
