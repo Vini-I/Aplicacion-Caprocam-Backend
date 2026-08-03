@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantVentas.controller.js
 Autor: Greivin Arguedas, Ricardo Chaves
-Fecha: 01/08/2026
+Fecha: 03/08/2026
 Modulo: Ventas
 Descripcion:
 Recibe las peticiones HTTP, delega y devuelve respuesta.
@@ -90,7 +90,6 @@ export async function createVenta(req, res) {
         precioKilo, 
         fecha, 
         total, 
-        colaborador, 
         comprador 
     } = req.body;
     
@@ -105,7 +104,6 @@ export async function createVenta(req, res) {
         precioKilo, 
         fecha, 
         total, 
-        colaborador, 
         comprador,
         creadoPorUsuarioId,
         creadoPorColaboradorId
@@ -141,7 +139,6 @@ export async function updateVenta(req, res) {
         precioKilo, 
         fecha, 
         total, 
-        colaborador, 
         comprador 
     } = req.body;
     
@@ -156,7 +153,6 @@ export async function updateVenta(req, res) {
         precioKilo, 
         fecha, 
         total, 
-        colaborador, 
         comprador
     );
     

@@ -19,6 +19,7 @@ IMPORTS
 */
 
 import { error } from "../common/respuestaJson.js";
+import { tieneCodigoCBODuplicado } from "../services/finca.service.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -26,7 +27,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export function validarMantFinca(req, res, next) {
+export async function validarMantFinca(req, res, next) {
   /*
     Descripcion:
     Valida los datos recibidos para la creacion o actualizacion de un registro de finca.
@@ -79,6 +80,17 @@ export function validarMantFinca(req, res, next) {
 
   if (!propietarioResponsable || String(propietarioResponsable).trim() === "") {
     return error(res, "El propietario responsable es obligatorio.", null, 400);
+  }
+
+  const codigoActual = String(req.params.id ?? "").trim();
+  const codigoDuplicado = await tieneCodigoCBODuplicado(
+    req,
+    codigoCBO,
+    codigoActual
+  );
+
+  if (codigoDuplicado) {
+    return error(res, "Ya existe una finca con ese ID CBO.", null, 409);
   }
 
   if (areaTotal === undefined || isNaN(areaTotal) || Number(areaTotal) <= 0) {
