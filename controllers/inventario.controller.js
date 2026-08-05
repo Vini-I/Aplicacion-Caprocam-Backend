@@ -53,10 +53,10 @@ function validarCuerpo(body, res) {
     - Objeto error de Express si falla, o null si es correcto.
   */
 
-  if (isEmpty(body.producto_id)) {
+  if (isEmpty(body.producto_id) && isEmpty(body.productoId)) {
     return error(res, "El campo producto_id es requerido.", null, 400);
   }
-  const productoIdNum = Number(body.producto_id);
+  const productoIdNum = Number(body.producto_id ?? body.productoId);
   if (
     Number.isNaN(productoIdNum) ||
     !Number.isInteger(productoIdNum) ||
@@ -65,12 +65,14 @@ function validarCuerpo(body, res) {
     return error(res, "El producto_id debe ser un entero positivo.", null, 422);
   }
 
-  if (!isNumeroValido(body.stock_minimo)) {
+  const stockMinimoValor = body.stock_minimo ?? body.stockMinimo;
+  if (!isNumeroValido(stockMinimoValor)) {
     return error(res, "El stock_minimo debe ser mayor o igual a 0.", null, 422);
   }
 
-  if (!isEmpty(body.proveedor_id)) {
-    const idNumero = Number(body.proveedor_id);
+  const proveedorIdValor = body.proveedor_id ?? body.proveedorId;
+  if (!isEmpty(proveedorIdValor)) {
+    const idNumero = Number(proveedorIdValor);
     if (
       Number.isNaN(idNumero) ||
       !Number.isInteger(idNumero) ||
@@ -183,8 +185,12 @@ export async function createInventario(req, res) {
     const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
       obtenerContextoPeticion(req);
 
+    const productoIdFinal = req.body.productoId ?? req.body.producto_id;
+    const proveedorIdFinal = req.body.proveedorId ?? req.body.proveedor_id;
+    const stockMinimoFinal = req.body.stockMinimo ?? req.body.stock_minimo;
+
     const productoExiste = await InventarioModel.verificarProductoExiste(
-      req.body.producto_id,
+      productoIdFinal,
       grupoDatos
     );
     if (!productoExiste) {
@@ -192,7 +198,7 @@ export async function createInventario(req, res) {
     }
 
     const yaExiste = await InventarioModel.findByProductoId(
-      req.body.producto_id,
+      productoIdFinal,
       grupoDatos
     );
     if (yaExiste) {
@@ -204,9 +210,9 @@ export async function createInventario(req, res) {
       );
     }
 
-    if (!isEmpty(req.body.proveedor_id)) {
+    if (!isEmpty(proveedorIdFinal)) {
       const provExiste = await InventarioModel.verificarProveedorExiste(
-        req.body.proveedor_id,
+        proveedorIdFinal,
         grupoDatos
       );
       if (!provExiste) {
@@ -215,10 +221,13 @@ export async function createInventario(req, res) {
     }
 
     const dto = new InventarioCreateDTO({
-      ...req.body,
+      productoId: productoIdFinal,
+      proveedorId: proveedorIdFinal,
+      stockMinimo: stockMinimoFinal,
       creadoPorUsuarioId,
       creadoPorColaboradorId,
     });
+    
     const nuevo = await InventarioModel.create(dto, grupoDatos);
 
     return exito(
@@ -257,15 +266,18 @@ export async function updateInventario(req, res) {
   const errId = validarIdParametro(req.params.id, res);
   if (errId) return errId;
 
-  if (!isNumeroValido(req.body.stock_minimo)) {
+  const stockMinimoValor = req.body.stockMinimo ?? req.body.stock_minimo;
+  if (!isNumeroValido(stockMinimoValor)) {
     return error(res, "El stock_minimo debe ser mayor o igual a 0.", null, 422);
   }
 
   try {
     const { grupoDatos } = obtenerContextoPeticion(req);
     
-    if (!isEmpty(req.body.proveedor_id)) {
-      const idNumero = Number(req.body.proveedor_id);
+    const proveedorIdFinal = req.body.proveedorId ?? req.body.proveedor_id;
+    
+    if (!isEmpty(proveedorIdFinal)) {
+      const idNumero = Number(proveedorIdFinal);
       if (
         Number.isNaN(idNumero) ||
         !Number.isInteger(idNumero) ||
@@ -291,7 +303,10 @@ export async function updateInventario(req, res) {
     if (!actual)
       return error(res, "Registro de inventario no encontrado.", null, 404);
 
-    const dto = new InventarioUpdateDTO(req.body);
+    const dto = new InventarioUpdateDTO({
+        proveedorId: proveedorIdFinal,
+        stockMinimo: stockMinimoValor
+    });
     const actualizado = await InventarioModel.update(req.params.id, dto, grupoDatos);
 
     return exito(
