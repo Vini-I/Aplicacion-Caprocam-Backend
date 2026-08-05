@@ -24,6 +24,7 @@ import {
     listarPrecrias,
     obtenerPrecria,
     crearPrecria,
+    crearPrecriaConLote,
     actualizarPrecria,
     finalizarPrecria,
     eliminarPrecria,
@@ -47,6 +48,9 @@ RUTAS
 router.get("/", verificarAuth, listarPrecrias);
 router.get("/:id", verificarAuth, obtenerPrecria);
 router.post("/", verificarAuth, validarBodyPrecria, crearPrecria);
+// Crea el lote de larva y la pre-cria en una sola transaccion atomica
+// (evita el "lote huerfano" que dejaban las 2 peticiones separadas).
+router.post("/con-lote", verificarAuth, validarBodyPrecria, crearPrecriaConLote);
 router.put("/:id", verificarAuth, validarBodyPrecria, actualizarPrecria);
 router.post("/:id/finalizar", verificarAuth, finalizarPrecria);
 router.delete("/:id", verificarAuth, eliminarPrecria);

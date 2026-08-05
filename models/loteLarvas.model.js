@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loteLarvas.model.js
 Autor: oscar mario
-Fecha: 01/08/2026
+Fecha: 02/08/2026
 Modulo: Lotes de Larva
 Descripcion:
 Capa de datos para lotes de larva.
@@ -169,6 +169,78 @@ export async function createLote(dto, grupoDatos) {
     return findById(result.insertId, grupoDatos);
 }
 
+export async function crearLoteEnTransaccion(connection, dto, grupoDatos) {
+    /*
+    Descripcion:
+    Inserta un lote de larva usando una conexion/transaccion ya
+    abierta por otro modelo (siembra o pre-cria), para que la
+    creacion del lote y la operacion que lo consume (siembra o
+    pre-cria) ocurran de forma atomica: si cualquier paso
+    posterior falla, el rollback de esa transaccion tambien
+    revierte este INSERT y no queda un lote huerfano.
+    Parametros:
+    - connection: Conexion MySQL con una transaccion ya iniciada
+      (connection.beginTransaction() ya fue llamado por el caller).
+    - dto: Objeto JSON/DTO con la carga util (payload) del lote.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual.
+ 
+    Retorna:
+    - El id (insertId) del lote de larva recien creado.
+    */
+    const sql = `
+        INSERT INTO lotes_larva (
+            grupo_datos,
+            codigo_lote,
+            proveedor_larva_id,
+            laboratorio_id,
+            procedencia_id,
+            certificado_larva,
+            pl_inicial,
+            cantidad_inicial,
+            fecha_ingreso,
+            estado_lote,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const [result] = await connection.execute(sql, [
+        grupoDatos,
+        dto.codigo_lote,
+        dto.proveedor_id  || null,
+        dto.laboratorio_id || null,
+        dto.procedencia_id || null,
+        dto.certificado_larva,
+        dto.pl_inicial,
+        dto.cantidad_inicial,
+        dto.fecha_ingreso,
+        dto.estado_lote || 'Disponible',
+        dto.creado_por_usuario_id,
+        dto.creado_por_colaborador_id,
+    ]);
+    return result.insertId;
+}
+ 
+export async function findByCodigoEnTransaccion(connection, codigo, grupoDatos) {
+    /*
+    Descripcion:
+    Igual que findByCodigo, pero usando una conexion/transaccion ya
+    abierta (con FOR UPDATE) para evitar condiciones de carrera
+    cuando dos peticiones intentan crear el mismo codigo_lote al
+    mismo tiempo desde el endpoint combinado de lote+siembra.
+    */
+    const [rows] = await connection.execute(`
+        SELECT id
+        FROM   lotes_larva
+        WHERE  LOWER(TRIM(codigo_lote)) = LOWER(TRIM(?))
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        LIMIT  1
+        FOR UPDATE
+    `, [codigo, grupoDatos]);
+    return rows[0] || null;
+}
+ 
 export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
@@ -191,13 +263,23 @@ export async function update(id, dto, grupoDatos) {
                pl_inicial        = ?,
                cantidad_inicial   = ?,
                fecha_ingreso      = ?,
-               estado_lote        = ?,
                version           = version + 1
         WHERE  id = ?
         AND    grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
     `;
+    // estado_lote NO esta en este UPDATE a proposito, aunque el DTO lo
+    // acepte como input: este endpoint es de edicion libre de datos del
+    // lote y NUNCA debe poder mover su estado (Disponible / En PreCria /
+    // Sembrado / Agotado) directamente desde el body. Las unicas
+    // transiciones de estado validas son las que ejecutan, en su propia
+    // transaccion, preCria.model.js (al crear una pre-cria) y
+    // siembra.model.js (al crear una siembra) - cada una con sus propias
+    // validaciones de negocio (estanque activo, sin siembra/precria
+    // activa, etc.). El controlador ademas bloquea por completo este
+    // endpoint si el lote ya no esta 'Disponible', pero se deja tambien
+    // fuera del UPDATE aqui como segunda capa de defensa.
     const [result] = await pool.execute(sql, [
         dto.codigo_lote,
         dto.proveedor_id  || null,
@@ -207,7 +289,6 @@ export async function update(id, dto, grupoDatos) {
         dto.pl_inicial,
         dto.cantidad_inicial,
         dto.fecha_ingreso,
-        dto.estado_lote || 'Disponible',
         Number(id),
         grupoDatos
     ]);
