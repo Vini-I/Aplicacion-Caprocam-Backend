@@ -13,14 +13,6 @@ login.
 */
 /*
 //////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Common
-*/
-import { error } from "../common/respuestaJson.js";
-/*
-//////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
 
@@ -75,6 +67,16 @@ const mensajesCampoFaltante = {
     // Verificar PIN
     operarioId: "El identificador del operario es obligatorio.",
 };
+
+function errorLogin(res, mensaje, codigo, code, details = null, err = null) {
+    return res.status(codigo).json({
+        success: false,
+        message: mensaje,
+        code,
+        details,
+        error: err?.message ?? err
+    });
+}
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
@@ -99,18 +101,29 @@ export function validarBodyLogin(req, res, next) {
     - 400 si el body esta vacio o faltan campos
     */
     if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, "Debe ingresar su usuario o correo y contrasena para iniciar sesion.", null, 400);
+        return errorLogin(
+            res,
+            "Debe ingresar su usuario o correo y contrasena para iniciar sesion.",
+            400,
+            "LOGIN_FIELDS_REQUIRED",
+            {
+                fields: ["usuario|correo", "contrasena"],
+            }
+        );
     }
 
     const faltantes = obtenerCamposFaltantes(req.body, camposLogin);
 
     if (faltantes.length > 0) {
         const mensajes = faltantes.map((campo) => mensajesCampoFaltante[campo] ?? `El campo '${campo}' es obligatorio.`);
-        return error(
+        return errorLogin(
             res,
             mensajes.length === 1 ? mensajes[0] : mensajes.join(" "),
-            { camposFaltantes: faltantes },
-            400
+            400,
+            "LOGIN_FIELDS_REQUIRED",
+            {
+                fields: faltantes,
+            }
         );
     }
 
@@ -134,18 +147,23 @@ export function validarBodyRegistro(req, res, next) {
   - 400 si el body esta vacio o faltan campos
   */
     if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, "Complete todos los campos requeridos.", null, 400);
+        return errorLogin(res, "Complete todos los campos requeridos.", 400, "REGISTER_FIELDS_REQUIRED", {
+            fields: ["nombre", "apellidos", "correo", "usuario", "contrasena", "rolId"],
+        });
     }
 
     const faltantes = obtenerCamposFaltantes(req.body, camposRegistro);
 
     if (faltantes.length > 0) {
         const mensajes = faltantes.map((campo) => mensajesCampoFaltante[campo] ?? `El campo '${campo}' es obligatorio.`);
-        return error(
+        return errorLogin(
             res,
             mensajes.length === 1 ? mensajes[0] : `Faltan campos obligatorios: ${mensajes.join(" ")}`,
-            { camposFaltantes: faltantes },
-            400
+            400,
+            "REGISTER_FIELDS_REQUIRED",
+            {
+                fields: faltantes,
+            }
         );
     }
 
@@ -169,18 +187,23 @@ export function validarBodyRegistroOperario(req, res, next) {
     - 400 si el body esta vacio o faltan campos
     */
     if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, "Complete todos los campos requeridos.", null, 400);
+        return errorLogin(res, "Complete todos los campos requeridos.", 400, "OPERARIO_REGISTER_FIELDS_REQUIRED", {
+            fields: ["nombre", "apellidos", "usuario", "rolId", "pin"],
+        });
     }
 
     const faltantes = obtenerCamposFaltantes(req.body, camposRegistroOperario);
 
     if (faltantes.length > 0) {
         const mensajes = faltantes.map((campo) => mensajesCampoFaltante[campo] ?? `El campo '${campo}' es obligatorio.`);
-        return error(
+        return errorLogin(
             res,
             mensajes.length === 1 ? mensajes[0] : `Faltan campos obligatorios: ${mensajes.join(" ")}`,
-            { camposFaltantes: faltantes },
-            400
+            400,
+            "OPERARIO_REGISTER_FIELDS_REQUIRED",
+            {
+                fields: faltantes,
+            }
         );
     }
 
@@ -204,18 +227,23 @@ export function validarBodyVerificarPin(req, res, next) {
    - 400 si el body esta vacio o faltan campos
    */
     if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, "Debe proporcionar el identificador del operario y su PIN.", null, 400);
+        return errorLogin(res, "Debe proporcionar el identificador del operario y su PIN.", 400, "VERIFY_PIN_FIELDS_REQUIRED", {
+            fields: ["operarioId", "pin"],
+        });
     }
 
     const faltantes = obtenerCamposFaltantes(req.body, camposVerificarPin);
 
     if (faltantes.length > 0) {
         const mensajes = faltantes.map((campo) => mensajesCampoFaltante[campo] ?? `El campo '${campo}' es obligatorio.`);
-        return error(
+        return errorLogin(
             res,
             mensajes.length === 1 ? mensajes[0] : mensajes.join(" "),
-            { camposFaltantes: faltantes },
-            400
+            400,
+            "VERIFY_PIN_FIELDS_REQUIRED",
+            {
+                fields: faltantes,
+            }
         );
     }
 
