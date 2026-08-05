@@ -11,6 +11,7 @@ Controlador HTTP para el modulo de procedencia.
 //////////////////////////////////////////////////////////
 */
 
+import { ProcedenciaDTO } from "../dtos/procedencia.dto.js";
 import * as ProcedenciaModel from "../models/procedencia.model.js";
 import { exito, error } from "../common/respuestaJson.js";
 import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
@@ -26,7 +27,7 @@ export async function getProcedencias(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const lista = await ProcedenciaModel.findAll(grupoDatos);
         return exito(res, "Procedencias obtenidas correctamente.", lista);
@@ -46,7 +47,7 @@ export async function getProcedenciaById(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const item = await ProcedenciaModel.findById(req.params.id, grupoDatos);
         if (!item) return error(res, "Procedencia no encontrada.", null, 404);
@@ -67,15 +68,18 @@ export async function createProcedencia(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
         obtenerContextoPeticion(req);
+        
         const dto = new ProcedenciaDTO({
-            ...req.body,
+            nombre: req.body.nombre,
+            descripcion: req.body.descripcion,
             grupoDatos,
             creadoPorUsuarioId,
             creadoPorColaboradorId
         });
+        
         const creado = await ProcedenciaModel.create(dto, grupoDatos);
         return exito(res, "Procedencia creada correctamente.", creado, 201);
     } catch (err) {
@@ -94,9 +98,18 @@ export async function updateProcedencia(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos } = obtenerContextoPeticion(req);
-        const actualizado = await ProcedenciaModel.update(req.params.id, req.body, grupoDatos);
+        
+        const dto = new ProcedenciaDTO({
+            nombre: req.body.nombre,
+            descripcion: req.body.descripcion,
+            grupoDatos,
+            creadoPorUsuarioId: null,
+            creadoPorColaboradorId: null
+        });
+
+        const actualizado = await ProcedenciaModel.update(req.params.id, dto, grupoDatos);
         if (!actualizado) return error(res, "Procedencia no encontrada.", null, 404);
         return exito(res, "Procedencia actualizada correctamente.", actualizado);
     } catch (err) {
@@ -115,7 +128,7 @@ export async function deleteProcedencia(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const eliminado = await ProcedenciaModel.remove(req.params.id, grupoDatos);
         if (!eliminado) return error(res, "Procedencia no encontrada.", null, 404);

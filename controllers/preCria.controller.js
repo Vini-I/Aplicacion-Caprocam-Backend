@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: preCria.controller.js
-Autor: oscar mario
-Fecha: 01/08/2026
+Autor: Joan Campos-Oscar Mario
+Fecha: 4/08/2026
 Modulo: Pre-cria
 Descripcion:
 Maneja las peticiones HTTP y la logica de pre-cria.
@@ -46,30 +46,32 @@ function validarCuerpo(body, res) {
     */
     const errores = [];
  
-    if (!isEnteroPositivo(body.lote_larva_id)) {
+    if (!isEnteroPositivo(body.lote_larva_id ?? body.loteLarvaId)) {
         errores.push("El campo lote_larva_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.finca_id)) {
+    if (!isEnteroPositivo(body.finca_id ?? body.fincaId)) {
         errores.push("El campo finca_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.estanque_id)) {
+    if (!isEnteroPositivo(body.estanque_id ?? body.estanqueId)) {
         errores.push("El campo estanque_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.cantidad_inicial)) {
+    if (!isEnteroPositivo(body.cantidad_inicial ?? body.cantidadInicial)) {
         errores.push("El campo cantidad_inicial debe ser un entero positivo.");
     }
+    const plInicialValor = body.pl_inicial ?? body.plInicial;
     if (
-        body.pl_inicial !== undefined && body.pl_inicial !== null &&
-        !isEnteroPositivo(body.pl_inicial)
+        plInicialValor !== undefined && plInicialValor !== null &&
+        !isEnteroPositivo(plInicialValor)
     ) {
         errores.push("El campo pl_inicial debe ser un entero positivo.");
     }
-    if (!isFechaValida(body.fecha_inicio)) {
+    if (!isFechaValida(body.fecha_inicio ?? body.fechaInicio)) {
         errores.push("El campo fecha_inicio debe ser una fecha valida.");
     }
+    const duracionDiasValor = body.duracion_dias ?? body.duracionDias;
     if (
-        !isEmpty(body.duracion_dias) &&
-        !isEnteroPositivo(body.duracion_dias)
+        !isEmpty(duracionDiasValor) &&
+        !isEnteroPositivo(duracionDiasValor)
     ) {
         errores.push("El campo duracion_dias debe ser un entero positivo.");
     }
@@ -98,8 +100,9 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
       con pre-cria activa"). null cuando se esta creando.
     */
     const { precriaIdActual = null } = opciones;
-    const loteId  = body.lote_larva_id ?? body.id_lote_larva;
-    const fincaId = body.finca_id ?? body.id_finca;
+    const loteId  = body.lote_larva_id ?? body.loteLarvaId ?? body.id_lote_larva;
+    const fincaId = body.finca_id ?? body.fincaId ?? body.id_finca;
+    const estanqueId = body.estanque_id ?? body.estanqueId;
  
     const lote = await loteLarvaModel.findById(loteId, grupoDatos);
     if (!lote) {
@@ -112,7 +115,7 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
     }
  
     const estanqueExiste = await precriaModel.verificarEstanqueExiste(
-        body.estanque_id, fincaId, grupoDatos
+        estanqueId, fincaId, grupoDatos
     );
     if (!estanqueExiste) {
         return error(
@@ -122,13 +125,14 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
  
     // Un estanque solo puede tener una pre-cria Activa a la vez.
     const precriaActivaExistente = await precriaModel.findActivaByEstanque(
-        body.estanque_id, grupoDatos, precriaIdActual
+        estanqueId, grupoDatos, precriaIdActual
     );
     if (precriaActivaExistente) {
         return error(res, "El estanque indicado ya tiene una pre-cria activa.", null, 409);
     }
  
-    if (!isEmpty(body.cantidad_inicial) && Number(body.cantidad_inicial) > lote.cantidad_inicial) {
+    const cantidadInicialValor = body.cantidad_inicial ?? body.cantidadInicial;
+    if (!isEmpty(cantidadInicialValor) && Number(cantidadInicialValor) > lote.cantidad_inicial) {
         return error(
             res,
             "cantidad_inicial de la pre-cria no puede superar la cantidad_inicial del lote.",
@@ -151,19 +155,20 @@ function validarCuerpoLoteYPrecria(body, res) {
     const errores = [];
  
     // --- Campos del lote ---
-    if (isEmpty(body.codigo_lote)) {
+    if (isEmpty(body.codigo_lote ?? body.codigoLote)) {
         errores.push("El campo codigo_lote es requerido.");
-    } else if (!isCodigoLarvaValido(body.codigo_lote)) {
+    } else if (!isCodigoLarvaValido(body.codigo_lote ?? body.codigoLote)) {
         errores.push(
             "El campo codigo_lote solo puede contener letras y numeros, con un maximo de 14 caracteres."
         );
     }
-    if (!isEmpty(body.certificado_larva) && !isCodigoLarvaValido(body.certificado_larva)) {
+    const certLarvaValor = body.certificado_larva ?? body.certificadoLarva;
+    if (!isEmpty(certLarvaValor) && !isCodigoLarvaValido(certLarvaValor)) {
         errores.push(
             "El campo certificado_larva solo puede contener letras y numeros, con un maximo de 14 caracteres."
         );
     }
-    if (!isFechaValida(body.fecha_ingreso)) {
+    if (!isFechaValida(body.fecha_ingreso ?? body.fechaIngreso)) {
         errores.push("El campo fecha_ingreso (del lote) debe ser una fecha valida.");
     }
     const proveedorIdValor = body.proveedor_id ?? body.proveedorId;
@@ -180,27 +185,29 @@ function validarCuerpoLoteYPrecria(body, res) {
     }
  
     // --- Campos de la pre-cria (sin lote_larva_id: el lote es nuevo) ---
-    if (!isEnteroPositivo(body.finca_id)) {
+    if (!isEnteroPositivo(body.finca_id ?? body.fincaId)) {
         errores.push("El campo finca_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.estanque_id)) {
+    if (!isEnteroPositivo(body.estanque_id ?? body.estanqueId)) {
         errores.push("El campo estanque_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.cantidad_inicial)) {
+    if (!isEnteroPositivo(body.cantidad_inicial ?? body.cantidadInicial)) {
         errores.push("El campo cantidad_inicial debe ser un entero positivo.");
     }
+    const plInicialValor = body.pl_inicial ?? body.plInicial;
     if (
-        body.pl_inicial !== undefined && body.pl_inicial !== null &&
-        !isEnteroPositivo(body.pl_inicial)
+        plInicialValor !== undefined && plInicialValor !== null &&
+        !isEnteroPositivo(plInicialValor)
     ) {
         errores.push("El campo pl_inicial debe ser un entero positivo.");
     }
-    if (!isFechaValida(body.fecha_inicio)) {
+    if (!isFechaValida(body.fecha_inicio ?? body.fechaInicio)) {
         errores.push("El campo fecha_inicio debe ser una fecha valida.");
     }
+    const duracionDiasValor = body.duracion_dias ?? body.duracionDias;
     if (
-        !isEmpty(body.duracion_dias) &&
-        !isEnteroPositivo(body.duracion_dias)
+        !isEmpty(duracionDiasValor) &&
+        !isEnteroPositivo(duracionDiasValor)
     ) {
         errores.push("El campo duracion_dias debe ser un entero positivo.");
     }
@@ -300,7 +307,14 @@ export async function crearPrecria(req, res) {
         if (errRef) return errRef;
  
         const dto = new PrecriaDTO({
-            ...req.body,
+            loteLarvaId: req.body.lote_larva_id ?? req.body.loteLarvaId,
+            fincaId: req.body.finca_id ?? req.body.fincaId,
+            estanqueId: req.body.estanque_id ?? req.body.estanqueId,
+            cantidadInicial: req.body.cantidad_inicial ?? req.body.cantidadInicial,
+            plInicial: req.body.pl_inicial ?? req.body.plInicial,
+            fechaInicio: req.body.fecha_inicio ?? req.body.fechaInicio,
+            duracionDias: req.body.duracion_dias ?? req.body.duracionDias,
+            estado: req.body.estado,
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
@@ -341,34 +355,38 @@ export async function crearPrecriaConLote(req, res) {
         // mensajes de error claros). La validacion definitiva ocurre
         // dentro de precriaModel.createConLote(). ---
  
-        const existente = await loteLarvaModel.findByCodigo(req.body.codigo_lote, grupoDatos);
+        const codigoLoteFinal = req.body.codigo_lote ?? req.body.codigoLote;
+        const proveedorIdFinal = req.body.proveedor_id ?? req.body.proveedorId;
+        const laboratorioIdFinal = req.body.laboratorio_id ?? req.body.laboratorioId;
+        const procedenciaIdFinal = req.body.procedencia_id ?? req.body.procedenciaId;
+        const fincaIdFinal = req.body.finca_id ?? req.body.fincaId;
+        const estanqueIdFinal = req.body.estanque_id ?? req.body.estanqueId;
+
+        const existente = await loteLarvaModel.findByCodigo(codigoLoteFinal, grupoDatos);
         if (existente) {
             return error(res, "Ya existe un lote con ese codigo.", null, 409);
         }
  
-        const proveedorId = req.body.proveedor_id ?? req.body.proveedorId;
-        if (!isEmpty(proveedorId)) {
-            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorId, grupoDatos);
+        if (!isEmpty(proveedorIdFinal)) {
+            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorIdFinal, grupoDatos);
             if (!existe) return error(res, "El proveedor indicado no existe.", null, 400);
         }
  
-        const laboratorioId = req.body.laboratorio_id ?? req.body.laboratorioId;
-        if (!isEmpty(laboratorioId)) {
-            const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioId, grupoDatos);
+        if (!isEmpty(laboratorioIdFinal)) {
+            const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioIdFinal, grupoDatos);
             if (!existe) return error(res, "El laboratorio indicado no existe.", null, 400);
         }
  
-        const procedenciaId = req.body.procedencia_id ?? req.body.procedenciaId;
-        if (!isEmpty(procedenciaId)) {
-            const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaId, grupoDatos);
+        if (!isEmpty(procedenciaIdFinal)) {
+            const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaIdFinal, grupoDatos);
             if (!existe) return error(res, "La procedencia indicada no existe.", null, 400);
         }
  
-        const fincaExiste = await precriaModel.verificarFincaExiste(req.body.finca_id, grupoDatos);
+        const fincaExiste = await precriaModel.verificarFincaExiste(fincaIdFinal, grupoDatos);
         if (!fincaExiste) return error(res, "La finca indicada no existe.", null, 400);
  
         const estanqueExiste = await precriaModel.verificarEstanqueExiste(
-            req.body.estanque_id, req.body.finca_id, grupoDatos
+            estanqueIdFinal, fincaIdFinal, grupoDatos
         );
         if (!estanqueExiste) {
             return error(
@@ -378,7 +396,7 @@ export async function crearPrecriaConLote(req, res) {
  
         // Un estanque solo puede tener una pre-cria Activa a la vez.
         const precriaActivaExistente = await precriaModel.findActivaByEstanque(
-            req.body.estanque_id, grupoDatos
+            estanqueIdFinal, grupoDatos
         );
         if (precriaActivaExistente) {
             return error(res, "El estanque indicado ya tiene una pre-cria activa.", null, 409);
@@ -389,9 +407,16 @@ export async function crearPrecriaConLote(req, res) {
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
+
         const dtoPrecria = new PrecriaDTO({
-            ...req.body,
-            lote_larva_id: 0, // placeholder: el modelo lo sobreescribe con el id del lote recien creado
+            loteLarvaId: 0, // placeholder: el modelo lo sobreescribe con el id del lote recien creado
+            fincaId: fincaIdFinal,
+            estanqueId: estanqueIdFinal,
+            cantidadInicial: req.body.cantidad_inicial ?? req.body.cantidadInicial,
+            plInicial: req.body.pl_inicial ?? req.body.plInicial,
+            fechaInicio: req.body.fecha_inicio ?? req.body.fechaInicio,
+            duracionDias: req.body.duracion_dias ?? req.body.duracionDias,
+            estado: req.body.estado,
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
@@ -442,11 +467,23 @@ export async function actualizarPrecria(req, res) {
                 409
             );
         }
-
+ 
         const errRef = await validarReferencias(req.body, res, grupoDatos, { precriaIdActual: id });
         if (errRef) return errRef;
  
-        const dto = new PrecriaDTO(req.body);
+        const dto = new PrecriaDTO({
+            loteLarvaId: req.body.lote_larva_id ?? req.body.loteLarvaId,
+            fincaId: req.body.finca_id ?? req.body.fincaId,
+            estanqueId: req.body.estanque_id ?? req.body.estanqueId,
+            cantidadInicial: req.body.cantidad_inicial ?? req.body.cantidadInicial,
+            plInicial: req.body.pl_inicial ?? req.body.plInicial,
+            fechaInicio: req.body.fecha_inicio ?? req.body.fechaInicio,
+            duracionDias: req.body.duracion_dias ?? req.body.duracionDias,
+            estado: req.body.estado,
+            creadoPorUsuarioId: null,
+            creadoPorColaboradorId: null,
+        });
+
         const actualizado = await precriaModel.update(id, grupoDatos, dto);
         return exito(res, "Pre-cria actualizada correctamente.", actualizado);
     } catch (err) {

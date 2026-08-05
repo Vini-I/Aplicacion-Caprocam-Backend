@@ -1,11 +1,10 @@
-
 /*
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: siembra.controller.js
-Autor: oscar mario
-Fecha: 02/08/2026
+Autor: oscar mario-Joan Campos
+Fecha: 4/08/2026
 Modulo: Siembra
 Descripcion:
 Maneja las peticiones HTTP y la logica de siembra.
@@ -58,37 +57,41 @@ function validarCuerpo(body, res) {
     */
     const errores = [];
 
-    if (!isEnteroPositivo(body.lote_larva_id)) {
+    if (!isEnteroPositivo(body.lote_larva_id ?? body.loteLarvaId)) {
         errores.push("El campo lote_larva_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.finca_id)) {
+    if (!isEnteroPositivo(body.finca_id ?? body.fincaId)) {
         errores.push("El campo finca_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.estanque_id)) {
+    if (!isEnteroPositivo(body.estanque_id ?? body.estanqueId)) {
         errores.push("El campo estanque_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.cantidad_sembrada)) {
+    if (!isEnteroPositivo(body.cantidad_sembrada ?? body.cantidadSembrada)) {
         errores.push("El campo cantidad_sembrada debe ser un entero positivo.");
     }
-    if (!isFechaValida(body.fecha_siembra)) {
+    if (!isFechaValida(body.fecha_siembra ?? body.fechaSiembra)) {
         errores.push("El campo fecha_siembra debe ser una fecha valida.");
     }
-    if (!isEmpty(body.precria_id) && !isEnteroPositivo(body.precria_id)) {
+    const precriaIdValor = body.precria_id ?? body.precriaId;
+    if (!isEmpty(precriaIdValor) && !isEnteroPositivo(precriaIdValor)) {
         errores.push("El campo precria_id debe ser un entero positivo.");
     }
+    const plSiembraValor = body.pl_siembra ?? body.plSiembra;
     if (
-        body.pl_siembra !== undefined && body.pl_siembra !== null &&
-        !isEnteroPositivo(body.pl_siembra)
+        plSiembraValor !== undefined && plSiembraValor !== null &&
+        !isEnteroPositivo(plSiembraValor)
     ) {
         errores.push("El campo pl_siembra debe ser un entero positivo.");
     }
+    const densidadPobValor = body.densidad_poblacional ?? body.densidadPoblacional;
     if (
-        !isEmpty(body.densidad_poblacional) &&
-        !isDecimalPositivo(body.densidad_poblacional)
+        !isEmpty(densidadPobValor) &&
+        !isDecimalPositivo(densidadPobValor)
     ) {
         errores.push("El campo densidad_poblacional debe ser un numero positivo.");
     }
-    if (!isEmpty(body.duracion_ciclo) && !isEnteroPositivo(body.duracion_ciclo)) {
+    const duracionCicloValor = body.duracion_ciclo ?? body.duracionCiclo;
+    if (!isEmpty(duracionCicloValor) && !isEnteroPositivo(duracionCicloValor)) {
         errores.push("El campo duracion_ciclo debe ser un entero positivo.");
     }
     if (!isEmpty(body.estado)) {
@@ -115,27 +118,29 @@ function validarCuerpoLoteYSiembra(body, res) {
     const errores = [];
  
     // --- Campos del lote ---
-    if (isEmpty(body.codigo_lote)) {
+    if (isEmpty(body.codigo_lote ?? body.codigoLote)) {
         errores.push("El campo codigo_lote es requerido.");
-    } else if (!isCodigoLarvaValido(body.codigo_lote)) {
+    } else if (!isCodigoLarvaValido(body.codigo_lote ?? body.codigoLote)) {
         errores.push(
             "El campo codigo_lote solo puede contener letras y numeros, con un maximo de 14 caracteres."
         );
     }
-    if (!isEmpty(body.certificado_larva) && !isCodigoLarvaValido(body.certificado_larva)) {
+    const certLarvaValor = body.certificado_larva ?? body.certificadoLarva;
+    if (!isEmpty(certLarvaValor) && !isCodigoLarvaValido(certLarvaValor)) {
         errores.push(
             "El campo certificado_larva solo puede contener letras y numeros, con un maximo de 14 caracteres."
         );
     }
-    if (!isEnteroPositivo(body.cantidad_inicial)) {
+    if (!isEnteroPositivo(body.cantidad_inicial ?? body.cantidadInicial)) {
         errores.push("El campo cantidad_inicial (del lote) debe ser un entero positivo.");
     }
-    if (!isFechaValida(body.fecha_ingreso)) {
+    if (!isFechaValida(body.fecha_ingreso ?? body.fechaIngreso)) {
         errores.push("El campo fecha_ingreso (del lote) debe ser una fecha valida.");
     }
+    const plInicialValor = body.pl_inicial ?? body.plInicial;
     if (
-        body.pl_inicial !== undefined && body.pl_inicial !== null &&
-        !isEnteroPositivo(body.pl_inicial)
+        plInicialValor !== undefined && plInicialValor !== null &&
+        !isEnteroPositivo(plInicialValor)
     ) {
         errores.push("El campo pl_inicial debe ser un entero positivo.");
     }
@@ -153,35 +158,40 @@ function validarCuerpoLoteYSiembra(body, res) {
     }
  
     // --- Campos de la siembra (sin lote_larva_id: el lote es nuevo) ---
-    if (!isEnteroPositivo(body.finca_id)) {
+    if (!isEnteroPositivo(body.finca_id ?? body.fincaId)) {
         errores.push("El campo finca_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.estanque_id)) {
+    if (!isEnteroPositivo(body.estanque_id ?? body.estanqueId)) {
         errores.push("El campo estanque_id debe ser un entero positivo.");
     }
-    if (!isEnteroPositivo(body.cantidad_sembrada)) {
+    const cantidadSembradaValor = body.cantidad_sembrada ?? body.cantidadSembrada;
+    if (!isEnteroPositivo(cantidadSembradaValor)) {
         errores.push("El campo cantidad_sembrada debe ser un entero positivo.");
     }
-    if (!isFechaValida(body.fecha_siembra)) {
+    if (!isFechaValida(body.fecha_siembra ?? body.fechaSiembra)) {
         errores.push("El campo fecha_siembra debe ser una fecha valida.");
     }
+    const plSiembraValor = body.pl_siembra ?? body.plSiembra;
     if (
-        body.pl_siembra !== undefined && body.pl_siembra !== null &&
-        !isEnteroPositivo(body.pl_siembra)
+        plSiembraValor !== undefined && plSiembraValor !== null &&
+        !isEnteroPositivo(plSiembraValor)
     ) {
         errores.push("El campo pl_siembra debe ser un entero positivo.");
     }
+    const densidadPoblacionalValor = body.densidad_poblacional ?? body.densidadPoblacional;
     if (
-        !isEmpty(body.densidad_poblacional) &&
-        !isDecimalPositivo(body.densidad_poblacional)
+        !isEmpty(densidadPoblacionalValor) &&
+        !isDecimalPositivo(densidadPoblacionalValor)
     ) {
         errores.push("El campo densidad_poblacional debe ser un numero positivo.");
     }
-    if (!isEmpty(body.duracion_ciclo) && !isEnteroPositivo(body.duracion_ciclo)) {
+    const duracionCicloValor = body.duracion_ciclo ?? body.duracionCiclo;
+    if (!isEmpty(duracionCicloValor) && !isEnteroPositivo(duracionCicloValor)) {
         errores.push("El campo duracion_ciclo debe ser un entero positivo.");
     }
-    if (!isEmpty(body.cantidad_sembrada) && !isEmpty(body.cantidad_inicial) &&
-        Number(body.cantidad_sembrada) > Number(body.cantidad_inicial)) {
+    const cantidadInicialValor = body.cantidad_inicial ?? body.cantidadInicial;
+    if (!isEmpty(cantidadSembradaValor) && !isEmpty(cantidadInicialValor) &&
+        Number(cantidadSembradaValor) > Number(cantidadInicialValor)) {
         errores.push("cantidad_sembrada no puede superar la cantidad_inicial del lote.");
     }
  
@@ -214,15 +224,20 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
     */
     const { esCreacion = false, siembraIdActual = null } = opciones;
 
-    const lote = await loteLarvaModel.findById(body.lote_larva_id, grupoDatos);
+    const loteLarvaIdValor = body.lote_larva_id ?? body.loteLarvaId;
+    const fincaIdValor = body.finca_id ?? body.fincaId;
+    const estanqueIdValor = body.estanque_id ?? body.estanqueId;
+    const precriaIdValor = body.precria_id ?? body.precriaId;
+    const cantidadSembradaValor = body.cantidad_sembrada ?? body.cantidadSembrada;
+
+    const lote = await loteLarvaModel.findById(loteLarvaIdValor, grupoDatos);
     if (!lote) {
         return error(res, "El lote de larva indicado no existe.", null, 400);
     }
 
-    // Un lote solo puede generar una unica siembra.
     if (esCreacion) {
         const loteYaUsado = await siembraModel.existeSiembraPorLote(
-            body.lote_larva_id, grupoDatos, siembraIdActual
+            loteLarvaIdValor, grupoDatos, siembraIdActual
         );
         if (loteYaUsado) {
             return error(
@@ -235,13 +250,13 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
         }
     }
 
-    const fincaExiste = await siembraModel.verificarFincaExiste(body.finca_id, grupoDatos);
+    const fincaExiste = await siembraModel.verificarFincaExiste(fincaIdValor, grupoDatos);
     if (!fincaExiste) {
         return error(res, "La finca indicada no existe.", null, 400);
     }
 
     const estanque = await siembraModel.obtenerEstanquePorId(
-        body.estanque_id, body.finca_id, grupoDatos
+        estanqueIdValor, fincaIdValor, grupoDatos
     );
     if (!estanque) {
         return error(
@@ -249,7 +264,6 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
         );
     }
 
-    // Solo se puede crear (no actualizar) una siembra si el estanque esta Activo.
     if (esCreacion) {
         if (String(estanque.estado).toLowerCase() !== EstadoEstanque.ACTIVO.toLowerCase()) {
             return error(
@@ -262,7 +276,7 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
         }
 
         const siembraActivaExistente = await siembraModel.findActivaByEstanque(
-            body.estanque_id, grupoDatos
+            estanqueIdValor, grupoDatos
         );
         if (siembraActivaExistente) {
             return error(
@@ -273,12 +287,12 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
 
     let origenCantidad = lote.cantidad_inicial;
 
-    if (!isEmpty(body.precria_id)) {
-        const precria = await precriaModel.findById(body.precria_id, grupoDatos);
+    if (!isEmpty(precriaIdValor)) {
+        const precria = await precriaModel.findById(precriaIdValor, grupoDatos);
         if (!precria) {
             return error(res, "La pre-cria indicada no existe.", null, 400);
         }
-        if (precria.lote_larva_id !== Number(body.lote_larva_id)) {
+        if (precria.lote_larva_id !== Number(loteLarvaIdValor)) {
             return error(
                 res, "La pre-cria indicada no pertenece al lote de larva indicado.", null, 400
             );
@@ -292,10 +306,9 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
             );
         }
 
-        // Una misma pre-cria solo puede originar una unica siembra.
         if (esCreacion) {
             const precriaYaUsada = await siembraModel.existeSiembraPorPrecria(
-                body.precria_id, grupoDatos, siembraIdActual
+                precriaIdValor, grupoDatos, siembraIdActual
             );
             if (precriaYaUsada) {
                 return error(
@@ -311,14 +324,15 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
         origenCantidad = precria.cantidad_final;
 
         // El PL inicial de la siembra debe ser el PL final de la pre-cria.
-        body.pl_siembra = precria.pl_final;
+        body.pl_siembra = precria.pl_final; // Retrocompatibilidad para las rutinas del modelo
+        body.plSiembra = precria.pl_final;
     }
 
-    if (!isEmpty(body.cantidad_sembrada) && Number(body.cantidad_sembrada) > origenCantidad) {
+    if (!isEmpty(cantidadSembradaValor) && Number(cantidadSembradaValor) > origenCantidad) {
         return error(
             res,
             "cantidad_sembrada no puede superar la cantidad disponible del " +
-                (isEmpty(body.precria_id) ? "lote." : "pre-cria."),
+                (isEmpty(precriaIdValor) ? "lote." : "pre-cria."),
             null,
             400
         );
@@ -400,15 +414,23 @@ export async function crearSiembra(req, res) {
         if (errRef) return errRef;
 
         const dto = new SiembraDTO({
-            ...req.body,
+            loteLarvaId: req.body.lote_larva_id ?? req.body.loteLarvaId,
+            precriaId: req.body.precria_id ?? req.body.precriaId,
+            fincaId: req.body.finca_id ?? req.body.fincaId,
+            estanqueId: req.body.estanque_id ?? req.body.estanqueId,
+            fechaSiembra: req.body.fecha_siembra ?? req.body.fechaSiembra,
+            tecnicaCultivo: req.body.tecnica_cultivo ?? req.body.tecnicaCultivo,
+            densidadPoblacional: req.body.densidad_poblacional ?? req.body.densidadPoblacional,
+            cantidadSembrada: req.body.cantidad_sembrada ?? req.body.cantidadSembrada,
+            plSiembra: req.body.pl_siembra ?? req.body.plSiembra,
+            duracionCiclo: req.body.duracion_ciclo ?? req.body.duracionCiclo,
+            estado: req.body.estado,
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
         const nueva = await siembraModel.create(dto, grupoDatos);
         return exito(res, "Siembra creada correctamente.", nueva, 201);
     } catch (err) {
-        // Errores de negocio lanzados dentro de la transaccion del modelo
-        // (condiciones de carrera sobre el estanque).
         if (err.codigoNegocio) {
             return error(res, err.message, null, 409);
         }
@@ -442,40 +464,38 @@ export async function crearSiembraConLote(req, res) {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
             obtenerContextoPeticion(req);
  
-        // --- Validaciones previas (fuera de la transaccion, para dar
-        // mensajes de error claros). La validacion definitiva y a
-        // prueba de condiciones de carrera ocurre dentro de
-        // siembraModel.createConLote(), que vuelve a chequear todo
-        // con locks (FOR UPDATE) antes de escribir nada. ---
- 
-        const existente = await loteLarvaModel.findByCodigo(req.body.codigo_lote, grupoDatos);
+        const codigoLoteFinal = req.body.codigo_lote ?? req.body.codigoLote;
+        const proveedorIdFinal = req.body.proveedor_id ?? req.body.proveedorId;
+        const laboratorioIdFinal = req.body.laboratorio_id ?? req.body.laboratorioId;
+        const procedenciaIdFinal = req.body.procedencia_id ?? req.body.procedenciaId;
+        const fincaIdFinal = req.body.finca_id ?? req.body.fincaId;
+        const estanqueIdFinal = req.body.estanque_id ?? req.body.estanqueId;
+
+        const existente = await loteLarvaModel.findByCodigo(codigoLoteFinal, grupoDatos);
         if (existente) {
             return error(res, "Ya existe un lote con ese codigo.", null, 409);
         }
  
-        const proveedorId = req.body.proveedor_id ?? req.body.proveedorId;
-        if (!isEmpty(proveedorId)) {
-            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorId, grupoDatos);
+        if (!isEmpty(proveedorIdFinal)) {
+            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorIdFinal, grupoDatos);
             if (!existe) return error(res, "El proveedor indicado no existe.", null, 400);
         }
  
-        const laboratorioId = req.body.laboratorio_id ?? req.body.laboratorioId;
-        if (!isEmpty(laboratorioId)) {
-            const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioId, grupoDatos);
+        if (!isEmpty(laboratorioIdFinal)) {
+            const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioIdFinal, grupoDatos);
             if (!existe) return error(res, "El laboratorio indicado no existe.", null, 400);
         }
  
-        const procedenciaId = req.body.procedencia_id ?? req.body.procedenciaId;
-        if (!isEmpty(procedenciaId)) {
-            const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaId, grupoDatos);
+        if (!isEmpty(procedenciaIdFinal)) {
+            const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaIdFinal, grupoDatos);
             if (!existe) return error(res, "La procedencia indicada no existe.", null, 400);
         }
  
-        const fincaExiste = await siembraModel.verificarFincaExiste(req.body.finca_id, grupoDatos);
+        const fincaExiste = await siembraModel.verificarFincaExiste(fincaIdFinal, grupoDatos);
         if (!fincaExiste) return error(res, "La finca indicada no existe.", null, 400);
  
         const estanque = await siembraModel.obtenerEstanquePorId(
-            req.body.estanque_id, req.body.finca_id, grupoDatos
+            estanqueIdFinal, fincaIdFinal, grupoDatos
         );
         if (!estanque) {
             return error(
@@ -492,7 +512,7 @@ export async function crearSiembraConLote(req, res) {
             );
         }
         const siembraActivaExistente = await siembraModel.findActivaByEstanque(
-            req.body.estanque_id, grupoDatos
+            estanqueIdFinal, grupoDatos
         );
         if (siembraActivaExistente) {
             return error(res, "El estanque indicado ya tiene una siembra activa.", null, 409);
@@ -504,10 +524,19 @@ export async function crearSiembraConLote(req, res) {
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
+
         const dtoSiembra = new SiembraDTO({
-            ...req.body,
-            lote_larva_id: 0, // placeholder: el modelo lo sobreescribe con el id del lote recien creado
-            precria_id: null,
+            loteLarvaId: 0, // placeholder: el modelo lo sobreescribe con el id del lote recien creado
+            precriaId: null,
+            fincaId: fincaIdFinal,
+            estanqueId: estanqueIdFinal,
+            fechaSiembra: req.body.fecha_siembra ?? req.body.fechaSiembra,
+            tecnicaCultivo: req.body.tecnica_cultivo ?? req.body.tecnicaCultivo,
+            densidadPoblacional: req.body.densidad_poblacional ?? req.body.densidadPoblacional,
+            cantidadSembrada: req.body.cantidad_sembrada ?? req.body.cantidadSembrada,
+            plSiembra: req.body.pl_siembra ?? req.body.plSiembra,
+            duracionCiclo: req.body.duracion_ciclo ?? req.body.duracionCiclo,
+            estado: req.body.estado,
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
@@ -560,7 +589,21 @@ export async function actualizarSiembra(req, res) {
         });
         if (errRef) return errRef;
 
-        const dto = new SiembraDTO(req.body);
+        const dto = new SiembraDTO({
+            loteLarvaId: req.body.lote_larva_id ?? req.body.loteLarvaId,
+            precriaId: req.body.precria_id ?? req.body.precriaId,
+            fincaId: req.body.finca_id ?? req.body.fincaId,
+            estanqueId: req.body.estanque_id ?? req.body.estanqueId,
+            fechaSiembra: req.body.fecha_siembra ?? req.body.fechaSiembra,
+            tecnicaCultivo: req.body.tecnica_cultivo ?? req.body.tecnicaCultivo,
+            densidadPoblacional: req.body.densidad_poblacional ?? req.body.densidadPoblacional,
+            cantidadSembrada: req.body.cantidad_sembrada ?? req.body.cantidadSembrada,
+            plSiembra: req.body.pl_siembra ?? req.body.plSiembra,
+            duracionCiclo: req.body.duracion_ciclo ?? req.body.duracionCiclo,
+            estado: req.body.estado,
+            creadoPorUsuarioId: null,
+            creadoPorColaboradorId: null,
+        });
         const actualizada = await siembraModel.update(id, grupoDatos, dto);
         return exito(res, "Siembra actualizada correctamente.", actualizada);
     } catch (err) {
@@ -628,7 +671,7 @@ export async function eliminarSiembra(req, res) {
 export async function obtenerSiembraActiva(req, res) {
     /*
     Descripcion:
-    Busca y retorna un registro especifico de siembra mediante su identificador unico.
+    Busca y retorna un registro especifico de siembra activa por estanque.
     Parametros:
     - req: Objeto Request de Express (contiene body, params y user autenticado).
     - res: Objeto Response de Express para envio estructurado de JSON.

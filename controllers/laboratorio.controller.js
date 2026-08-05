@@ -3,14 +3,15 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: laboratorio.controller.js
-Autor: Oscar Mario
-Fecha: 01/08/2026
+Autor: Oscar Mario-Joan Campos
+Fecha: 4/08/2026
 Modulo: Laboratorio
 Descripcion:
 Controlador HTTP para el modulo de laboratorio.
 //////////////////////////////////////////////////////////
 */
 
+import { LaboratorioDTO } from "../dtos/laboratorio.dto.js";
 import * as LaboratorioModel from "../models/laboratorio.model.js";
 import { exito, error } from "../common/respuestaJson.js";
 import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
@@ -26,7 +27,7 @@ export async function getLaboratorios(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
        const { grupoDatos } = obtenerContextoPeticion(req);
         const lista = await LaboratorioModel.findAll(grupoDatos);
         return exito(res, "Laboratorios obtenidos correctamente.", lista);
@@ -46,7 +47,7 @@ export async function getLaboratorioById(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const item = await LaboratorioModel.findById(req.params.id, grupoDatos);
         if (!item) return error(res, "Laboratorio no encontrado.", null, 404);
@@ -67,15 +68,18 @@ export async function createLaboratorio(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
         obtenerContextoPeticion(req);
+        
         const dto = new LaboratorioDTO({
-            ...req.body,
+            nombre: req.body.nombre,
+            descripcion: req.body.descripcion,
             grupoDatos,
             creadoPorUsuarioId,
             creadoPorColaboradorId
         });
+        
         const creado = await LaboratorioModel.create(dto, grupoDatos);
         return exito(res, "Laboratorio creado correctamente.", creado, 201);
     } catch (err) {
@@ -94,9 +98,18 @@ export async function updateLaboratorio(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos } = obtenerContextoPeticion(req);
-        const actualizado = await LaboratorioModel.update(req.params.id, req.body, grupoDatos);
+        
+        const dto = new LaboratorioDTO({
+            nombre: req.body.nombre,
+            descripcion: req.body.descripcion,
+            grupoDatos,
+            creadoPorUsuarioId: null,
+            creadoPorColaboradorId: null
+        });
+
+        const actualizado = await LaboratorioModel.update(req.params.id, dto, grupoDatos);
         if (!actualizado) return error(res, "Laboratorio no encontrado.", null, 404);
         return exito(res, "Laboratorio actualizado correctamente.", actualizado);
     } catch (err) {
@@ -115,7 +128,7 @@ export async function deleteLaboratorio(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const eliminado = await LaboratorioModel.remove(req.params.id, grupoDatos);
         if (!eliminado) return error(res, "Laboratorio no encontrado.", null, 404);

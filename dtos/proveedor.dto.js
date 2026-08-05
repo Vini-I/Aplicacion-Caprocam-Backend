@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: proveedor.dto.js
-Autor: Oscar Mario Alvarez
-Fecha: 01/08/2026
+Autor: Joan Campos
+Fecha: 4/08/2026
 Modulo: proveedores
 Descripcion:
 Modulo de transferencia de datos dto para proveedor.
@@ -35,42 +35,38 @@ DTO
 
 export class proveedorDto {
     constructor({
-        nombre_empresa, nombre, tipo_producto, tipoProducto, telefono,
-        correo_electronico, correo, direccion, notas,
-        creadoPorUsuarioId, creadoPorColaboradorId,
+        nombre, 
+        tipoProducto, 
+        telefono,
+        correo, 
+        direccion, 
+        notas,
+        creadoPorUsuarioId, 
+        creadoPorColaboradorId,
     }) {
         /*
         Descripcion:
         Construye un objeto proveedorDto con los datos recibidos.
-        Acepta tanto los nombres de columna DB (snake_case) como
-        alias camelCase cortos, para no depender de que el
-        frontend mande un formato u otro.
  
         Parametros:
-        - nombre_empresa / nombre:             Nombre de la empresa (requerido).
-        - tipo_producto / tipoProducto:         Tipo de producto (requerido, ENUM).
-        - telefono:                             Telefono de contacto.
-        - correo_electronico / correo:          Correo de contacto (opcional).
-        - direccion:                            Direccion (opcional).
-        - notas:                                Notas adicionales (opcional).
-        - creadoPorUsuarioId:                   FK a usuarios - web (resuelto por
-          obtenerContextoPeticion, nunca por el body del cliente).
-        - creadoPorColaboradorId:               FK a colaboradores - movil (idem).
+        - nombre:             Nombre de la empresa (requerido).
+        - tipoProducto:       Tipo de producto (requerido, ENUM).
+        - telefono:           Telefono de contacto.
+        - correo:             Correo de contacto (opcional).
+        - direccion:          Direccion (opcional).
+        - notas:              Notas adicionales (opcional).
+        - creadoPorUsuarioId: FK a usuarios - web.
+        - creadoPorColaboradorId: FK a colaboradores - movil.
         */
 
-        const nombreDb = nombre_empresa ?? nombre;
-        const tipoDb   = tipo_producto ?? tipoProducto;
-        const correoDb = correo_electronico ?? correo;
-
-        this.nombre_empresa = String(nombreDb).trim();
-        this.tipo_producto = String(tipoDb).trim();
+        this.nombre_empresa = String(nombre).trim();
+        this.tipo_producto = String(tipoProducto).trim();
         this.telefono = telefono ? String(telefono).trim() : null;
-        this.correo_electronico = correo_electronico ? String(correoDb).trim() : null;
+        this.correo_electronico = correo ? String(correo).trim() : null;
         this.direccion = direccion ? String(direccion).trim() : null;
         this.notas = notas ? String(notas).trim() : null; 
         this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
         this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
-        
     }
 }
 

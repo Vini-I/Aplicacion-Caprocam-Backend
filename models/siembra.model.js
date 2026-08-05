@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: siembra.model.js
-Autor: oscar mario
-Fecha: 02/08/2026
+Autor: Joan Campos
+Fecha: 4/08/2026
 Modulo: Siembra
 Descripcion:
 Capa de datos para siembra.
