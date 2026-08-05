@@ -24,7 +24,7 @@ export const tipoProductos = Object.freeze({
     PROBIOTICOS: 'Probioticos',
     EQUIPOS: 'Equipos',
     LARVA: 'Larva',
-    OTROS: 'Otros'
+    OTROS: 'Otro'
 });
 
 /*

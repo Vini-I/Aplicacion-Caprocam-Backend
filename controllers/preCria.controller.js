@@ -401,9 +401,17 @@ export async function crearPrecriaConLote(req, res) {
         if (precriaActivaExistente) {
             return error(res, "El estanque indicado ya tiene una pre-cria activa.", null, 409);
         }
- 
-        const dtoLote = new LoteLarvaDTO({
-            ...req.body,
+
+         const dtoLote = new LoteLarvaDTO({
+            codigoLote: codigoLoteFinal,
+            proveedorId: proveedorIdFinal,
+            laboratorioId: laboratorioIdFinal,
+            procedenciaId: procedenciaIdFinal,
+            certificadoLarva: req.body.certificado_larva ?? req.body.certificadoLarva,
+            plInicial: req.body.pl_inicial ?? req.body.plInicial,
+            cantidadInicial: req.body.cantidad_inicial ?? req.body.cantidadInicial,
+            fechaIngreso: req.body.fecha_ingreso ?? req.body.fechaIngreso,
+            estadoLote: req.body.estado_lote ?? req.body.estadoLote,
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
@@ -471,7 +479,7 @@ export async function actualizarPrecria(req, res) {
         const errRef = await validarReferencias(req.body, res, grupoDatos, { precriaIdActual: id });
         if (errRef) return errRef;
  
-        const dto = new PrecriaDTO({
+            const dto = new PrecriaDTO({
             loteLarvaId: req.body.lote_larva_id ?? req.body.loteLarvaId,
             fincaId: req.body.finca_id ?? req.body.fincaId,
             estanqueId: req.body.estanque_id ?? req.body.estanqueId,
@@ -479,6 +487,9 @@ export async function actualizarPrecria(req, res) {
             plInicial: req.body.pl_inicial ?? req.body.plInicial,
             fechaInicio: req.body.fecha_inicio ?? req.body.fechaInicio,
             duracionDias: req.body.duracion_dias ?? req.body.duracionDias,
+            fechaFin: req.body.fecha_fin ?? req.body.fechaFin,
+            cantidadFinal: req.body.cantidad_final ?? req.body.cantidadFinal,
+            plFinal: req.body.pl_final ?? req.body.plFinal,
             estado: req.body.estado,
             creadoPorUsuarioId: null,
             creadoPorColaboradorId: null,

@@ -518,9 +518,16 @@ export async function crearSiembraConLote(req, res) {
             return error(res, "El estanque indicado ya tiene una siembra activa.", null, 409);
         }
  
-        // --- DTOs ---
-        const dtoLote = new LoteLarvaDTO({
-            ...req.body,
+            const dtoLote = new LoteLarvaDTO({
+            codigoLote: codigoLoteFinal,
+            proveedorId: proveedorIdFinal,
+            laboratorioId: laboratorioIdFinal,
+            procedenciaId: procedenciaIdFinal,
+            certificadoLarva: req.body.certificado_larva ?? req.body.certificadoLarva,
+            plInicial: req.body.pl_inicial ?? req.body.plInicial,
+            cantidadInicial: req.body.cantidad_inicial ?? req.body.cantidadInicial,
+            fechaIngreso: req.body.fecha_ingreso ?? req.body.fechaIngreso,
+            estadoLote: req.body.estado_lote ?? req.body.estadoLote,
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });

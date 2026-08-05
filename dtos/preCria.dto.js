@@ -37,19 +37,16 @@ export class PrecriaDTO {
         plInicial,
         fechaInicio,
         duracionDias,
+        fechaFin,
+        cantidadFinal,
+        plFinal,
         estado,
         creadoPorUsuarioId,
         creadoPorColaboradorId,
     }) {
         /*
         Descripcion:
-        Constructor del Data Transfer Object (DTO) para pre-cria. Se encarga de recibir datos crudos (ya sea del request del cliente o de una fila cruda de base de datos) y normalizarlos en una estructura segura, aplicando transformaciones de tipo, resolviendo llaves foraneas y seteando valores por defecto (ej. estados predeterminados).
-
-        Parametros:
-        - Objeto literal destructurado con las propiedades originales a mapear (incluyendo snake_case desde BD o camelCase desde JSON).
-        - creadoPorUsuarioId:     FK a usuarios - web (resuelto por
-          obtenerContextoPeticion, nunca por el body del cliente).
-        - creadoPorColaboradorId: FK a colaboradores - movil (idem).
+        Constructor del Data Transfer Object (DTO) para pre-cria. Se encarga de recibir datos crudos y normalizarlos en una estructura segura.
         */
  
         this.lote_larva_id = Number(loteLarvaId);
@@ -63,6 +60,13 @@ export class PrecriaDTO {
         
         this.duracion_dias = duracionDias !== undefined && duracionDias !== null
             ? Number(duracionDias) : null;
+            
+        // --- Campos de finalizacion para cuando se edita antes del cierre ---
+        this.fecha_fin = fechaFin ? String(fechaFin).trim() : null;
+        this.cantidad_final = cantidadFinal !== undefined && cantidadFinal !== null 
+            ? Number(cantidadFinal) : null;
+        this.pl_final = plFinal !== undefined && plFinal !== null 
+            ? Number(plFinal) : null;
             
         this.estado = estado ? String(estado).trim() : EstadoPrecria.ACTIVA;
         
