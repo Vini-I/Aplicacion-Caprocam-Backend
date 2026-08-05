@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: inventario.dto.js
-Autor: Brayan / Joan
-Fecha: 30/06/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Inventario
 Descripcion:
 DTO de entrada y mapper de salida, SOLO para los campos
@@ -34,6 +34,8 @@ export class InventarioCreateDTO {
         proveedorId,
         stock_minimo,
         stockMinimo,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
     }) {
         /*
         Descripcion:
@@ -45,6 +47,9 @@ export class InventarioCreateDTO {
         - producto_id:   ID del producto ya existente (requerido).
         - proveedor_id:  ID del proveedor (opcional, FK nullable).
         - stock_minimo:  Cantidad minima antes de alertar (requerido).
+        - creadoPorUsuarioId:    FK a usuarios - web (resuelto por
+          obtenerContextoPeticion, nunca por el body del cliente).
+        - creadoPorColaboradorId: FK a colaboradores - movil (idem).
         */
         const productoDb  = producto_id ?? productoId;
         const proveedorDb = proveedor_id ?? proveedorId;
@@ -53,6 +58,8 @@ export class InventarioCreateDTO {
         this.producto_id  = Number(productoDb);
         this.proveedor_id = proveedorDb ? Number(proveedorDb) : null;
         this.stock_minimo = Number(stockMinDb);
+        this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
+        this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
     }
 }
 
@@ -144,6 +151,8 @@ export function mapearInventario(row) {
         stockMinimo:        Number(row.stock_minimo),
         fechaCaducidad:     formatearFechaDDMMAAAA(row.fecha_caducidad),  
         estado:             row.estado,
+        creadoPorUsuarioId:     row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         activo:             Boolean(row.inv_activo),
         version:            row.version,
         fechaCreacion:      row.fecha_creacion,

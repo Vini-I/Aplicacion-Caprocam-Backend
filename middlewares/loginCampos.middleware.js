@@ -52,6 +52,29 @@ const camposRegistroOperario = [
 ];
 
 const camposVerificarPin = [["operarioId"], ["pin"]];
+
+/*
+Mensajes personalizados por campo. La clave es el nombre
+principal del grupo (primer elemento del array de aliases).
+*/
+const mensajesCampoFaltante = {
+    // Login
+    usuario: "Debe ingresar su usuario o correo electronico.",
+    contrasena: "La contrasena es obligatoria.",
+
+    // Registro administrador
+    nombre: "El nombre es obligatorio.",
+    apellidos: "Los apellidos son obligatorios.",
+    correo: "El correo electronico es obligatorio.",
+    nombreUsuario: "El nombre de usuario es obligatorio.",
+    rolId: "Debe seleccionar un rol para el usuario.",
+
+    // Registro operario
+    pin: "El PIN de 4 digitos es obligatorio.",
+
+    // Verificar PIN
+    operarioId: "El identificador del operario es obligatorio.",
+};
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
@@ -76,16 +99,17 @@ export function validarBodyLogin(req, res, next) {
     - 400 si el body esta vacio o faltan campos
     */
     if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, "El body no puede estar vacio.", null, 400);
+        return error(res, "Debe ingresar su usuario o correo y contrasena para iniciar sesion.", null, 400);
     }
 
     const faltantes = obtenerCamposFaltantes(req.body, camposLogin);
 
     if (faltantes.length > 0) {
+        const mensajes = faltantes.map((campo) => mensajesCampoFaltante[campo] ?? `El campo '${campo}' es obligatorio.`);
         return error(
             res,
-            `Faltan campos requeridos: ${faltantes.join(", ")}.`,
-            null,
+            mensajes.length === 1 ? mensajes[0] : mensajes.join(" "),
+            { camposFaltantes: faltantes },
             400
         );
     }
@@ -94,32 +118,33 @@ export function validarBodyLogin(req, res, next) {
 }
 
 export function validarBodyRegistro(req, res, next) {
-      /*
-    Descripcion:
-    Verifica que el body no este vacio y contenga
-    los campos minimos requeridos para registrar un
-    administrador web.
+    /*
+  Descripcion:
+  Verifica que el body no este vacio y contenga
+  los campos minimos requeridos para registrar un
+  administrador web.
 
-    Parametros:
-    - req:  Objeto request de Express
-    - res:  Objeto response de Express
-    - next: Funcion para pasar al siguiente middleware
+  Parametros:
+  - req:  Objeto request de Express
+  - res:  Objeto response de Express
+  - next: Funcion para pasar al siguiente middleware
 
-    Retorna:
-    - next() si el body es valido
-    - 400 si el body esta vacio o faltan campos
-    */
+  Retorna:
+  - next() si el body es valido
+  - 400 si el body esta vacio o faltan campos
+  */
     if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, "El body no puede estar vacio.", null, 400);
+        return error(res, "Complete todos los campos requeridos.", null, 400);
     }
 
     const faltantes = obtenerCamposFaltantes(req.body, camposRegistro);
 
     if (faltantes.length > 0) {
+        const mensajes = faltantes.map((campo) => mensajesCampoFaltante[campo] ?? `El campo '${campo}' es obligatorio.`);
         return error(
             res,
-            `Faltan campos requeridos: ${faltantes.join(", ")}.`,
-            null,
+            mensajes.length === 1 ? mensajes[0] : `Faltan campos obligatorios: ${mensajes.join(" ")}`,
+            { camposFaltantes: faltantes },
             400
         );
     }
@@ -144,16 +169,17 @@ export function validarBodyRegistroOperario(req, res, next) {
     - 400 si el body esta vacio o faltan campos
     */
     if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, "El body no puede estar vacio.", null, 400);
+        return error(res, "Complete todos los campos requeridos.", null, 400);
     }
 
     const faltantes = obtenerCamposFaltantes(req.body, camposRegistroOperario);
 
     if (faltantes.length > 0) {
+        const mensajes = faltantes.map((campo) => mensajesCampoFaltante[campo] ?? `El campo '${campo}' es obligatorio.`);
         return error(
             res,
-            `Faltan campos requeridos: ${faltantes.join(", ")}.`,
-            null,
+            mensajes.length === 1 ? mensajes[0] : `Faltan campos obligatorios: ${mensajes.join(" ")}`,
+            { camposFaltantes: faltantes },
             400
         );
     }
@@ -162,32 +188,33 @@ export function validarBodyRegistroOperario(req, res, next) {
 }
 
 export function validarBodyVerificarPin(req, res, next) {
-     /*
-    Descripcion:
-    Verifica que el body no este vacio y contenga
-    los campos minimos requeridos para verificar el
-    PIN de un operario de campo en la app movil.
+    /*
+   Descripcion:
+   Verifica que el body no este vacio y contenga
+   los campos minimos requeridos para verificar el
+   PIN de un operario de campo en la app movil.
 
-    Parametros:
-    - req:  Objeto request de Express
-    - res:  Objeto response de Express
-    - next: Funcion para pasar al siguiente middleware
+   Parametros:
+   - req:  Objeto request de Express
+   - res:  Objeto response de Express
+   - next: Funcion para pasar al siguiente middleware
 
-    Retorna:
-    - next() si el body es valido
-    - 400 si el body esta vacio o faltan campos
-    */
+   Retorna:
+   - next() si el body es valido
+   - 400 si el body esta vacio o faltan campos
+   */
     if (!req.body || Object.keys(req.body).length === 0) {
-        return error(res, "El body no puede estar vacio.", null, 400);
+        return error(res, "Debe proporcionar el identificador del operario y su PIN.", null, 400);
     }
 
     const faltantes = obtenerCamposFaltantes(req.body, camposVerificarPin);
 
     if (faltantes.length > 0) {
+        const mensajes = faltantes.map((campo) => mensajesCampoFaltante[campo] ?? `El campo '${campo}' es obligatorio.`);
         return error(
             res,
-            `Faltan campos requeridos: ${faltantes.join(", ")}.`,
-            null,
+            mensajes.length === 1 ? mensajes[0] : mensajes.join(" "),
+            { camposFaltantes: faltantes },
             400
         );
     }

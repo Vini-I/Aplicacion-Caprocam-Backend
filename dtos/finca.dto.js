@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: Finca.dto.js
 Autor: Greivin Arguedas
-Fecha: 04/07/2026
+Fecha: 01/08/2026
 Modulo: Finca
 Descripcion:
 Archivo de transferencia de datos para finca.
@@ -28,15 +28,16 @@ export class FincaDTO {
     Parametros:
     - id: ID de la finca.
     - codigoCBO: ID del CBO asociado a la finca.
-    - nombreFinca: Nombre de la finca. 
-    - provincia: Provincia donde se encuentra la finca.
-    - canton: Cantón donde se encuentra la finca.
+    - nombreFinca: Nombre de la finca.
+    - provincia: Provincia donde se encuentra la finca. 
+    - canton: Cantón donde se encuentra la finca. 
     - distrito: Distrito donde se encuentra la finca.
     - otrasSenas: Otras señas de la finca.
     - propietarioResponsable: Nombre del propietario o responsable de la finca.
     - telefono: Teléfono de contacto del propietario o responsable.
     - areaTotal: Área total de la finca en hectáreas.
     - espejosAgua: Área de espejos de agua en la finca en hectáreas.
+    - creadoPorUsuarioId: ID del usuario que creó el registro de la finca.
 
     Retorna:
     - Un objeto de tipo FincaDTO con los datos proporcionados.
@@ -53,6 +54,8 @@ export class FincaDTO {
     telefono,
     areaTotal,
     espejosAgua,
+    creadoPorUsuarioId,
+    propietarioUsuarioId
   ) {
     this.grupoDatos = grupoDatos;
     this.codigoCBO = codigoCBO;
@@ -62,8 +65,10 @@ export class FincaDTO {
     this.distrito = distrito;
     this.otrasSenas = otrasSenas;
     this.propietarioResponsable = propietarioResponsable;
-    this.telefono = telefono;
+    this.telefono = telefono ?? null;
     this.areaTotal = areaTotal;
     this.espejosAgua = espejosAgua;
+    this.creadoPorUsuarioId = creadoPorUsuarioId ?? null;
+    this.propietarioUsuarioId = propietarioUsuarioId ?? creadoPorUsuarioId;
   }
 }

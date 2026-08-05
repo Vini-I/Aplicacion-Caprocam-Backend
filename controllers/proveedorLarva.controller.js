@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: proveedorLarva.controller.js
-Autor: Joan
-Fecha: 19/07/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Proveedor Larva
 Descripcion:
 Controlador HTTP para el modulo de proveedor de larva.
@@ -13,6 +13,7 @@ Controlador HTTP para el modulo de proveedor de larva.
 
 import * as ProveedorLarvaModel from "../models/proveedorLarva.model.js";
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 export async function getProveedoresLarva(req, res) {
     /*
@@ -26,7 +27,7 @@ export async function getProveedoresLarva(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
 try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const lista = await ProveedorLarvaModel.findAll(grupoDatos);
         return exito(res, "Proveedores de larva obtenidos correctamente.", lista);
     } catch (err) {
@@ -46,7 +47,7 @@ export async function getProveedorLarvaById(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
 try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const item = await ProveedorLarvaModel.findById(req.params.id, grupoDatos);
         if (!item) return error(res, "Proveedor de larva no encontrado.", null, 404);
         return exito(res, "Proveedor de larva obtenido correctamente.", item);
@@ -67,8 +68,15 @@ export async function createProveedorLarva(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
 try {
-        const grupoDatos = req.user.grupoDatos;
-        const creado = await ProveedorLarvaModel.create(req.body, grupoDatos);
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+        obtenerContextoPeticion(req);
+        const dto = new ProveedorLarvaDTO({
+            ...req.body,
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
+        });
+        const creado = await ProveedorLarvaModel.create(dto, grupoDatos);
         return exito(res, "Proveedor de larva creado correctamente.", creado, 201);
     } catch (err) {
         return error(res, "Error al crear proveedor de larva.", err);
@@ -87,7 +95,7 @@ export async function updateProveedorLarva(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
 try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const actualizado = await ProveedorLarvaModel.update(req.params.id, req.body, grupoDatos);
         if (!actualizado) return error(res, "Proveedor de larva no encontrado.", null, 404);
         return exito(res, "Proveedor de larva actualizado correctamente.", actualizado);
@@ -108,7 +116,7 @@ export async function deleteProveedorLarva(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
 try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const eliminado = await ProveedorLarvaModel.remove(req.params.id, grupoDatos);
         if (!eliminado) return error(res, "Proveedor de larva no encontrado.", null, 404);
         return exito(res, "Proveedor de larva eliminado correctamente.", null);

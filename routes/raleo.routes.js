@@ -30,6 +30,7 @@ import {
     getRaleo,
     getRaleoById,
     createRaleo,
+    updateRaleo,
     deleteRaleo
 } from "../controllers/raleo.controller.js";
 
@@ -50,6 +51,7 @@ RUTAS
 router.get("/", verificarAuth, getRaleo);
 router.get("/:id", verificarAuth, getRaleoById);
 router.post("/", verificarAuth, validarBodyRaleo, createRaleo);
+router.put("/:id", verificarAuth, validarBodyRaleo, updateRaleo);
 router.delete("/:id", verificarAuth, deleteRaleo);
 
 /*

@@ -14,6 +14,15 @@ de validacion para el middleware).
 
 /*
 //////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+*/
+
+import * as FincaModel from "../models/finca.model.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
+
+/*
+//////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
@@ -47,4 +56,26 @@ export function isNumeroPositivo(value) {
     */
     const num = Number(value);
     return !isNaN(num) && num > 0;
+}
+
+export async function tieneCodigoCBODuplicado(req, codigoCBO, codigoActual = null) {
+    /*
+    Descripcion:
+    Verifica si ya existe una finca con el mismo CBO dentro del grupo.
+
+    Parametros:
+    - req: Peticion HTTP para obtener el contexto de grupo.
+    - codigoCBO: CBO a validar.
+    - codigoActual: CBO actual en caso de actualizacion.
+
+    Retorna:
+    - true si ya existe otro registro con ese CBO.
+    - false si no existe duplicado.
+    */
+    const { grupoDatos } = obtenerContextoPeticion(req);
+    const codigoNormalizado = String(codigoCBO).trim();
+    const codigoRegistroActual = String(codigoActual ?? "").trim();
+    const fincaExistente = await FincaModel.findByIdCBO(codigoNormalizado, grupoDatos);
+
+    return Boolean(fincaExistente && codigoNormalizado !== codigoRegistroActual);
 }

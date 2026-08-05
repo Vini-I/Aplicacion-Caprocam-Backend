@@ -42,6 +42,8 @@ const SELECT_BASE = `
         dp.estanque_id,
         dp.colaborador_id,
         c.nombre AS usuario_nombre,
+        dp.creado_por_usuario_id,
+        dp.creado_por_colaborador_id,
         dp.fecha,
         dp.cantidad_siembra,
         dp.area_estanque,
@@ -52,6 +54,8 @@ const SELECT_BASE = `
         dp.sobrevivencia,
         dp.densidad,
         dp.notas_conteo,
+        dp.creado_por_usuario_id,
+        dp.creado_por_colaborador_id,
         dp.activo,
         dp.fecha_creacion,
         dp.fecha_actualizacion,
@@ -208,10 +212,10 @@ export async function create(dto) {
     /*
     Descripcion:
     Inserta un nuevo registro de densidad poblacional en la base de datos.
-    grupoDatos y usuarioId deben venir ya resueltos desde el JWT
-    (ver controller y dto): si cualquiera de los dos falta o es
-    invalido, se rechaza la insercion en vez de asumir un valor
-    por defecto (evita registros huerfanos o mal atribuidos).
+    grupoDatos debe venir ya resuelto desde el JWT (ver controller y
+    dto): si falta o es invalido, se rechaza la insercion en vez de
+    asumir un valor por defecto. De creadoPorUsuarioId/
+    creadoPorColaboradorId debe venir presente exactamente uno.
 
     Parametros:
     - dto: Objeto DensidadPoblacionalDTO con los datos normalizados.
@@ -220,19 +224,37 @@ export async function create(dto) {
     - El registro creado consultado nuevamente desde la base de datos.
 
     Lanza:
-    - Error si dto.grupoDatos o dto.usuarioId no son validos.
+    - Error si dto.grupoDatos no es valido.
+    - Error si dto.creadoPorUsuarioId y dto.creadoPorColaboradorId
+      estan ambos ausentes.
     */
 
     const grupoDatos = obtenerNumeroValido(dto.grupoDatos);
-    const usuarioId = obtenerNumeroValido(dto.usuarioId);
+    const creadoPorUsuarioId = obtenerNumeroValido(dto.creadoPorUsuarioId);
+    const creadoPorColaboradorId = obtenerNumeroValido(dto.creadoPorColaboradorId);
 
     if (grupoDatos === null) {
         throw new Error("No se pudo determinar el grupo de datos del usuario autenticado.");
     }
 
-    if (usuarioId === null) {
-        throw new Error("No se pudo determinar el usuario autenticado que hizo el registro.");
+    if (creadoPorUsuarioId === null && creadoPorColaboradorId === null) {
+        throw new Error("No se pudo determinar quien hizo el registro (usuario o colaborador autenticado).");
     }
+
+    /*
+    colaborador_id (quien realizo el conteo/medicion) es distinto de
+    creado_por_colaborador_id (quien autentico la peticion). Antes
+    este valor se llenaba con el id crudo del JWT sin distinguir si
+    era un Usuario Web o un Colaborador APK, lo que podia violar la
+    llave foranea hacia "colaboradores" o guardar un id equivocado.
+    Ahora: si el body trae un colaborador especifico (dto.idColaborador),
+    se usa ese; si no, se asume el colaborador que autentico la
+    peticion (cuando fue registrado desde la APK). Si fue un Usuario
+    Web sin colaborador especificado, queda en NULL (la columna lo
+    permite).
+    */
+    const idColaboradorEnviado = obtenerNumeroValido(dto.idColaborador);
+    const colaboradorId = idColaboradorEnviado !== null ? idColaboradorEnviado : creadoPorColaboradorId;
 
     const fecha = normalizarFechaMysql(dto.fecha);
 
@@ -252,15 +274,17 @@ export async function create(dto) {
             promedio_por_tiro,
             sobrevivencia,
             densidad,
-            notas_conteo
+            notas_conteo,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
-            usuarioId,
+            colaboradorId,
             fecha,
             dto.cantidadSiembra,
             dto.areaEstanque,
@@ -270,7 +294,9 @@ export async function create(dto) {
             dto.promedioPorTiro,
             dto.sobrevivencia,
             dto.densidad,
-            dto.notasConteo
+            dto.notasConteo,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
         ]
     );
 
@@ -305,12 +331,21 @@ export async function update(id, dto, grupoDatos) {
 
     const fecha = normalizarFechaMysql(dto.fecha);
 
+    /*
+    Si el dto no trae idColaborador (no se reenvio desde el
+    formulario), se conserva el valor que ya tenia el registro en
+    vez de sobreescribirlo con null.
+    */
+    const idColaboradorEnviado = obtenerNumeroValido(dto.idColaborador);
+    const colaboradorId = idColaboradorEnviado !== null ? idColaboradorEnviado : actual.idColaborador;
+
     await pool.execute(
         `
         UPDATE densidad_poblacional
         SET
             finca_id = ?,
             estanque_id = ?,
+            colaborador_id = ?,
             fecha = ?,
             cantidad_siembra = ?,
             area_estanque = ?,
@@ -330,6 +365,7 @@ export async function update(id, dto, grupoDatos) {
         [
             dto.idFinca,
             dto.idEstanque,
+            colaboradorId,
             fecha,
             dto.cantidadSiembra,
             dto.areaEstanque,
@@ -442,8 +478,11 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         idFinca: row.finca_id,
         idEstanque: row.estanque_id,
+        idColaborador: row.colaborador_id,
         usuarioId: row.colaborador_id,
         usuarioNombre: row.usuario_nombre,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         fecha: formatearFecha(row.fecha),
         cantidadSiembra: convertirNumero(row.cantidad_siembra),
         areaEstanque: convertirNumero(row.area_estanque),
@@ -454,6 +493,8 @@ function mapearFila(row) {
         sobrevivencia: convertirNumero(row.sobrevivencia),
         densidad: convertirNumero(row.densidad),
         notasConteo: row.notas_conteo,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         activo: Boolean(row.activo),
         fechaCreacion: row.fecha_creacion,
         fechaActualizacion: row.fecha_actualizacion,

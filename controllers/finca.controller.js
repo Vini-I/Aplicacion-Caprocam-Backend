@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: Finca.controller.js
 Autor: Greivin Arguedas
-Fecha: 04/07/2026
+Fecha: 01/08/2026
 Modulo: Finca
 Descripcion:
 Recibe las peticiones HTTP, delega y devuelve respuesta.
@@ -20,6 +20,7 @@ IMPORTS
 import { FincaDTO } from "../dtos/finca.dto.js";
 import * as FincaModel from "../models/finca.model.js";
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -38,7 +39,7 @@ export async function getFincas(req, res) {
     Retorna:
     - Una respuesta JSON con todos los registros de fincas.
     */
-  const grupoDatos = req.user.grupoDatos;
+  const { grupoDatos } = obtenerContextoPeticion(req);
   const data = await FincaModel.findAll(grupoDatos);
   return exito(res, "Fincas obtenidas correctamente.", data);
 }
@@ -54,7 +55,7 @@ export async function getFincaById(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de finca correspondiente al ID CBO proporcionado.
     */
-  const grupoDatos = req.user.grupoDatos;
+  const { grupoDatos } = obtenerContextoPeticion(req);
   const registro = await FincaModel.findByIdCBO(req.params.id, grupoDatos);
 
   if (!registro) {
@@ -75,7 +76,8 @@ export async function createFinca(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de finca creado.
     */
-  const grupoDatos = req.user.grupoDatos;
+  
+  const { grupoDatos, creadoPorUsuarioId } = obtenerContextoPeticion(req);
   const {
     codigoCBO,
     nombreFinca,
@@ -87,6 +89,7 @@ export async function createFinca(req, res) {
     telefono,
     areaTotal,
     espejosAgua,
+    propietarioUsuarioId
   } = req.body;
   const dto = new FincaDTO(
     grupoDatos,
@@ -97,9 +100,11 @@ export async function createFinca(req, res) {
     distrito,
     otrasSenas,
     propietarioResponsable,
-    telefono,
+    telefono ?? null,
     areaTotal,
     espejosAgua,
+    creadoPorUsuarioId,
+    propietarioUsuarioId ?? creadoPorUsuarioId
   );
 
   const nuevaFinca = await FincaModel.create(dto);
@@ -118,7 +123,7 @@ export async function updateFinca(req, res) {
     Retorna:
     - Una respuesta JSON con el registro de finca actualizado.
     */
-  const grupoDatos = req.user.grupoDatos;
+  const { grupoDatos } = obtenerContextoPeticion(req);
   const {
     codigoCBO,
     nombreFinca,
@@ -140,7 +145,7 @@ export async function updateFinca(req, res) {
     distrito,
     otrasSenas,
     propietarioResponsable,
-    telefono,
+    telefono ?? null,
     areaTotal,
     espejosAgua,
   );
@@ -163,7 +168,7 @@ export async function deleteFinca(req, res) {
     Retorna:
     - Una respuesta JSON indicando si la eliminación fue exitosa o no.
     */
-  const grupoDatos = req.user.grupoDatos;
+  const { grupoDatos } = obtenerContextoPeticion(req);
   const eliminado = await FincaModel.remove(req.params.id, grupoDatos);
   if (!eliminado) {
     return error(res, "Finca no encontrada.", null, 404);

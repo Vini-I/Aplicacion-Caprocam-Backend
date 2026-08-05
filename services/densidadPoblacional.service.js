@@ -149,13 +149,16 @@ export function isPercentageOpcional(valor) {
     return true;
 }
 
+const REGEX_FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
 export function isFechaValida(valor) {
     /*
     Descripcion:
-    Valida que una fecha sea valida.
+    Valida que una fecha sea valida y venga en formato ISO
+    estricto YYYY-MM-DD.
 
     Parametros:
-    - valor: Fecha a validar
+    - valor: Fecha a validar (se espera "YYYY-MM-DD").
 
     Retorna:
     - true si es valida, false si no
@@ -164,7 +167,25 @@ export function isFechaValida(valor) {
         return false;
     }
 
-    return !Number.isNaN(Date.parse(valor));
+    const texto = String(valor).trim();
+
+    if (!REGEX_FECHA_ISO.test(texto)) {
+        return false;
+    }
+
+    const [anio, mes, dia] = texto.split("-").map(Number);
+
+    const fecha = new Date(anio, mes - 1, dia);
+
+    if (Number.isNaN(fecha.getTime())) {
+        return false;
+    }
+
+    return (
+        fecha.getFullYear() === anio &&
+        fecha.getMonth() === mes - 1 &&
+        fecha.getDate() === dia
+    );
 }
 
 export function isIdValido(id) {

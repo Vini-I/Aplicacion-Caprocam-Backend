@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS fincas (
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
     propietario_usuario_id INT NULL,
-    codigo_cbo VARCHAR(40) NULL,
+    codigo_cbo VARCHAR(40) NOT NULL UNIQUE,
     nombre_finca VARCHAR(80) NOT NULL,
     provincia VARCHAR(40) NULL,
     canton VARCHAR(60) NULL,
@@ -138,16 +138,8 @@ CREATE TABLE IF NOT EXISTS estanques (
     ancho DECIMAL(10,2) NOT NULL,
     profundidad DECIMAL(10,2) NOT NULL,
     fuente_agua VARCHAR(100) NULL,
-    especie VARCHAR(150) NULL,
-    fecha_siembra DATE NULL,
-    fecha_inicio_engorde DATE NULL,
     fecha_mantenimiento DATE NULL,
-    densidad_siembra DECIMAL(10,2) NULL,
     precria BOOLEAN NOT NULL DEFAULT FALSE,
-    metodo_alimentacion VARCHAR(100) NULL,
-    proveedor_alimento VARCHAR(100) NULL,
-    numero_aireadores INT NOT NULL DEFAULT 0,
-    tiene_alimentador_automatico BOOLEAN NOT NULL DEFAULT FALSE,
     creado_por_usuario_id INT NULL,
     creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
@@ -710,7 +702,6 @@ CREATE TABLE IF NOT EXISTS crecimientos (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
-    colaborador_id INT NULL,
     fecha_registro DATE NOT NULL,
     peso_actual DECIMAL(10,2) NOT NULL,
     creado_por_usuario_id INT NULL,
@@ -729,9 +720,6 @@ CREATE TABLE IF NOT EXISTS crecimientos (
 
     CONSTRAINT fk_crecimientos_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
-
-    CONSTRAINT fk_crecimientos_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
 
     CONSTRAINT fk_crecimientos_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
@@ -775,7 +763,6 @@ CREATE TABLE IF NOT EXISTS ventas (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
-    colaborador_id INT NULL,
     comprador_id INT NULL,
     peso_promedio DECIMAL(10,2) NULL,
     tamano_promedio DECIMAL(10,2) NULL,
@@ -800,9 +787,6 @@ CREATE TABLE IF NOT EXISTS ventas (
     CONSTRAINT fk_ventas_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
-    CONSTRAINT fk_ventas_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
-
     CONSTRAINT fk_ventas_compradores
     FOREIGN KEY (comprador_id) REFERENCES compradores(id),
 
@@ -819,7 +803,6 @@ CREATE TABLE IF NOT EXISTS parasitologias (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
-    colaborador_id INT NULL,
     tipo_registro VARCHAR(50) NOT NULL,
     fecha_reporte DATE NOT NULL,
     responsable VARCHAR(100) NULL,
@@ -846,9 +829,6 @@ CREATE TABLE IF NOT EXISTS parasitologias (
     CONSTRAINT fk_parasitologias_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
-    CONSTRAINT fk_parasitologias_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
-
     CONSTRAINT fk_parasitologias_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
 
@@ -862,7 +842,6 @@ CREATE TABLE IF NOT EXISTS enfermedades (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
-    colaborador_id INT NULL,
     tipo_registro VARCHAR(50) NOT NULL,
     fecha_reporte DATE NOT NULL,
     responsable VARCHAR(100) NULL,
@@ -886,9 +865,6 @@ CREATE TABLE IF NOT EXISTS enfermedades (
 
     CONSTRAINT fk_enfermedades_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
-
-    CONSTRAINT fk_enfermedades_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
 
     CONSTRAINT fk_enfermedades_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
@@ -1171,6 +1147,7 @@ CREATE INDEX idx_fisico_quimico_grupo ON fisico_quimico(grupo_datos);
 
 CREATE INDEX idx_equipos_grupo ON equipos(grupo_datos);
 CREATE INDEX idx_equipos_estanque ON equipos(estanque_id);
+CREATE INDEX idx_equipos_estanque_tipo ON equipos(grupo_datos, estanque_id, tipo_equipo, activo,deleted_at);
 CREATE INDEX idx_tareas_grupo ON tareas(grupo_datos);
 CREATE INDEX idx_laboratorios_grupo ON laboratorios(grupo_datos);
 CREATE INDEX idx_procedencias_grupo ON procedencias(grupo_datos);
@@ -1252,3 +1229,4 @@ CREATE INDEX idx_trazabilidad_creado_usuario ON trazabilidad(creado_por_usuario_
 CREATE INDEX idx_trazabilidad_creado_colaborador ON trazabilidad(creado_por_colaborador_id);
 CREATE INDEX idx_mantenimiento_creado_usuario ON mantenimiento_equipo(creado_por_usuario_id);
 CREATE INDEX idx_mantenimiento_creado_colaborador ON mantenimiento_equipo(creado_por_colaborador_id);
+

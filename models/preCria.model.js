@@ -21,24 +21,34 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export async function findAll(grupoDatos) {
+export async function findAll(grupoDatos, estadoFiltro = null) {
     /*
     Descripcion:
     Obtiene un listado completo de todos los registros activos del modulo preCria.
     Parametros:
     - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - estadoFiltro: Opcional. Si se indica 'Activa' o 'Finalizada', filtra el listado.
 
     Retorna:
     - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
     */
-const [rows] = await pool.execute(`
+    let sql = `
         SELECT *
         FROM   precrias
         WHERE  grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
-        ORDER BY id ASC
-    `, [grupoDatos]);
+    `;
+    const params = [grupoDatos];
+
+    if (estadoFiltro) {
+        sql += " AND LOWER(TRIM(estado)) = LOWER(?)";
+        params.push(estadoFiltro);
+    }
+
+    sql += " ORDER BY id ASC";
+
+    const [rows] = await pool.execute(sql, params);
     return rows;
 }
  
@@ -89,9 +99,10 @@ export async function create(dto, grupoDatos) {
         const [result] = await connection.execute(`
             INSERT INTO precrias (
                 grupo_datos, lote_larva_id, finca_id, estanque_id,
-                fecha_inicio, fecha_fin, duracion_dias,
-                cantidad_inicial, cantidad_final, pl_inicial, pl_final, estado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                fecha_inicio, fecha_fin, duracion_dias, duracion_dias_esperada,
+                cantidad_inicial, cantidad_final, pl_inicial, pl_final, estado,
+                creado_por_usuario_id, creado_por_colaborador_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             grupoDatos,
             dto.lote_larva_id,
@@ -100,11 +111,14 @@ export async function create(dto, grupoDatos) {
             dto.fecha_inicio,
             dto.fecha_fin,
             dto.duracion_dias,
+            dto.duracion_dias_esperada,
             dto.cantidad_inicial,
             dto.cantidad_final,
             dto.pl_inicial,
             dto.pl_final,
             dto.estado || 'Activa',
+            dto.creado_por_usuario_id,
+            dto.creado_por_colaborador_id,
         ]);
  
         await connection.execute(`
@@ -163,6 +177,7 @@ export async function update(id, grupoDatos, datos) {
         cantidad_final:   'cantidad_final',
         pl_final:         'pl_final',
         duracion_dias:    'duracion_dias',
+        duracion_dias_esperada: 'duracion_dias_esperada',
     };
  
     const setParts = [];
@@ -260,4 +275,40 @@ if (!estanqueId || !fincaId) return false;
         AND activo = TRUE AND deleted_at IS NULL
     `, [Number(estanqueId), Number(fincaId), grupoDatos]);
     return rows.length > 0;
+}
+
+export async function finalizarActivasVencidas() {
+    /*
+    Descripcion:
+    Cierre automatico: busca (en TODOS los grupos de datos) las pre-crias
+    Activas cuyo duracion_dias_esperada ya se cumplio y las finaliza.
+    No inventa cantidad_final ni pl_final (quedan NULL); esos valores
+    reales el biologo los puede completar despues con un PUT,(el ciclo se puede seguir extendiendo
+    si el biologo lo decide, o cerrar antes con el boton manual).
+    Retorna:
+    - Array de IDs de pre-crias finalizadas automaticamente.
+    */
+    const [vencidas] = await pool.execute(`
+        SELECT id, grupo_datos, fecha_inicio, duracion_dias_esperada
+        FROM   precrias
+        WHERE  LOWER(TRIM(estado)) = 'activa'
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        AND    duracion_dias_esperada IS NOT NULL
+        AND    DATEDIFF(CURDATE(), fecha_inicio) >= duracion_dias_esperada
+    `);
+
+    const idsFinalizados = [];
+    for (const fila of vencidas) {
+        const duracionReal = Math.round(
+            (new Date() - new Date(fila.fecha_inicio)) / (1000 * 60 * 60 * 24)
+        );
+        await update(fila.id, fila.grupo_datos, {
+            estado: 'Finalizada',
+            fecha_fin: new Date().toISOString().slice(0, 10),
+            duracion_dias: duracionReal,
+        });
+        idsFinalizados.push(fila.id);
+    }
+    return idsFinalizados;
 }

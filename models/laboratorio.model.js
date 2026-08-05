@@ -25,7 +25,7 @@ export async function findAll(grupoDatos) {
     - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
     */
 const [rows] = await pool.execute(
-        `SELECT id, uuid, grupo_datos, nombre, descripcion, activo, fecha_creacion, fecha_actualizacion
+        `SELECT id, uuid, grupo_datos, nombre, descripcion,creado_por_usuario_id, creado_por_colaborador_id, activo, fecha_creacion, fecha_actualizacion
          FROM laboratorios
          WHERE grupo_datos = ? AND deleted_at IS NULL AND activo = TRUE
          ORDER BY id DESC`,
@@ -46,7 +46,7 @@ export async function findById(id, grupoDatos) {
     - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
     */
 const [rows] = await pool.execute(
-        `SELECT id, uuid, grupo_datos, nombre, descripcion, activo, fecha_creacion, fecha_actualizacion
+        `SELECT id, uuid, grupo_datos, nombre, descripcion,creado_por_usuario_id, creado_por_colaborador_id, activo, fecha_creacion, fecha_actualizacion
          FROM laboratorios
          WHERE id = ? AND grupo_datos = ? AND deleted_at IS NULL AND activo = TRUE
          LIMIT 1`,
@@ -67,9 +67,9 @@ export async function create(dto, grupoDatos) {
     - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
     */
 const [result] = await pool.execute(
-        `INSERT INTO laboratorios (grupo_datos, nombre, descripcion)
-         VALUES (?, ?, ?)`,
-        [grupoDatos, dto.nombre, dto.descripcion ?? null]
+        `INSERT INTO laboratorios (grupo_datos, nombre, descripcion, creado_por_usuario_id, creado_por_colaborador_id)
+         VALUES (?, ?, ?, ?, ?)`,
+        [grupoDatos, dto.nombre, dto.descripcion ?? null, dto.creado_por_usuario_id, dto.creado_por_colaborador_id]
     );
     return await findById(result.insertId, grupoDatos);
 }

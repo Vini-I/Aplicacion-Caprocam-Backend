@@ -30,6 +30,7 @@ Campos minimos requeridos en el body para proveedores.
 */
 
 const camposRequeridos = ["nombre", "tipoProducto", "telefono"];
+const telefonoRegex = /^\d{8}$/;
 
 /*
 //////////////////////////////////////////////////////////
@@ -90,12 +91,11 @@ export function validarBodyProveedor(req, res, next) {
         );
     }
 
-    // Validar telefono formato +506 XXXX-XXXX (8 digitos tras prefijo)
-    const telefonoRegex = /^\+506 \d{4}-\d{4}$/;
+    // Validar telefono de ocho digitos
     if (!telefonoRegex.test(req.body.telefono)) {
         return error(
             res,
-            "Formato de telefono invalido. Debe ser: +506 XXXX-XXXX",
+            "Formato de telefono invalido. Debe contener 8 digitos.",
             null,
             400
         );

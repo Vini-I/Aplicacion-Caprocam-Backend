@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loteLarva.dto.js
-Autor: Joan
-Fecha: 04/07/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: lotelarva
 Descripcion:
 DTOs para transferir y normalizar datos del modulo de loteLarva.
@@ -43,6 +43,8 @@ export class LoteLarvaDTO {
         cantidad_inicial,
         fecha_ingreso,
         estado_lote,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
     }) {
         /*
         Descripcion:
@@ -66,6 +68,9 @@ export class LoteLarvaDTO {
         - cantidad_inicial:  Cantidad inicial (requerido).
         - fecha_ingreso:     Fecha de ingreso (requerido).
         - estado_lote:       Estado del lote (opcional, default Disponible).
+        - creadoPorUsuarioId:     FK a usuarios - web (resuelto por
+          obtenerContextoPeticion, nunca por el body del cliente).
+        - creadoPorColaboradorId: FK a colaboradores - movil (idem).
         */
         const proveedorDb   = proveedor_id ?? proveedorId;
         const procedenciaDb = lugar_procedencia ?? procedencia;
@@ -82,5 +87,7 @@ export class LoteLarvaDTO {
         this.estado_lote       = estado_lote
             ? String(estado_lote).trim()
             : EstadoLote.DISPONIBLE;
+        this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
+        this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
     }
 }

@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: siembra.model.js
-Autor: Joan
-Fecha: 04/07/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Siembra
 Descripcion:
 Capa de datos para siembra.
@@ -18,6 +18,7 @@ IMPORTS
 */
 
 import { EstadoLote }from "../dtos/loteLarva.dto.js";
+import { EstadoEstanque } from "../dtos/estanques.dto.js";
 
 import pool from '../config/database.js';
 
@@ -27,24 +28,36 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export async function findAll(grupoDatos) {
+export async function findAll(grupoDatos, estadoFiltro = null) {
     /*
     Descripcion:
     Obtiene un listado completo de todos los registros activos del modulo siembra.
     Parametros:
     - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - estadoFiltro: Opcional. Si se indica 'Activa' o 'Finalizada', filtra el listado
+      (usado por el toggle de "ocultar siembras finalizadas" del frontend).
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array,
+     o null si la consulta no produce resultados.
     */
-const [rows] = await pool.execute(`
+    let sql = `
         SELECT *
         FROM   siembras
         WHERE  grupo_datos = ?
         AND    activo = TRUE
         AND    deleted_at IS NULL
-        ORDER BY id ASC
-    `, [grupoDatos]);
+    `;
+    const params = [grupoDatos];
+
+    if (estadoFiltro) {
+        sql += " AND LOWER(TRIM(estado)) = LOWER(?)";
+        params.push(estadoFiltro);
+    }
+
+    sql += " ORDER BY id ASC";
+
+    const [rows] = await pool.execute(sql, params);
     return rows;
 }
  
@@ -90,13 +103,56 @@ export async function create(dto, grupoDatos) {
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
- 
+
+        // Bloquea la fila del estanque para evitar condiciones de carrera
+        // (dos siembras creandose al mismo tiempo sobre el mismo estanque).
+        const [estanqueRows] = await connection.execute(`
+            SELECT id, estado
+            FROM   estanques
+            WHERE  id = ?
+            AND    grupo_datos = ?
+            AND    activo = TRUE
+            AND    deleted_at IS NULL
+            FOR UPDATE
+        `, [dto.estanque_id, grupoDatos]);
+
+        const estanque = estanqueRows[0];
+        if (!estanque) {
+            const err = new Error("El estanque indicado no existe.");
+            err.codigoNegocio = "ESTANQUE_NO_EXISTE";
+            throw err;
+        }
+        if (String(estanque.estado).toLowerCase() !== EstadoEstanque.ACTIVO.toLowerCase()) {
+            const err = new Error(
+                "Solo se puede crear una siembra en un estanque en estado 'Activo'."
+            );
+            err.codigoNegocio = "ESTANQUE_NO_ACTIVO";
+            throw err;
+        }
+
+        // Un estanque solo puede tener una siembra Activa a la vez.
+        const [siembraActivaRows] = await connection.execute(`
+            SELECT id FROM siembras
+            WHERE  estanque_id = ?
+            AND    grupo_datos = ?
+            AND    LOWER(TRIM(estado)) = 'activa'
+            AND    activo = TRUE
+            AND    deleted_at IS NULL
+            LIMIT 1
+        `, [dto.estanque_id, grupoDatos]);
+        if (siembraActivaRows.length > 0) {
+            const err = new Error("El estanque indicado ya tiene una siembra activa.");
+            err.codigoNegocio = "ESTANQUE_CON_SIEMBRA_ACTIVA";
+            throw err;
+        }
+
         const [result] = await connection.execute(`
             INSERT INTO siembras (
                 grupo_datos, lote_larva_id, precria_id, finca_id, estanque_id,
                 fecha_siembra, tecnica_cultivo, densidad_poblacional,
-                cantidad_sembrada, pl_siembra, duracion_ciclo, estado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                cantidad_sembrada, pl_siembra, duracion_ciclo, estado,
+                creado_por_usuario_id, creado_por_colaborador_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             grupoDatos,
             dto.lote_larva_id,
@@ -109,7 +165,12 @@ export async function create(dto, grupoDatos) {
             dto.cantidad_sembrada,
             dto.pl_siembra,
             dto.duracion_ciclo,
-            dto.estado || 'Activa',
+            // Una siembra SIEMPRE nace 'Activa', sin importar lo que el
+            // cliente mande en el body. El unico camino hacia 'Finalizada'
+            // es finalizarConEstanque(), que ademas sincroniza el estanque.
+            'Activa',
+            dto.creado_por_usuario_id,
+            dto.creado_por_colaborador_id,
         ]);
  
         await connection.execute(`
@@ -121,6 +182,17 @@ export async function create(dto, grupoDatos) {
             AND    activo = TRUE
             AND    deleted_at IS NULL
         `, [EstadoLote.SEMBRADO, dto.lote_larva_id, grupoDatos]);
+
+        // El estanque pasa a 'Engorde' mientras dura la siembra activa.
+        await connection.execute(`
+            UPDATE estanques
+            SET    estado = ?,
+                   fecha_siembra = ?,
+                   fecha_inicio_engorde = ?,
+                   version = version + 1
+            WHERE  id = ?
+            AND    grupo_datos = ?
+        `, [EstadoEstanque.ENGORDE, dto.fecha_siembra, dto.fecha_siembra, dto.estanque_id, grupoDatos]);
  
         await connection.commit();
         return findById(result.insertId, grupoDatos);
@@ -130,6 +202,138 @@ export async function create(dto, grupoDatos) {
     } finally {
         connection.release();
     }
+}
+
+export async function existeSiembraPorLote(loteLarvaId, grupoDatos, excluirId = null) {
+    /*
+    Descripcion:
+    Verifica si un lote de larva ya tiene una siembra registrada
+    (Activa o Finalizada). Segun la regla de negocio, un mismo lote
+    solo puede originar una unica siembra.
+    */
+    let sql = `
+        SELECT id FROM siembras
+        WHERE  lote_larva_id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `;
+    const params = [Number(loteLarvaId), grupoDatos];
+    if (excluirId) {
+        sql += " AND id <> ?";
+        params.push(Number(excluirId));
+    }
+    const [rows] = await pool.execute(sql, params);
+    return rows.length > 0;
+}
+
+export async function existeSiembraPorPrecria(precriaId, grupoDatos, excluirId = null) {
+    /*
+    Descripcion:
+    Verifica si una pre-cria ya fue utilizada para crear una siembra.
+    Segun la regla de negocio, una pre-cria solo puede originar una
+    unica siembra (no se puede repartir entre varias siembras).
+    */
+    let sql = `
+        SELECT id FROM siembras
+        WHERE  precria_id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `;
+    const params = [Number(precriaId), grupoDatos];
+    if (excluirId) {
+        sql += " AND id <> ?";
+        params.push(Number(excluirId));
+    }
+    const [rows] = await pool.execute(sql, params);
+    return rows.length > 0;
+}
+
+export async function obtenerEstanquePorId(estanqueId, fincaId, grupoDatos) {
+    /*
+    Descripcion:
+    Obtiene el estanque completo (incluyendo su estado actual) para
+    poder validar reglas de negocio como "solo se siembra en estado Activo".
+    */
+    if (!estanqueId || !fincaId) return null;
+    const [rows] = await pool.execute(`
+        SELECT id, estado, precria FROM estanques
+        WHERE id = ? AND finca_id = ? AND grupo_datos = ?
+        AND activo = TRUE AND deleted_at IS NULL
+    `, [Number(estanqueId), Number(fincaId), grupoDatos]);
+    return rows[0] || null;
+}
+
+export async function finalizarConEstanque(id, grupoDatos, datosFinalizacion) {
+    /*
+    Descripcion:
+    Finaliza una siembra (manual o automaticamente) y transiciona el
+    estanque asociado a 'Cosechado', en una sola transaccion.
+    */
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const [siembraRows] = await connection.execute(`
+            SELECT * FROM siembras
+            WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
+            FOR UPDATE
+        `, [Number(id), grupoDatos]);
+        const siembra = siembraRows[0];
+        if (!siembra) {
+            await connection.rollback();
+            return null;
+        }
+
+        await connection.execute(`
+            UPDATE siembras
+            SET    estado = ?, version = version + 1
+            WHERE  id = ? AND grupo_datos = ?
+        `, [datosFinalizacion.estado, Number(id), grupoDatos]);
+
+        await connection.execute(`
+            UPDATE estanques
+            SET    estado = ?, fecha_mantenimiento = NULL, version = version + 1
+            WHERE  id = ? AND grupo_datos = ?
+        `, [EstadoEstanque.COSECHADO, siembra.estanque_id, grupoDatos]);
+
+        await connection.commit();
+        return findById(id, grupoDatos);
+    } catch (err) {
+        await connection.rollback();
+        throw err;
+    } finally {
+        connection.release();
+    }
+}
+
+export async function finalizarActivasVencidas() {
+    /*
+    Descripcion:
+    Cierre automatico: busca (en TODOS los grupos de datos) las siembras
+    Activas cuyo duracion_ciclo ya se cumplio y las finaliza, transicionando
+    tambien el estanque asociado a 'Cosechado'. Pensado para ser invocado
+    periodicamente por un job/scheduler.
+    Retorna:
+    - Array de IDs de siembras finalizadas automaticamente.
+    */
+    const [vencidas] = await pool.execute(`
+        SELECT id, grupo_datos
+        FROM   siembras
+        WHERE  LOWER(TRIM(estado)) = 'activa'
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        AND    duracion_ciclo IS NOT NULL
+        AND    DATEDIFF(CURDATE(), fecha_siembra) >= duracion_ciclo
+    `);
+
+    const idsFinalizados = [];
+    for (const fila of vencidas) {
+        await finalizarConEstanque(fila.id, fila.grupo_datos, { estado: 'Finalizada' });
+        idsFinalizados.push(fila.id);
+    }
+    return idsFinalizados;
 }
  
 export async function update(id, grupoDatos, datos) {
@@ -161,7 +365,11 @@ export async function update(id, grupoDatos, datos) {
         cantidad_sembrada:     'cantidad_sembrada',
         pl_siembra:            'pl_siembra',
         duracion_ciclo:        'duracion_ciclo',
-        estado:                'estado',
+        // estado NO esta aqui a proposito: el PUT generico nunca debe poder
+        // cambiar el estado de una siembra, porque dejaria el estanque
+        // desincronizado (el estanque solo cambia dentro de
+        // finalizarConEstanque()). El unico camino a 'Finalizada' es
+        // POST /siembras/:id/finalizar.
     };
  
     const setParts = [];
@@ -250,7 +458,8 @@ export async function verificarEstanqueExiste(estanqueId, fincaId, grupoDatos) {
     - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array,
+    o null si la consulta no produce resultados.
     */
 if (!estanqueId || !fincaId) return false;
     const [rows] = await pool.execute(`
@@ -267,10 +476,12 @@ export async function findActivaByEstanque(estanqueId, grupoDatos) {
     Obtiene un listado completo de todos los registros activos del modulo siembra.
     Parametros:
     - estanqueId: Argumento requerido para el procesamiento interno de la logica.
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual,
+    usado para  segmentarla informacion.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array,
+     o null si la consulta no produce resultados.
     */
 const [rows] = await pool.execute(`
         SELECT *

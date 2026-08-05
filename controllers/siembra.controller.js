@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: siembra.controller.js
-Autor: Joan
-Fecha: 04/07/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Siembra
 Descripcion:
 Maneja las peticiones HTTP y la logica de siembra.
@@ -34,9 +34,12 @@ import * as siembraModel from "../models/siembra.model.js";
 import * as loteLarvaModel from "../models/loteLarvas.model.js";
 import * as precriaModel from "../models/preCria.model.js";
 import { EstadoPrecria } from "../dtos/preCria.dto.js";
+import { EstadoLote } from "../dtos/loteLarva.dto.js";
+import { EstadoEstanque } from "../dtos/estanques.dto.js";
 
 // Common
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -85,8 +88,11 @@ function validarCuerpo(body, res) {
     if (!isEmpty(body.duracion_ciclo) && !isEnteroPositivo(body.duracion_ciclo)) {
         errores.push("El campo duracion_ciclo debe ser un entero positivo.");
     }
-    if (!isEmpty(body.estado) && !isEstadoValido(body.estado)) {
-        errores.push("El campo estado debe ser Activa o Finalizada.");
+    if (!isEmpty(body.estado)) {
+        errores.push(
+            "El campo estado no se puede establecer aqui. Una siembra siempre " +
+                "nace 'Activa'; para finalizarla usa POST /siembras/:id/finalizar."
+        );
     }
 
     if (errores.length > 0) {
@@ -95,17 +101,48 @@ function validarCuerpo(body, res) {
     return null;
 }
 
-async function validarReferencias(body, res, grupoDatos) {
+async function validarReferencias(body, res, grupoDatos, opciones = {}) {
     /*
     Descripcion:
     Verifica que el lote de larva, la finca y el estanque
     indicados existan en la base de datos. Si se indica una
     pre-cria, verifica que pertenezca al lote y este Finalizada.
     Tambien valida que la cantidad sembrada no supere la disponible.
+
+    Ademas aplica las reglas de negocio del documento de preguntas
+    de siembra:
+    - El estanque solo permite crear una siembra si esta en estado 'Activo'.
+    - Un estanque solo puede tener una siembra Activa a la vez.
+    - Un mismo lote de larva solo puede originar una unica siembra.
+    - Una misma pre-cria solo puede originar una unica siembra.
+    - pl_siembra debe heredarse del pl_final de la pre-cria (si se indica).
+
+    Parametros:
+    - opciones.esCreacion: true si se esta creando (no actualizando) una siembra.
+    - opciones.siembraIdActual: id de la siembra que se esta actualizando (para excluirla
+      de las validaciones de unicidad).
     */
+    const { esCreacion = false, siembraIdActual = null } = opciones;
+
     const lote = await loteLarvaModel.findById(body.lote_larva_id, grupoDatos);
     if (!lote) {
         return error(res, "El lote de larva indicado no existe.", null, 400);
+    }
+
+    // Un lote solo puede generar una unica siembra.
+    if (esCreacion) {
+        const loteYaUsado = await siembraModel.existeSiembraPorLote(
+            body.lote_larva_id, grupoDatos, siembraIdActual
+        );
+        if (loteYaUsado) {
+            return error(
+                res,
+                "El lote de larva indicado ya fue utilizado en otra siembra. " +
+                    "Un lote solo puede originar una unica siembra.",
+                null,
+                409
+            );
+        }
     }
 
     const fincaExiste = await siembraModel.verificarFincaExiste(body.finca_id, grupoDatos);
@@ -113,13 +150,35 @@ async function validarReferencias(body, res, grupoDatos) {
         return error(res, "La finca indicada no existe.", null, 400);
     }
 
-    const estanqueExiste = await siembraModel.verificarEstanqueExiste(
+    const estanque = await siembraModel.obtenerEstanquePorId(
         body.estanque_id, body.finca_id, grupoDatos
     );
-    if (!estanqueExiste) {
+    if (!estanque) {
         return error(
             res, "El estanque indicado no existe o no pertenece a la finca.", null, 400
         );
+    }
+
+    // Solo se puede crear (no actualizar) una siembra si el estanque esta Activo.
+    if (esCreacion) {
+        if (String(estanque.estado).toLowerCase() !== EstadoEstanque.ACTIVO.toLowerCase()) {
+            return error(
+                res,
+                "Solo se puede crear una siembra en un estanque en estado 'Activo'. " +
+                    `Estado actual: ${estanque.estado}.`,
+                null,
+                409
+            );
+        }
+
+        const siembraActivaExistente = await siembraModel.findActivaByEstanque(
+            body.estanque_id, grupoDatos
+        );
+        if (siembraActivaExistente) {
+            return error(
+                res, "El estanque indicado ya tiene una siembra activa.", null, 409
+            );
+        }
     }
 
     let origenCantidad = lote.cantidad_inicial;
@@ -142,7 +201,27 @@ async function validarReferencias(body, res, grupoDatos) {
                 400
             );
         }
+
+        // Una misma pre-cria solo puede originar una unica siembra.
+        if (esCreacion) {
+            const precriaYaUsada = await siembraModel.existeSiembraPorPrecria(
+                body.precria_id, grupoDatos, siembraIdActual
+            );
+            if (precriaYaUsada) {
+                return error(
+                    res,
+                    "La pre-cria indicada ya fue utilizada en otra siembra. " +
+                        "Una pre-cria solo puede originar una unica siembra.",
+                    null,
+                    409
+                );
+            }
+        }
+
         origenCantidad = precria.cantidad_final;
+
+        // El PL inicial de la siembra debe ser el PL final de la pre-cria.
+        body.pl_siembra = precria.pl_final;
     }
 
     if (!isEmpty(body.cantidad_sembrada) && Number(body.cantidad_sembrada) > origenCantidad) {
@@ -176,8 +255,12 @@ export async function listarSiembra(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const siembras = await siembraModel.findAll(grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const estadoFiltro = req.query.estado || null;
+        if (estadoFiltro && !isEstadoValido(estadoFiltro)) {
+            return error(res, "El parametro estado debe ser Activa o Finalizada.", null, 422);
+        }
+        const siembras = await siembraModel.findAll(grupoDatos, estadoFiltro);
         return exito(res, "Siembras obtenidas correctamente.", siembras);
     } catch (err) {
         return error(res, "Error al obtener las siembras.", err, 500);
@@ -196,7 +279,7 @@ export async function obtenerSiembra(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const { id } = req.params;
         const siembra = await siembraModel.findById(id, grupoDatos);
         if (!siembra) return error(res, "Siembra no encontrada.", null, 404);
@@ -221,14 +304,24 @@ export async function crearSiembra(req, res) {
     if (errBody) return errBody;
 
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const errRef = await validarReferencias(req.body, res, grupoDatos);
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
+        const errRef = await validarReferencias(req.body, res, grupoDatos, { esCreacion: true });
         if (errRef) return errRef;
 
-        const dto = new SiembraDTO(req.body);
+        const dto = new SiembraDTO({
+            ...req.body,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        });
         const nueva = await siembraModel.create(dto, grupoDatos);
         return exito(res, "Siembra creada correctamente.", nueva, 201);
     } catch (err) {
+        // Errores de negocio lanzados dentro de la transaccion del modelo
+        // (condiciones de carrera sobre el estanque).
+        if (err.codigoNegocio) {
+            return error(res, err.message, null, 409);
+        }
         return error(res, "Error al crear la siembra.", err, 500);
     }
 }
@@ -249,11 +342,14 @@ export async function actualizarSiembra(req, res) {
     if (errBody) return errBody;
 
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const actual = await siembraModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Siembra no encontrada.", null, 404);
 
-        const errRef = await validarReferencias(req.body, res, grupoDatos);
+        const errRef = await validarReferencias(req.body, res, grupoDatos, {
+            esCreacion: false,
+            siembraIdActual: id,
+        });
         if (errRef) return errRef;
 
         const dto = new SiembraDTO(req.body);
@@ -277,7 +373,7 @@ export async function finalizarSiembra(req, res) {
     */
     const { id } = req.params;
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const siembra = await siembraModel.findById(id, grupoDatos);
         if (!siembra) return error(res, "Siembra no encontrada.", null, 404);
 
@@ -287,7 +383,10 @@ export async function finalizarSiembra(req, res) {
             );
         }
 
-        const actualizada = await siembraModel.update(id, grupoDatos, {
+        // Finaliza la siembra Y transiciona el estanque asociado a 'Cosechado'
+        // (el biologo puede finalizar antes o despues de duracion_ciclo,
+        // segun el criterio operativo, tal como pide el documento de siembra).
+        const actualizada = await siembraModel.finalizarConEstanque(id, grupoDatos, {
             estado: EstadoSiembra.FINALIZADA,
         });
         return exito(res, "Siembra finalizada correctamente.", actualizada);
@@ -309,7 +408,7 @@ export async function eliminarSiembra(req, res) {
     */
     const { id } = req.params;
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const eliminada = await siembraModel.remove(id, grupoDatos);
         if (!eliminada) return error(res, "Siembra no encontrada.", null, 404);
         return exito(res, "Siembra eliminada correctamente.", eliminada);
@@ -330,7 +429,7 @@ export async function obtenerSiembraActiva(req, res) {
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const estanqueId = req.query.estanqueId;
 
         if (!estanqueId) {
