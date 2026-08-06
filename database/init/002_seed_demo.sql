@@ -147,7 +147,7 @@ INSERT INTO inventario (id, uuid, grupo_datos, producto_id, proveedor_id, cantid
 -- ------------------------------------------------------------------------------
 -- 15. TABLA: movimientos_inventario
 -- ------------------------------------------------------------------------------
-INSERT INTO movimientos_inventario (id, uuid, grupo_datos, inventario_id, producto_id, colaborador_id, tipo_movimiento, cantidad, observacion, fecha_movimiento, activo) VALUES
+INSERT INTO movimientos_inventario (id, uuid, grupo_datos, inventario_id, producto_id, creado_por_colaborador_id, tipo_movimiento, cantidad, observacion, fecha_movimiento, activo) VALUES
 (1, UUID(), 1001, 1, 1, 1, 'Entrada', 200.00, 'Factura #F-4589 Nicovita recoleccion en bodegas', '2026-06-01 10:00:00', TRUE),
 (2, UUID(), 1001, 1, 1, 1, 'Salida', 50.00, 'Alimentacion semanal Estanque EST-01', '2026-06-10 16:30:00', TRUE);
 
@@ -198,7 +198,7 @@ INSERT INTO siembras (id, uuid, grupo_datos, lote_larva_id, precria_id, finca_id
 -- ------------------------------------------------------------------------------
 -- 22. TABLA: crecimientos
 -- ------------------------------------------------------------------------------
-INSERT INTO crecimientos (id, uuid, grupo_datos, finca_id, estanque_id, colaborador_id, fecha_registro, peso_actual, activo) VALUES
+INSERT INTO crecimientos (id, uuid, grupo_datos, finca_id, estanque_id, creado_por_colaborador_id, fecha_registro, peso_actual, activo) VALUES
 (1, UUID(), 1001, 1, 1, 2, '2026-06-01', 4.50, TRUE),
 (2, UUID(), 1001, 1, 1, 2, '2026-06-15', 7.80, TRUE),
 (3, UUID(), 1001, 1, 1, 2, '2026-07-01', 11.20, TRUE),
@@ -214,7 +214,7 @@ INSERT INTO compradores (id, uuid, grupo_datos, nombre, cedula, telefono, correo
 -- ------------------------------------------------------------------------------
 -- 24. TABLA: ventas
 -- ------------------------------------------------------------------------------
-INSERT INTO ventas (id, uuid, grupo_datos, finca_id, estanque_id, colaborador_id, comprador_id, peso_promedio, tamano_promedio, cantidad_vendida, precio_kilo, total, fecha, activo) VALUES
+INSERT INTO ventas (id, uuid, grupo_datos, finca_id, estanque_id, creado_por_colaborador_id, comprador_id, peso_promedio, tamano_promedio, cantidad_vendida, precio_kilo, total, fecha, activo) VALUES
 (1, UUID(), 1001, 1, 1, 1, 1, 15.20, 60.00, 3500.00, 3200.00, 11200000.00, '2026-07-25', TRUE);
 
 -- ------------------------------------------------------------------------------
@@ -231,20 +231,20 @@ INSERT INTO enfermedades (id, uuid, grupo_datos, finca_id, estanque_id, tipo_reg
 -- ------------------------------------------------------------------------------
 -- 27. TABLA: alimentaciones
 -- ------------------------------------------------------------------------------
-INSERT INTO alimentaciones (id, uuid, grupo_datos, finca_id, estanque_id, colaborador_id, proveedor_id, producto_id, fecha, hora, metodo, cantidad_kg, presentacion, proveedor, tipo_alimento, observaciones, activo) VALUES
+INSERT INTO alimentaciones (id, uuid, grupo_datos, finca_id, estanque_id, creado_por_colaborador_id, proveedor_id, producto_id, fecha, hora, metodo, cantidad_kg, presentacion, proveedor, tipo_alimento, observaciones, activo) VALUES
 (1, UUID(), 1001, 1, 1, 1, 1, 1, '2026-07-28', '07:00', 'Automatico', 45.00, 'Saco 25kg', 'Nicovita', '35% Proteina 2.0mm', 'Primera racion de la manana. Respuesta fuerte en comederos.', TRUE),
 (2, UUID(), 1001, 1, 1, 1, 1, 1, '2026-07-28', '13:00', 'Automatico', 45.00, 'Saco 25kg', 'Nicovita', '35% Proteina 2.0mm', 'Segunda racion. Ajuste de pulso por temperatura alta.', TRUE);
 
 -- ------------------------------------------------------------------------------
 -- 28. TABLA: densidad_poblacional
 -- ------------------------------------------------------------------------------
-INSERT INTO densidad_poblacional (id, uuid, grupo_datos, finca_id, estanque_id, colaborador_id, fecha, cantidad_siembra, area_estanque, numero_camarones, tiros_atarraya, area_atarraya, promedio_por_tiro, sobrevivencia, densidad, notas_conteo, activo) VALUES
+INSERT INTO densidad_poblacional (id, uuid, grupo_datos, finca_id, estanque_id, creado_por_colaborador_id, fecha, cantidad_siembra, area_estanque, numero_camarones, tiros_atarraya, area_atarraya, promedio_por_tiro, sobrevivencia, densidad, notas_conteo, activo) VALUES
 (1, UUID(), 1001, 1, 1, 1, '2026-07-20', 1500000, 5000.00, 1125000, 10, 3.14, 22.50, 75.00, 11.25, 'Conteo mediante atarrayado circular de 2m de diametro. Buena distribucion uniforme.', TRUE);
 
 -- ------------------------------------------------------------------------------
 -- 29. TABLA: raleos
 -- ------------------------------------------------------------------------------
-INSERT INTO raleos (id, uuid, grupo_datos, finca_id, estanque_id, colaborador_id, fecha, porcentaje, peso_estimado, biomasa_estimada, objetivo, metodos, observaciones, activo) VALUES
+INSERT INTO raleos (id, uuid, grupo_datos, finca_id, estanque_id, creado_por_colaborador_id, fecha, porcentaje, peso_estimado, biomasa_estimada, objetivo, metodos, observaciones, activo) VALUES
 (1, UUID(), 1001, 1, 1, 1, '2026-07-24', '15%', 14.50, 16300.00, 'Bajar carga biologica para alcanzar talla de exportacion (18g)', 'Atarraya comederos y copos', 'Raleo parcial nocturno sin inconvenientes de temperatura.', TRUE);
 
 -- ------------------------------------------------------------------------------
@@ -271,7 +271,7 @@ INSERT INTO fisico_quimico_detalle (id, uuid, lectura_id, tipo_medicion, etiquet
 -- ------------------------------------------------------------------------------
 -- 32. TABLA: trazabilidad
 -- ------------------------------------------------------------------------------
-INSERT INTO trazabilidad (id, uuid, grupo_datos, finca_id, estanque_origen_id, estanque_destino_id, colaborador_id, fecha, tamano, dias, pl, tipo_movimiento, activo) VALUES
+INSERT INTO trazabilidad (id, uuid, grupo_datos, finca_id, estanque_origen_id, estanque_destino_id, creado_por_colaborador_id, fecha, tamano, dias, pl, tipo_movimiento, activo) VALUES
 (1, UUID(), 1001, 1, 2, 1, 1, '2026-06-22', 1.20, 20, 25, 'Trasplante de Precria a Engorde', TRUE);
 
 -- ------------------------------------------------------------------------------

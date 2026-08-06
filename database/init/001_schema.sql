@@ -453,7 +453,6 @@ CREATE TABLE IF NOT EXISTS movimientos_inventario (
     grupo_datos INT NOT NULL,
     inventario_id INT NOT NULL,
     producto_id INT NOT NULL,
-    colaborador_id INT NULL,
     tipo_movimiento ENUM('Entrada', 'Salida', 'Ajuste') NOT NULL,
     cantidad DECIMAL(10,2) NOT NULL,
     observacion TEXT NULL,
@@ -474,9 +473,6 @@ CREATE TABLE IF NOT EXISTS movimientos_inventario (
 
     CONSTRAINT fk_mov_inv_productos
     FOREIGN KEY (producto_id) REFERENCES productos(id),
-
-    CONSTRAINT fk_mov_inv_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
 
     CONSTRAINT fk_movimientos_inventario_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
@@ -879,7 +875,6 @@ CREATE TABLE IF NOT EXISTS alimentaciones (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
-    colaborador_id INT NULL,
     proveedor_id INT NULL,
     producto_id INT NULL,
     fecha DATE NOT NULL,
@@ -907,9 +902,6 @@ CREATE TABLE IF NOT EXISTS alimentaciones (
     CONSTRAINT fk_alimentaciones_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
-    CONSTRAINT fk_alimentaciones_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
-
     CONSTRAINT fk_alimentaciones_proveedores
     FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
 
@@ -929,7 +921,6 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
-    colaborador_id INT NULL,
     fecha DATE NOT NULL,
     cantidad_siembra INT NULL,
     area_estanque DECIMAL(10,2) NULL,
@@ -957,9 +948,6 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
     CONSTRAINT fk_densidad_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
-    CONSTRAINT fk_densidad_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
-
     CONSTRAINT fk_densidad_poblacional_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
 
@@ -973,7 +961,6 @@ CREATE TABLE IF NOT EXISTS raleos (
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
-    colaborador_id INT NULL,
     fecha DATE NOT NULL,
     porcentaje VARCHAR(10) NULL,
     peso_estimado DECIMAL(10,2) NULL,
@@ -997,9 +984,6 @@ CREATE TABLE IF NOT EXISTS raleos (
 
     CONSTRAINT fk_raleos_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
-
-    CONSTRAINT fk_raleos_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
 
     CONSTRAINT fk_raleos_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
@@ -1077,7 +1061,6 @@ CREATE TABLE IF NOT EXISTS trazabilidad (
     finca_id INT NOT NULL,
     estanque_origen_id INT NULL,
     estanque_destino_id INT NULL,
-    colaborador_id INT NULL,
     fecha DATE NOT NULL,
     tamano DECIMAL(5,2) NULL,
     dias INT NULL,
@@ -1102,9 +1085,6 @@ CREATE TABLE IF NOT EXISTS trazabilidad (
 
     CONSTRAINT fk_trazabilidad_estanque_destino
     FOREIGN KEY (estanque_destino_id) REFERENCES estanques(id),
-
-    CONSTRAINT fk_trazabilidad_colaboradores
-    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id),
 
     CONSTRAINT fk_trazabilidad_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
@@ -1168,11 +1148,7 @@ CREATE INDEX idx_mant_prod_ticket ON mantenimiento_equipo_productos(mantenimient
 CREATE INDEX idx_mant_tareas_grupo ON mantenimiento_equipo_tareas(grupo_datos);
 CREATE INDEX idx_mant_tareas_ticket ON mantenimiento_equipo_tareas(mantenimiento_equipo_id);
 
-CREATE INDEX idx_densidad_colaborador ON densidad_poblacional(colaborador_id);
-
 CREATE INDEX idx_mantenimiento_estado_equipo ON mantenimiento_equipo(estado_equipo);
-CREATE INDEX idx_alimentaciones_colaborador ON alimentaciones(colaborador_id);
-
 CREATE INDEX idx_fincas_creado_usuario ON fincas(creado_por_usuario_id);
 CREATE INDEX idx_colaboradores_creado_usuario ON colaboradores(creado_por_usuario_id);
 CREATE INDEX idx_estanques_creado_usuario ON estanques(creado_por_usuario_id);
@@ -1229,4 +1205,3 @@ CREATE INDEX idx_trazabilidad_creado_usuario ON trazabilidad(creado_por_usuario_
 CREATE INDEX idx_trazabilidad_creado_colaborador ON trazabilidad(creado_por_colaborador_id);
 CREATE INDEX idx_mantenimiento_creado_usuario ON mantenimiento_equipo(creado_por_usuario_id);
 CREATE INDEX idx_mantenimiento_creado_colaborador ON mantenimiento_equipo(creado_por_colaborador_id);
-
