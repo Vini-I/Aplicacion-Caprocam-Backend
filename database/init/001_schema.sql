@@ -18,24 +18,10 @@ CREATE TABLE IF NOT EXISTS grupos_datos (
     version INT NOT NULL DEFAULT 1
 );
 
-CREATE TABLE IF NOT EXISTS roles (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
-    nombre VARCHAR(80) NOT NULL UNIQUE,
-    descripcion VARCHAR(255) NULL,
-    acceso_global BOOLEAN NOT NULL DEFAULT FALSE,
-    activo BOOLEAN NOT NULL DEFAULT TRUE,
-    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at DATETIME NULL,
-    version INT NOT NULL DEFAULT 1
-);
-
 CREATE TABLE IF NOT EXISTS usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
-    rol_id INT NOT NULL,
     nombre VARCHAR(80) NOT NULL,
     apellidos VARCHAR(120) NOT NULL,
     email VARCHAR(120) NOT NULL UNIQUE,
@@ -48,10 +34,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     version INT NOT NULL DEFAULT 1,
 
     CONSTRAINT fk_usuarios_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
-    CONSTRAINT fk_usuarios_roles
-    FOREIGN KEY (rol_id) REFERENCES roles(id)
+    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo)
 );
 
 CREATE TABLE IF NOT EXISTS fincas (
@@ -91,7 +74,6 @@ CREATE TABLE IF NOT EXISTS colaboradores (
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
     finca_id INT NULL,
-    rol_id INT NOT NULL,
     nombre VARCHAR(80) NOT NULL,
     apellidos VARCHAR(120) NOT NULL,
     cedula VARCHAR(20) NULL,
@@ -112,9 +94,6 @@ CREATE TABLE IF NOT EXISTS colaboradores (
 
     CONSTRAINT fk_colaboradores_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
-
-    CONSTRAINT fk_colaboradores_roles
-    FOREIGN KEY (rol_id) REFERENCES roles(id),
 
     CONSTRAINT uq_colaborador_usuario_grupo
     UNIQUE (grupo_datos, nombre_usuario),
@@ -219,7 +198,6 @@ CREATE TABLE IF NOT EXISTS tareas (
     descripcion VARCHAR(400) NULL,
     categoria ENUM('Preventivo', 'Correctivo', 'Predictivo', 'Emergencia') NULL,
     horas DECIMAL(5,2) NULL,
-    estado ENUM('Pendiente', 'En proceso', 'Finalizada', 'Cancelada') NOT NULL DEFAULT 'Pendiente',
     creado_por_usuario_id INT NULL,
     creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
@@ -661,6 +639,7 @@ CREATE TABLE IF NOT EXISTS siembras (
     cantidad_sembrada INT NOT NULL,
     pl_siembra INT NULL,
     duracion_ciclo INT NULL,
+    produccion_kg DECIMAL(10,2) NOT NULL DEFAULT 0,
     estado ENUM('Activa', 'Finalizada') NOT NULL DEFAULT 'Activa',
     creado_por_usuario_id INT NULL,
     creado_por_colaborador_id INT NULL,
@@ -761,7 +740,6 @@ CREATE TABLE IF NOT EXISTS ventas (
     estanque_id INT NOT NULL,
     comprador_id INT NULL,
     peso_promedio DECIMAL(10,2) NULL,
-    tamano_promedio DECIMAL(10,2) NULL,
     cantidad_vendida DECIMAL(10,2) NOT NULL,
     precio_kilo DECIMAL(10,2) NOT NULL,
     total DECIMAL(12,2) NOT NULL,
@@ -803,8 +781,8 @@ CREATE TABLE IF NOT EXISTS parasitologias (
     fecha_reporte DATE NOT NULL,
     responsable VARCHAR(100) NULL,
     parasito ENUM('gregarina', 'nematodo', 'epicomensal', 'protozoario', 'otro') NOT NULL,
-    camarones_muestreados INT NOT NULL,
-    camarones_infectados INT NOT NULL,
+    camarones_muestreados INT NULL,
+    camarones_infectados INT NULL,
     porcentaje_infeccion DECIMAL(5,2) NULL,
     grado_infeccion ENUM('bajo', 'medio', 'alto') NULL,
     observaciones VARCHAR(400) NULL,
@@ -843,7 +821,6 @@ CREATE TABLE IF NOT EXISTS enfermedades (
     responsable VARCHAR(100) NULL,
     enfermedad ENUM('WSSV - Mancha Blanca', 'AHPND - Necrosis hepatopancreatica aguda', 'Vibriosis', 'IHHNV', 'NHP - Hepatobacter penaei', 'otro') NOT NULL,
     severidad ENUM('bajo', 'medio', 'alto', 'critica') NOT NULL,
-    mortalidad_registrada INT NULL,
     reporte VARCHAR(400) NULL,
     creado_por_usuario_id INT NULL,
     creado_por_colaborador_id INT NULL,
@@ -924,10 +901,12 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
     fecha DATE NOT NULL,
     cantidad_siembra INT NULL,
     area_estanque DECIMAL(10,2) NULL,
-    numero_camarones INT NULL,
+    total_camarones_muestra INT NULL,
     tiros_atarraya INT NULL,
     area_atarraya DECIMAL(10,2) NULL,
+    area_muestreada DECIMAL(10,2) NULL,
     promedio_por_tiro DECIMAL(10,2) NULL,
+    poblacion_estimada INT NULL,
     sobrevivencia DECIMAL(10,2) NULL,
     densidad DECIMAL(10,2) NULL,
     notas_conteo TEXT NULL,
@@ -955,18 +934,33 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
     FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
+CREATE TABLE IF NOT EXISTS densidad_detalle_tiros (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    densidad_id INT NOT NULL,
+    numero_tiro INT NOT NULL,
+    cantidad_camarones INT NOT NULL,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_densidad_detalle_tiros_densidad
+    FOREIGN KEY (densidad_id) REFERENCES densidad_poblacional(id),
+
+    CONSTRAINT uq_densidad_detalle_tiro
+    UNIQUE (densidad_id, numero_tiro)
+);
+
 CREATE TABLE IF NOT EXISTS raleos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
     finca_id INT NOT NULL,
     estanque_id INT NOT NULL,
+    siembra_id INT NULL,
     fecha DATE NOT NULL,
-    porcentaje VARCHAR(10) NULL,
-    peso_estimado DECIMAL(10,2) NULL,
+    porcentaje DECIMAL(5,2) NULL,
+    kg_retirados DECIMAL(10,2) NULL,
+    biomasa_restante DECIMAL(10,2) NULL,
     biomasa_estimada DECIMAL(10,2) NULL,
-    objetivo VARCHAR(80) NULL,
-    metodos VARCHAR(50) NULL,
     observaciones TEXT NULL,
     creado_por_usuario_id INT NULL,
     creado_por_colaborador_id INT NULL,
@@ -984,6 +978,9 @@ CREATE TABLE IF NOT EXISTS raleos (
 
     CONSTRAINT fk_raleos_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
+
+    CONSTRAINT fk_raleos_siembras
+    FOREIGN KEY (siembra_id) REFERENCES siembras(id),
 
     CONSTRAINT fk_raleos_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
@@ -1136,6 +1133,8 @@ CREATE INDEX idx_lotes_larva_grupo ON lotes_larva(grupo_datos);
 CREATE INDEX idx_precrias_grupo ON precrias(grupo_datos);
 CREATE INDEX idx_siembras_grupo ON siembras(grupo_datos);
 CREATE INDEX idx_raleos_grupo ON raleos(grupo_datos);
+CREATE INDEX idx_raleos_siembra ON raleos(siembra_id);
+CREATE INDEX idx_densidad_detalle_tiros_densidad ON densidad_detalle_tiros(densidad_id);
 
 CREATE INDEX idx_fq_estanque_fecha ON fisico_quimico(estanque_id, fecha_registro);
 CREATE INDEX idx_fq_detalle_lectura ON fisico_quimico_detalle(lectura_id);
