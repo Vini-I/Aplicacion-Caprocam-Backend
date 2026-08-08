@@ -50,22 +50,36 @@ export async function findAll(filtros) {
     ];
 
     if (filtros.fincaId) {
-        sql = sql + " AND finca_id = ?";
-        params.push(filtros.fincaId);
+        sql = sql +
+            " AND finca_id = ?";
+
+        params.push(
+            filtros.fincaId
+        );
     }
 
     if (filtros.estanqueId) {
-        sql = sql + " AND estanque_id = ?";
-        params.push(filtros.estanqueId);
+        sql = sql +
+            " AND estanque_id = ?";
+
+        params.push(
+            filtros.estanqueId
+        );
     }
 
     if (filtros.parasito) {
-        sql = sql + " AND parasito = ?";
-        params.push(filtros.parasito);
+        sql = sql +
+            " AND parasito = ?";
+
+        params.push(
+            filtros.parasito
+        );
     }
 
     if (filtros.fechaReporte) {
-        sql = sql + " AND fecha_reporte = ?";
+        sql = sql +
+            " AND fecha_reporte = ?";
+
         params.push(
             normalizarFechaMysql(
                 filtros.fechaReporte
@@ -76,12 +90,15 @@ export async function findAll(filtros) {
     sql = sql +
         " ORDER BY fecha_reporte DESC, id DESC";
 
-    const [rows] = await pool.execute(
-        sql,
-        params
-    );
+    const [rows] =
+        await pool.execute(
+            sql,
+            params
+        );
 
-    return mapearLista(rows);
+    return mapearLista(
+        rows
+    );
 }
 
 /*
@@ -104,19 +121,22 @@ export async function findById(
         AND activo = TRUE
         LIMIT 1`;
 
-    const [rows] = await pool.execute(
-        sql,
-        [
-            id,
-            grupoDatos
-        ]
-    );
+    const [rows] =
+        await pool.execute(
+            sql,
+            [
+                id,
+                grupoDatos
+            ]
+        );
 
     if (rows.length === 0) {
         return null;
     }
 
-    return mapearFila(rows[0]);
+    return mapearFila(
+        rows[0]
+    );
 }
 
 /*
@@ -133,30 +153,31 @@ export async function fincaEstanquePertenecenGrupo(
     estanqueId,
     grupoDatos
 ) {
-    const [rows] = await pool.execute(
-        `
-        SELECT
-            e.id
-        FROM estanques e
-        INNER JOIN fincas f
-            ON f.id = e.finca_id
-        WHERE f.id = ?
-        AND e.id = ?
-        AND f.grupo_datos = ?
-        AND e.grupo_datos = ?
-        AND f.deleted_at IS NULL
-        AND e.deleted_at IS NULL
-        AND f.activo = TRUE
-        AND e.activo = TRUE
-        LIMIT 1
-        `,
-        [
-            fincaId,
-            estanqueId,
-            grupoDatos,
-            grupoDatos
-        ]
-    );
+    const [rows] =
+        await pool.execute(
+            `
+            SELECT
+                e.id
+            FROM estanques e
+            INNER JOIN fincas f
+                ON f.id = e.finca_id
+            WHERE f.id = ?
+            AND e.id = ?
+            AND f.grupo_datos = ?
+            AND e.grupo_datos = ?
+            AND f.deleted_at IS NULL
+            AND e.deleted_at IS NULL
+            AND f.activo = TRUE
+            AND e.activo = TRUE
+            LIMIT 1
+            `,
+            [
+                fincaId,
+                estanqueId,
+                grupoDatos,
+                grupoDatos
+            ]
+        );
 
     return rows.length > 0;
 }
@@ -170,54 +191,56 @@ Registro creado.
 Parametros:
 - No utiliza colaborador_id.
 - El creador se guarda solo en creado_por_usuario_id o
-- creado_por_colaborador_id.
+  creado_por_colaborador_id.
 
 Retorna:
 - dto: Datos normalizados por ParasitologiaDTO.
 */
 
 export async function create(dto) {
-    const fechaReporte = normalizarFechaMysql(
-        dto.fechaReporte
-    );
+    const fechaReporte =
+        normalizarFechaMysql(
+            dto.fechaReporte
+        );
 
-    const [result] = await pool.execute(
-        `
-        INSERT INTO parasitologias (
-            grupo_datos,
-            finca_id,
-            estanque_id,
-            creado_por_usuario_id,
-            creado_por_colaborador_id,
-            tipo_registro,
-            fecha_reporte,
-            responsable,
-            parasito,
-            camarones_muestreados,
-            camarones_infectados,
-            porcentaje_infeccion,
-            grado_infeccion,
-            observaciones
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        [
-            dto.grupoDatos,
-            dto.fincaId,
-            dto.estanqueId,
-            dto.creadoPorUsuarioId,
-            dto.creadoPorColaboradorId,
-            dto.tipoRegistro,
-            fechaReporte,
-            dto.responsable,
-            dto.parasito,
-            dto.camaronesMuestreados,
-            dto.camaronesInfectados,
-            dto.porcentajeInfeccion,
-            dto.gradoInfeccion,
-            dto.observaciones
-        ]
-    );
+    const [result] =
+        await pool.execute(
+            `
+            INSERT INTO parasitologias (
+                grupo_datos,
+                finca_id,
+                estanque_id,
+                creado_por_usuario_id,
+                creado_por_colaborador_id,
+                tipo_registro,
+                fecha_reporte,
+                responsable,
+                parasito,
+                camarones_muestreados,
+                camarones_infectados,
+                porcentaje_infeccion,
+                grado_infeccion,
+                observaciones
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+                dto.grupoDatos,
+                dto.fincaId,
+                dto.estanqueId,
+                dto.creadoPorUsuarioId,
+                dto.creadoPorColaboradorId,
+                dto.tipoRegistro,
+                fechaReporte,
+                dto.responsable,
+                dto.parasito,
+                dto.camaronesMuestreados,
+                dto.camaronesInfectados,
+                dto.porcentajeInfeccion,
+                dto.gradoInfeccion,
+                dto.observaciones
+            ]
+        );
 
     return findById(
         result.insertId,
@@ -240,43 +263,45 @@ export async function update(
     dto,
     grupoDatos
 ) {
-    const fechaReporte = normalizarFechaMysql(
-        dto.fechaReporte
-    );
+    const fechaReporte =
+        normalizarFechaMysql(
+            dto.fechaReporte
+        );
 
-    const [result] = await pool.execute(
-        `
-        UPDATE parasitologias
-        SET
-            finca_id = ?,
-            estanque_id = ?,
-            fecha_reporte = ?,
-            parasito = ?,
-            camarones_muestreados = ?,
-            camarones_infectados = ?,
-            porcentaje_infeccion = ?,
-            grado_infeccion = ?,
-            observaciones = ?,
-            version = version + 1
-        WHERE id = ?
-        AND grupo_datos = ?
-        AND deleted_at IS NULL
-        AND activo = TRUE
-        `,
-        [
-            dto.fincaId,
-            dto.estanqueId,
-            fechaReporte,
-            dto.parasito,
-            dto.camaronesMuestreados,
-            dto.camaronesInfectados,
-            dto.porcentajeInfeccion,
-            dto.gradoInfeccion,
-            dto.observaciones,
-            id,
-            grupoDatos
-        ]
-    );
+    const [result] =
+        await pool.execute(
+            `
+            UPDATE parasitologias
+            SET
+                finca_id = ?,
+                estanque_id = ?,
+                fecha_reporte = ?,
+                parasito = ?,
+                camarones_muestreados = ?,
+                camarones_infectados = ?,
+                porcentaje_infeccion = ?,
+                grado_infeccion = ?,
+                observaciones = ?,
+                version = version + 1
+            WHERE id = ?
+            AND grupo_datos = ?
+            AND deleted_at IS NULL
+            AND activo = TRUE
+            `,
+            [
+                dto.fincaId,
+                dto.estanqueId,
+                fechaReporte,
+                dto.parasito,
+                dto.camaronesMuestreados,
+                dto.camaronesInfectados,
+                dto.porcentajeInfeccion,
+                dto.gradoInfeccion,
+                dto.observaciones,
+                id,
+                grupoDatos
+            ]
+        );
 
     if (result.affectedRows === 0) {
         return null;
@@ -300,10 +325,11 @@ export async function remove(
     id,
     grupoDatos
 ) {
-    const actual = await findById(
-        id,
-        grupoDatos
-    );
+    const actual =
+        await findById(
+            id,
+            grupoDatos
+        );
 
     if (!actual) {
         return null;
@@ -392,7 +418,9 @@ function mapearLista(rows) {
         i++
     ) {
         resultado.push(
-            mapearFila(rows[i])
+            mapearFila(
+                rows[i]
+            )
         );
     }
 
@@ -412,43 +440,75 @@ Retorna:
 
 function mapearFila(row) {
     return {
-        id: row.id,
-        uuid: row.uuid,
-        grupoDatos: row.grupo_datos,
-        fincaId: row.finca_id,
-        estanqueId: row.estanque_id,
+        id:
+            row.id,
+
+        uuid:
+            row.uuid,
+
+        grupoDatos:
+            row.grupo_datos,
+
+        fincaId:
+            row.finca_id,
+
+        estanqueId:
+            row.estanque_id,
+
         creadoPorUsuarioId:
             row.creado_por_usuario_id,
+
         creadoPorColaboradorId:
             row.creado_por_colaborador_id,
-        tipoRegistro: row.tipo_registro,
-        fechaReporte: formatearFecha(
-            row.fecha_reporte
-        ),
-        responsable: row.responsable,
-        parasito: row.parasito,
-        camaronesMuestreados: Number(
-            row.camarones_muestreados
-        ),
-        camaronesInfectados: Number(
-            row.camarones_infectados
-        ),
-        porcentajeInfeccion: convertirNumero(
-            row.porcentaje_infeccion
-        ),
+
+        tipoRegistro:
+            row.tipo_registro,
+
+        fechaReporte:
+            formatearFecha(
+                row.fecha_reporte
+            ),
+
+        responsable:
+            row.responsable,
+
+        parasito:
+            row.parasito,
+
+        camaronesMuestreados:
+            convertirNumero(
+                row.camarones_muestreados
+            ),
+
+        camaronesInfectados:
+            convertirNumero(
+                row.camarones_infectados
+            ),
+
+        porcentajeInfeccion:
+            convertirNumero(
+                row.porcentaje_infeccion
+            ),
+
         gradoInfeccion:
             row.grado_infeccion,
+
         observaciones:
             row.observaciones,
+
         activo:
             row.activo === 1 ||
             row.activo === true,
+
         fechaCreacion:
             row.fecha_creacion,
+
         fechaActualizacion:
             row.fecha_actualizacion,
+
         deletedAt:
             row.deleted_at,
+
         version:
             row.version
     };
@@ -466,6 +526,13 @@ Retorna:
 */
 
 function normalizarFechaMysql(valor) {
+    if (
+        valor === undefined ||
+        valor === null
+    ) {
+        return null;
+    }
+
     if (valor instanceof Date) {
         return valor.toISOString().slice(
             0,
@@ -473,21 +540,27 @@ function normalizarFechaMysql(valor) {
         );
     }
 
-    const texto = String(valor).trim();
+    const texto =
+        String(
+            valor
+        ).trim();
 
     if (texto.includes("/")) {
-        const partes = texto.split("/");
+        const partes =
+            texto.split("/");
 
         if (partes.length === 3) {
-            const dia = partes[0].padStart(
-                2,
-                "0"
-            );
+            const dia =
+                partes[0].padStart(
+                    2,
+                    "0"
+                );
 
-            const mes = partes[1].padStart(
-                2,
-                "0"
-            );
+            const mes =
+                partes[1].padStart(
+                    2,
+                    "0"
+                );
 
             return (
                 partes[2] +
@@ -528,7 +601,9 @@ function formatearFecha(valor) {
         );
     }
 
-    return String(valor).slice(
+    return String(
+        valor
+    ).slice(
         0,
         10
     );
@@ -553,5 +628,7 @@ function convertirNumero(valor) {
         return null;
     }
 
-    return Number(valor);
+    return Number(
+        valor
+    );
 }
