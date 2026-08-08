@@ -703,6 +703,35 @@ CREATE TABLE IF NOT EXISTS crecimientos (
     FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
 );
 
+CREATE TABLE IF NOT EXISTS calculos_crecimiento (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    grupo_datos INT NOT NULL,
+    crecimiento_id INT NOT NULL,
+    cantidad_individuos INT NOT NULL,
+    peso_total DECIMAL(10,2) NOT NULL,
+    peso_promedio_individual DECIMAL(10,2) NOT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    version INT NOT NULL DEFAULT 1,
+
+    CONSTRAINT fk_calculos_crecimiento_grupos_datos
+    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
+
+    CONSTRAINT fk_calculos_crecimiento_crecimiento
+    FOREIGN KEY (crecimiento_id) REFERENCES crecimientos(id),
+
+    CONSTRAINT fk_calculos_crecimiento_creado_usuario
+    FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+
+    CONSTRAINT fk_calculos_crecimiento_creado_colaborador
+    FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id)
+);
+
 CREATE TABLE IF NOT EXISTS compradores (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
@@ -1204,3 +1233,8 @@ CREATE INDEX idx_trazabilidad_creado_usuario ON trazabilidad(creado_por_usuario_
 CREATE INDEX idx_trazabilidad_creado_colaborador ON trazabilidad(creado_por_colaborador_id);
 CREATE INDEX idx_mantenimiento_creado_usuario ON mantenimiento_equipo(creado_por_usuario_id);
 CREATE INDEX idx_mantenimiento_creado_colaborador ON mantenimiento_equipo(creado_por_colaborador_id);
+
+CREATE INDEX idx_calculos_crecimiento_grupo ON calculos_crecimiento(grupo_datos);
+CREATE INDEX idx_calculos_crecimiento_crecimiento_id ON calculos_crecimiento(crecimiento_id);
+CREATE INDEX idx_calculos_crecimiento_creado_usuario ON calculos_crecimiento(creado_por_usuario_id);
+CREATE INDEX idx_calculos_crecimiento_creado_colaborador ON calculos_crecimiento(creado_por_colaborador_id);

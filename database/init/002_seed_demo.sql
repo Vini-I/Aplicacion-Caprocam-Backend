@@ -183,6 +183,20 @@ INSERT INTO crecimientos (id, uuid, grupo_datos, finca_id, estanque_id, creado_p
 (4, UUID(), 1001, 1, 1, 2, '2026-07-15', 14.60, TRUE);
 
 -- ------------------------------------------------------------------------------
+-- 21.1 TABLA: calculos_crecimientos
+-- ------------------------------------------------------------------------------
+INSERT INTO calculos_crecimiento (id, uuid, grupo_datos, crecimiento_id, cantidad_individuos, peso_total, peso_promedio_individual, creado_por_colaborador_id, activo) VALUES
+(1, UUID(), 1001, 1, 25, 112.50, 4.50, 2, TRUE),
+(2, UUID(), 1001, 1, 30, 135.00, 4.50, 2, TRUE),
+(3, UUID(), 1001, 2, 25, 195.00, 7.80, 2, TRUE),
+(4, UUID(), 1001, 2, 30, 234.00, 7.80, 2, TRUE),
+(5, UUID(), 1001, 3, 25, 280.00, 11.20, 2, TRUE),
+(6, UUID(), 1001, 3, 30, 336.00, 11.20, 2, TRUE),
+(7, UUID(), 1001, 4, 25, 365.00, 14.60, 2, TRUE),
+(8, UUID(), 1001, 4, 30, 438.00, 14.60, 2, TRUE);
+
+
+-- ------------------------------------------------------------------------------
 -- 22. TABLA: compradores
 -- ------------------------------------------------------------------------------
 INSERT INTO compradores (id, uuid, grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado, activo) VALUES
