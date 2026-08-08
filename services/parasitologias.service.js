@@ -250,7 +250,8 @@ export function isParasitoValido(parasito) {
     - parasito: Valor del parasito.
 
     Retorna:
-    - true si es valido, false si no.
+    - true si es valido.
+    - false si no es valido.
     */
 
     if (isEmpty(parasito)) {
@@ -275,6 +276,58 @@ export function isParasitoValido(parasito) {
         if (
             parasitoTexto ===
             parasitos[i]
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export function isGradoInfeccionValido(
+    gradoInfeccion
+) {
+    /*
+    Descripcion:
+    Valida que el grado de infeccion recibido exista
+    dentro de los valores permitidos por el modulo.
+
+    Parametros:
+    - gradoInfeccion: Grado seleccionado.
+
+    Retorna:
+    - true si el grado es bajo, medio o alto.
+    - false si no corresponde a un valor permitido.
+    */
+
+    if (
+        isEmpty(
+            gradoInfeccion
+        )
+    ) {
+        return false;
+    }
+
+    const grados =
+        Object.values(
+            GradoInfeccion
+        );
+
+    const gradoTexto =
+        String(
+            gradoInfeccion
+        )
+            .trim()
+            .toLowerCase();
+
+    for (
+        let i = 0;
+        i < grados.length;
+        i++
+    ) {
+        if (
+            gradoTexto ===
+            grados[i]
         ) {
             return true;
         }
@@ -419,60 +472,6 @@ export function calcularPorcentajeInfeccion(
     );
 }
 
-export function calcularGradoInfeccion(
-    porcentajeInfeccion
-) {
-    /*
-    Descripcion:
-    Calcula el grado de infeccion segun el porcentaje.
-
-    Parametros:
-    - porcentajeInfeccion: Porcentaje calculado.
-
-    Retorna:
-    - bajo, medio o alto.
-    - null cuando no existe porcentaje calculado.
-    */
-
-    if (
-        isEmpty(
-            porcentajeInfeccion
-        )
-    ) {
-        return null;
-    }
-
-    const porcentaje =
-        Number(
-            porcentajeInfeccion
-        );
-
-    if (
-        Number.isNaN(
-            porcentaje
-        )
-    ) {
-        return null;
-    }
-
-    if (
-        porcentaje < 0 ||
-        porcentaje > 100
-    ) {
-        return null;
-    }
-
-    if (porcentaje >= 60) {
-        return GradoInfeccion.ALTO;
-    }
-
-    if (porcentaje >= 30) {
-        return GradoInfeccion.MEDIO;
-    }
-
-    return GradoInfeccion.BAJO;
-}
-
 export function obtenerCatalogoParasitos() {
     /*
     Descripcion:
@@ -509,14 +508,19 @@ export function construirResumenParasitologias(
     const resumen = {
         totalRegistros:
             registros.length,
+
         totalCamaronesMuestreados:
             0,
+
         totalCamaronesInfectados:
             0,
+
         promedioInfeccion:
             null,
+
         gradosFrecuentes:
             [],
+
         parasitosFrecuentes:
             []
     };
@@ -823,6 +827,7 @@ function construirListaContador(
         lista.push({
             valor:
                 clave,
+
             cantidad:
                 contador[clave]
         });

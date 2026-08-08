@@ -20,7 +20,8 @@ IMPORTS
 
 import {
     ParasitologiaDTO,
-    ParasitoParasitologia
+    ParasitoParasitologia,
+    GradoInfeccion
 } from "../dtos/parasitologias.dto.js";
 
 import {
@@ -31,9 +32,9 @@ import {
     isFechaValida,
     isFechaFutura,
     isParasitoValido,
+    isGradoInfeccionValido,
     isInfectadosValido,
     calcularPorcentajeInfeccion,
-    calcularGradoInfeccion,
     obtenerCatalogoParasitos as
         obtenerCatalogoParasitosService,
     construirResumenParasitologias
@@ -63,6 +64,8 @@ Parametros:
 - El grupo y el creador se resuelven desde el JWT.
 - Los campos camaronesMuestreados y camaronesInfectados
   son opcionales.
+- El gradoInfeccion es obligatorio y debe ser seleccionado
+  por el usuario.
 
 Retorna:
 - body: Cuerpo de la peticion.
@@ -96,6 +99,12 @@ function validarCuerpo(
     if (isEmpty(body.parasito)) {
         errores.push(
             "El campo parasito es requerido."
+        );
+    }
+
+    if (isEmpty(body.gradoInfeccion)) {
+        errores.push(
+            "El campo gradoInfeccion es requerido."
         );
     }
 
@@ -160,6 +169,20 @@ function validarCuerpo(
             "Parasito invalido. Opciones: " +
             Object.values(
                 ParasitoParasitologia
+            ).join(", ")
+        );
+    }
+
+    if (
+        !isEmpty(body.gradoInfeccion) &&
+        !isGradoInfeccionValido(
+            body.gradoInfeccion
+        )
+    ) {
+        errores.push(
+            "Grado de infeccion invalido. Opciones: " +
+            Object.values(
+                GradoInfeccion
             ).join(", ")
         );
     }
@@ -286,8 +309,8 @@ function obtenerResponsablePeticion(req) {
 
 /*
 Descripcion:
-Construye el DTO con datos funcionales, calculos sanitarios
-y auditoria dual.
+Construye el DTO con datos funcionales, porcentaje
+calculado, grado seleccionado y auditoria dual.
 
 Instancia normalizada de ParasitologiaDTO.
 
@@ -295,8 +318,10 @@ Parametros:
 - No utiliza colaboradorId.
 - La identidad se guarda solo en creadoPorUsuarioId o
   creadoPorColaboradorId.
-- El porcentaje y grado quedan null cuando no existen
-  datos suficientes para calcularlos.
+- El porcentaje queda null cuando no existen datos
+  suficientes para calcularlo.
+- El gradoInfeccion se recibe desde el frontend y se
+  guarda siempre normalizado en minuscula.
 */
 
 function construirDTO(
@@ -310,9 +335,11 @@ function construirDTO(
         );
 
     const gradoInfeccion =
-        calcularGradoInfeccion(
-            porcentajeInfeccion
-        );
+        String(
+            body.gradoInfeccion
+        )
+            .trim()
+            .toLowerCase();
 
     return new ParasitologiaDTO({
         grupoDatos:
@@ -413,12 +440,16 @@ function construirFiltros(
 ) {
     return {
         grupoDatos,
+
         fincaId:
             req.query.fincaId,
+
         estanqueId:
             req.query.estanqueId,
+
         parasito:
             req.query.parasito,
+
         fechaReporte:
             req.query.fechaReporte
     };
@@ -626,6 +657,7 @@ Parametros:
 - Usuario web: creadoPorUsuarioId contiene el id.
 - Colaborador movil: creadoPorColaboradorId contiene el id.
 - No se utiliza colaboradorId.
+- El grado de infeccion se recibe desde el frontend.
 */
 
 export async function crearParasitologia(
@@ -708,6 +740,8 @@ Registro actualizado o error 404.
 
 Parametros:
 - La identidad del creador original permanece inmutable.
+- El grado de infeccion puede ser actualizado mediante
+  el valor seleccionado en el frontend.
 */
 
 export async function actualizarParasitologia(

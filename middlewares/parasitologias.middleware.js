@@ -20,7 +20,8 @@ const camposRequeridos = [
     "fincaId",
     "estanqueId",
     "fechaReporte",
-    "parasito"
+    "parasito",
+    "gradoInfeccion"
 ];
 
 export function validarGrupoDatos(

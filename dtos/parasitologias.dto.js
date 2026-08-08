@@ -33,7 +33,7 @@ export const ParasitoParasitologia = Object.freeze({
 
 /*
 Descripcion:
-Define los grados de infeccion calculados.
+Define los grados de infeccion permitidos por el modulo.
 */
 
 export const GradoInfeccion = Object.freeze({
@@ -60,6 +60,7 @@ Parametros:
   creadoPorColaboradorId.
 - No utiliza colaboradorId.
 - Los campos de muestreo pueden ser opcionales.
+- El grado de infeccion es obligatorio.
 
 Retorna:
 
@@ -98,6 +99,7 @@ export class ParasitologiaDTO {
     }) {
         this.id = id;
         this.uuid = uuid;
+
         this.grupoDatos = Number(
             grupoDatos
         );
@@ -185,9 +187,9 @@ export class ParasitologiaDTO {
             );
 
         this.gradoInfeccion =
-            normalizarTextoOpcional(
+            normalizarTexto(
                 gradoInfeccion
-            );
+            ).toLowerCase();
 
         this.observaciones =
             normalizarTextoOpcional(
