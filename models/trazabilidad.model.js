@@ -3,7 +3,7 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: trazabilidad.model.js
-Autor: Samuel
+Autor: Brandon
 Fecha: 05/07/2026
 Modulo: Trazabilidad
 Descripcion:
@@ -44,15 +44,16 @@ Contiene las funciones exportables que interactuan
 directamente con la base de datos MySQL.
 */
 
-export async function findAll() {
+export async function findAll(grupoDatos) {
 
     /*
     Descripcion:
     Obtiene todos los registros activos de
-    trazabilidad.
+    trazabilidad que pertenecen al grupo de
+    datos del usuario autenticado (JWT).
 
     Parametros:
-    No posee.
+    - grupoDatos: Grupo de datos del usuario autenticado.
 
     Retorna:
     Lista de registros.
@@ -67,6 +68,8 @@ export async function findAll() {
             estanque_origen_id,
             estanque_destino_id,
             colaborador_id,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             fecha,
             tamano,
             dias,
@@ -80,20 +83,23 @@ export async function findAll() {
         FROM trazabilidad
         WHERE deleted_at IS NULL
         AND activo = TRUE
+        AND grupo_datos = ?
         ORDER BY id DESC
-    `);
+    `, [grupoDatos]);
 
     return mapearLista(rows);
 }
 
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
 
     /*
     Descripcion:
-    Busca un registro por su identificador.
+    Busca un registro por su identificador, limitado
+    al grupo de datos del usuario autenticado (JWT).
 
     Parametros:
     - id: Identificador del registro.
+    - grupoDatos: Grupo de datos del usuario autenticado.
 
     Retorna:
     Registro encontrado o null.
@@ -108,6 +114,8 @@ export async function findById(id) {
             estanque_origen_id,
             estanque_destino_id,
             colaborador_id,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             fecha,
             tamano,
             dias,
@@ -122,14 +130,83 @@ export async function findById(id) {
         WHERE id = ?
         AND deleted_at IS NULL
         AND activo = TRUE
+        AND grupo_datos = ?
         LIMIT 1
-    `, [id]);
+    `, [id, grupoDatos]);
 
     if (rows.length === 0) {
         return null;
     }
 
     return mapearFila(rows[0]);
+}
+
+export async function obtenerUltimoMovimientoPorEstanque(estanqueId, grupoDatos) {
+
+    /*
+    Descripcion:
+    Obtiene el ultimo movimiento activo (por fecha, luego
+    por id) en el que participa un estanque, ya sea como
+    origen o como destino, dentro del grupo de datos del
+    usuario autenticado. Permite determinar si el estanque
+    quedo ocupado o si ya fue liberado por un movimiento
+    posterior.
+
+    Parametros:
+    - estanqueId: Identificador del estanque a revisar.
+    - grupoDatos: Grupo de datos del usuario autenticado.
+
+    Retorna:
+    - El ultimo movimiento encontrado (fila cruda).
+    - null si el estanque nunca participo en un movimiento.
+    */
+
+    const [rows] = await pool.execute(`
+        SELECT
+            id,
+            estanque_origen_id,
+            estanque_destino_id
+        FROM trazabilidad
+        WHERE (estanque_origen_id = ? OR estanque_destino_id = ?)
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        AND grupo_datos = ?
+        ORDER BY fecha DESC, id DESC
+        LIMIT 1
+    `, [estanqueId, estanqueId, grupoDatos]);
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return rows[0];
+}
+
+export async function estanqueDestinoOcupado(estanqueId, grupoDatos) {
+
+    /*
+    Descripcion:
+    Determina si un estanque esta actualmente ocupado.
+    Esta ocupado cuando el ultimo movimiento en el que
+    participo lo dejo como destino (todavia no existe un
+    movimiento posterior que lo saque como origen).
+
+    Parametros:
+    - estanqueId: Identificador del estanque a revisar.
+    - grupoDatos: Grupo de datos del usuario autenticado.
+
+    Retorna:
+    - true si el estanque esta ocupado.
+    - false si esta libre para recibir un nuevo movimiento.
+    */
+
+    const ultimo = await obtenerUltimoMovimientoPorEstanque(estanqueId, grupoDatos);
+
+    if (!ultimo) {
+        return false;
+    }
+
+    return Number(ultimo.estanque_destino_id) === Number(estanqueId);
 }
 
 export async function create(dto) {
@@ -159,13 +236,15 @@ export async function create(dto) {
             estanque_origen_id,
             estanque_destino_id,
             colaborador_id,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             fecha,
             tamano,
             dias,
             pl,
             tipo_movimiento
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
@@ -173,6 +252,8 @@ export async function create(dto) {
             dto.estanqueOrigenId,
             dto.estanqueDestinoId,
             dto.colaboradorId,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId,
             fecha,
             dto.tamano,
             dto.dias,
@@ -181,47 +262,14 @@ export async function create(dto) {
         ]
     );
 
-    return await findById(result.insertId);
+    return await findById(result.insertId, grupoDatos);
 }
 
-export async function remove(id) {
-
-    /*
-    Descripcion:
-    Realiza el borrado logico de un registro
-    de trazabilidad.
-
-    Parametros:
-    - id: Identificador del registro.
-
-    Retorna:
-    - Registro eliminado logicamente.
-    - null si no existe.
-    */
-
-    const actual = await findById(id);
-
-    if (!actual) {
-        return null;
-    }
-
-    await pool.execute(
-        `
-        UPDATE trazabilidad
-        SET
-        activo = FALSE,
-        deleted_at = CURRENT_TIMESTAMP,
-        version = version + 1
-        WHERE id = ?
-        AND deleted_at IS NULL
-        AND activo = TRUE
-        `,
-        [id]
-    );
-
-    return actual;
-}
-
+/*
+Se quito remove() (borrado logico) el 19/07 -- trazabilidad
+es un historico de movimientos y no estaba en lo que pidio
+la companera (Registrar, GetAll, GetPorId).
+*/
 
 /*
 //////////////////////////////////////////////////////////
@@ -279,6 +327,8 @@ function mapearFila(row) {
         estanqueOrigenId: row.estanque_origen_id,
         estanqueDestinoId: row.estanque_destino_id,
         colaboradorId: row.colaborador_id,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         fecha: formatearFecha(row.fecha),
         tamano: Number(row.tamano),
         dias: Number(row.dias),
@@ -296,33 +346,35 @@ function obtenerGrupoDatos(valor) {
 
     /*
     Descripcion:
-    Obtiene el grupo de datos que utilizara
-    el registro.
-
-    Si no se recibe ningun valor se utiliza
-    el grupo 1 mientras se implementa la
-    autenticacion.
+    Valida el grupo de datos recibido desde el
+    JWT (req.user.grupoDatos). Ya no se tolera un
+    valor ausente: antes se usaba 1 por defecto
+    mientras se implementaba la autenticacion, pero
+    esa autenticacion ya existe en todos los modulos.
 
     Parametros:
-    - valor: Grupo de datos.
+    - valor: Grupo de datos proveniente del token.
 
     Retorna:
-    Numero del grupo de datos.
+    - Numero del grupo de datos, si es valido.
+
+    Lanza:
+    - Error si el valor no llego o no es numerico.
     */
 
-    if (valor === undefined) {
-        return 1;
+    if (valor === undefined || valor === null || String(valor).trim() === '') {
+        throw new Error(
+            'grupoDatos es obligatorio y debe venir del token JWT (req.user.grupoDatos).'
+        );
     }
 
-    if (valor === null) {
-        return 1;
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        throw new Error('grupoDatos debe ser numerico.');
     }
 
-    if (String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
+    return numero;
 }
 
 function normalizarFechaMysql(valor) {

@@ -4,7 +4,6 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: densidadPoblacional.dto.js
 Autor: Eduard Salas
-Fecha: 6/07/2026
 Modulo: Densidad Poblacional
 Descripcion:
 Archivo de transferencia de datos para densidad poblacional.
@@ -21,77 +20,119 @@ DTO
 Caparazon de datos para el modulo de densidad poblacional.
 Normaliza los campos recibidos desde el body antes de que sean
 procesados por el controller y el model.
+
+IMPORTANTE (seguridad):
+grupoDatos, creadoPorUsuarioId y creadoPorColaboradorId NO se
+reciben del body. Se reciben en un segundo parametro "contexto",
+que el controller arma siempre a partir de obtenerContextoPeticion
+(req.user / req.colaborador, el payload ya verificado del JWT). Si
+se aceptaran desde el body, cualquier cliente podria mandar esos
+campos falsos y el backend terminaria guardando datos en el grupo
+equivocado, o atribuyendo el registro a otro usuario/colaborador
+que no lo creo. Por eso el constructor ya ni siquiera destructura
+esos campos del body.
+
+idColaborador (quien realizo el conteo/medicion, distinto de quien
+autentico la peticion) SI se acepta del body, de forma opcional:
+si no viene, el model asume por defecto el colaborador que
+autentico la peticion (cuando fue registrado desde la APK).
 */
 
 export class DensidadPoblacionalDTO {
-    constructor({
-        id,
-        uuid,
-        grupoDatos,
-        idFinca,
-        fincaId,
-        finca,
-        idEstanque,
-        estanqueId,
-        estanque,
-        fecha,
-        cantidadSiembra,
-        areaEstanque,
-        numeroCamarones,
-        tirosAtarraya,
-        areaAtarraya,
-        promedioPorTiro,
-        sobrevivencia,
-        densidad,
-        notasConteo,
-        activo,
-        fechaCreacion,
-        fechaActualizacion,
-        deletedAt,
-        version
-    }) {
+    constructor(body, contexto = {}) {
         /*
         Descripcion:
-        Construye un objeto DensidadPoblacionalDTO con los datos recibidos.
+        Construye un objeto DensidadPoblacionalDTO con los datos
+        recibidos en el body de la peticion, mas el grupoDatos y
+        creadoPorUsuarioId/creadoPorColaboradorId reales del usuario
+        o colaborador autenticado.
 
         Parametros:
-        - id: Identificador numerico interno del registro.
-        - uuid: Identificador global usado para futura sincronizacion offline.
-        - grupoDatos: Codigo del grupo de datos al que pertenece el registro.
-        - idFinca / fincaId / finca: Identificador de la finca (se aceptan alias).
-        - idEstanque / estanqueId / estanque: Identificador del estanque (se aceptan alias).
-        - fecha: Fecha del conteo.
-        - cantidadSiembra: Cantidad sembrada.
-        - areaEstanque: Area del estanque.
-        - numeroCamarones: Total de camarones contados.
-        - tirosAtarraya: Cantidad de tiros de atarraya.
-        - areaAtarraya: Area cubierta por la atarraya.
-        - promedioPorTiro: Promedio de camarones por tiro.
-        - sobrevivencia: Porcentaje de sobrevivencia.
-        - densidad: Densidad poblacional calculada.
-        - notasConteo: Observaciones del conteo.
-        - activo: Estado logico del registro.
-        - fechaCreacion: Fecha de creacion del registro.
-        - fechaActualizacion: Fecha de ultima actualizacion.
-        - deletedAt: Fecha de borrado logico.
-        - version: Version del registro para control de cambios.
+        - body: Campos recibidos en el body de la peticion (req.body).
+            - id: Identificador numerico interno del registro.
+            - uuid: Identificador global usado para futura sincronizacion offline.
+            - idFinca / fincaId / finca: Identificador de la finca (se aceptan alias).
+            - idEstanque / estanqueId / estanque: Identificador del estanque (se aceptan alias).
+            - idColaborador / colaboradorId: Colaborador que realizo el conteo (opcional; se aceptan alias).
+            - fecha: Fecha del conteo.
+            - cantidadSiembra: Cantidad sembrada.
+            - areaEstanque: Area del estanque.
+            - numeroCamarones: Total de camarones contados.
+            - tirosAtarraya: Cantidad de tiros de atarraya.
+            - areaAtarraya: Area cubierta por la atarraya.
+            - promedioPorTiro: Promedio de camarones por tiro.
+            - sobrevivencia: Porcentaje de sobrevivencia.
+            - densidad: Densidad poblacional calculada.
+            - notasConteo: Observaciones del conteo.
+            - activo: Estado logico del registro.
+            - fechaCreacion: Fecha de creacion del registro.
+            - fechaActualizacion: Fecha de ultima actualizacion.
+            - deletedAt: Fecha de borrado logico.
+            - version: Version del registro para control de cambios.
+        - contexto: Datos de confianza que arma el controller a partir
+          del JWT (via obtenerContextoPeticion), nunca del body.
+            - grupoDatos: Grupo de datos del usuario/colaborador autenticado.
+            - creadoPorUsuarioId: Id del usuario web autenticado (null si fue un colaborador).
+            - creadoPorColaboradorId: Id del colaborador APK autenticado (null si fue un usuario web).
 
         Retorna:
         - Objeto DensidadPoblacionalDTO con campos normalizados.
         */
 
+        const {
+            id,
+            uuid,
+            idFinca,
+            fincaId,
+            finca,
+            idEstanque,
+            estanqueId,
+            estanque,
+            idColaborador,
+            colaboradorId,
+            fecha,
+            cantidadSiembra,
+            areaEstanque,
+            numeroCamarones,
+            tirosAtarraya,
+            areaAtarraya,
+            promedioPorTiro,
+            sobrevivencia,
+            densidad,
+            notasConteo,
+            activo,
+            fechaCreacion,
+            fechaActualizacion,
+            deletedAt,
+            version
+        } = body || {};
+
         this.id = id;
         this.uuid = uuid;
 
         /*
-        Si grupoDatos no viene definido, se utiliza 1 como valor
-        temporal para pruebas mientras se implementa autenticacion.
+        grupoDatos SIEMPRE viene del contexto (JWT), nunca del body.
+        Si por alguna razon llega vacio o invalido, se guarda null:
+        el model rechazara la insercion en vez de asumir un grupo
+        por defecto (evita que un registro quede huerfano o en el
+        grupo equivocado).
         */
-        if (grupoDatos === undefined || grupoDatos === null || String(grupoDatos).trim() === "") {
-            this.grupoDatos = 1;
-        } else {
-            this.grupoDatos = Number(grupoDatos);
-        }
+        this.grupoDatos = normalizarNumeroObligatorio(contexto.grupoDatos);
+
+        /*
+        creadoPorUsuarioId / creadoPorColaboradorId (quien hizo el
+        registro) SIEMPRE vienen del contexto (JWT), nunca del body.
+        Exactamente uno de los dos identifica a quien realizo la
+        peticion (usuario web o colaborador APK); el otro queda null.
+        */
+        this.creadoPorUsuarioId = contexto.creadoPorUsuarioId ?? null;
+        this.creadoPorColaboradorId = contexto.creadoPorColaboradorId ?? null;
+
+        /*
+        idColaborador (quien realizo el conteo) SI se acepta del
+        body, de forma opcional y con alias.
+        */
+        this.idColaborador = normalizarNumeroOpcional(idColaborador !== undefined ? idColaborador : colaboradorId);
 
         /*
         Se permite recibir idFinca, fincaId o finca para mantener
@@ -153,6 +194,39 @@ FUNCIONES SECUNDARIAS
 Contiene funciones internas para normalizar los datos recibidos.
 Estas funciones no consultan base de datos.
 */
+
+function normalizarNumeroObligatorio(valor) {
+    /*
+    Descripcion:
+    Normaliza un campo numerico que es obligatorio (grupoDatos,
+    usuarioId). A diferencia de normalizarNumeroOpcional, aqui un
+    valor vacio o invalido se deja explicitamente en null para que
+    el llamador (model) pueda rechazar la operacion en vez de
+    inventar un valor por defecto.
+
+    Parametros:
+    - valor: Valor recibido.
+
+    Retorna:
+    - Numero normalizado.
+    - null si el valor no existe, esta vacio o no es numerico.
+    */
+    if (valor === undefined || valor === null) {
+        return null;
+    }
+
+    if (String(valor).trim() === "") {
+        return null;
+    }
+
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        return null;
+    }
+
+    return numero;
+}
 
 function normalizarTextoOpcional(valor) {
     /*

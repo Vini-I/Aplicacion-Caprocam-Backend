@@ -3,12 +3,14 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: inventario.model.js
-Autor: Brayan / Joan
-Fecha: 30/06/2026
+Autor: Joan
+Fecha: 4/08/2026
 Modulo: Inventario
 Descripcion:
-Capa de datos del modulo de inventario.
-Trabaja con datos en memoria (borrado logico).
+Capa de datos SOLO de la tabla inventario. Ya no crea ni
+actualiza productos (eso vive en producto.model.js). Los
+SELECT hacen JOIN con productos unicamente para enriquecer
+la respuesta con nombre/categoria/etc.
 //////////////////////////////////////////////////////////
 */
 
@@ -18,100 +20,52 @@ IMPORTS
 //////////////////////////////////////////////////////////
 */
 
-import { UnidadInventario } from '../dtos/inventario.dto.js';
+import pool from '../config/database.js';
+import { mapearInventario } from '../dtos/inventario.dto.js';
 
 /*
 //////////////////////////////////////////////////////////
-MOCK DATA
+QUERY BASE — JOIN productos + inventario
 //////////////////////////////////////////////////////////
+
+Tiene UN SOLO placeholder (grupo_datos). Cualquier funcion
+que agregue condiciones extra debe mandar GRUPO_DATOS como
+el PRIMER parametro, seguido de los parametros de sus propias
+condiciones, en el mismo orden en que aparecen en el SQL.
 */
 
-let productos = [
-    {
-        id:           1,
-        codigo:       'ALI-001',
-        nombre:       'Alimento Biomar 35%',
-        categoria:    'Alimentación',
-        cantidad:     250,
-        unidad:       UnidadInventario.KILOGRAMOS,
-        stockMinimo:  50,
-        proveedor:    'Biomar',
-        precioUnidad: 1450,
-        activo:       true,
-    },
-    {
-        id:           2,
-        codigo:       'ALI-002',
-        nombre:       'Melaza de caña',
-        categoria:    'Alimentación',
-        cantidad:     30,
-        unidad:       UnidadInventario.LITROS,
-        stockMinimo:  50,
-        proveedor:    'Trisan',
-        precioUnidad: 320,
-        activo:       true,
-    },
-    {
-        id:           3,
-        codigo:       'TRA-001',
-        nombre:       'Cal agrícola',
-        categoria:    'Tratamiento',
-        cantidad:     120,
-        unidad:       UnidadInventario.KILOGRAMOS,
-        stockMinimo:  40,
-        proveedor:    'Farivet',
-        precioUnidad: 850,
-        activo:       true,
-    },
-    {
-        id:           4,
-        codigo:       'TRA-002',
-        nombre:       'Probiótico EM-1',
-        categoria:    'Tratamiento',
-        cantidad:     15,
-        unidad:       UnidadInventario.LITROS,
-        stockMinimo:  20,
-        proveedor:    'Farivet',
-        precioUnidad: 4200,
-        activo:       true,
-    },
-    {
-        id:           5,
-        codigo:       'QUI-001',
-        nombre:       'Oxígeno granulado',
-        categoria:    'Químico',
-        cantidad:     80,
-        unidad:       UnidadInventario.KILOGRAMOS,
-        stockMinimo:  30,
-        proveedor:    'Trisan',
-        precioUnidad: 2100,
-        activo:       true,
-    },
-    {
-        id:           6,
-        codigo:       'ALI-003',
-        nombre:       'Sal mineral',
-        categoria:    'Alimentación',
-        cantidad:     200,
-        unidad:       UnidadInventario.KILOGRAMOS,
-        stockMinimo:  60,
-        proveedor:    'Trisan',
-        precioUnidad: 560,
-        activo:       true,
-    },
-    {
-        id:           7,
-        codigo:       'FER-001',
-        nombre:       'Fertilizante NPK',
-        categoria:    'Fertilizante',
-        cantidad:     5,
-        unidad:       UnidadInventario.KILOGRAMOS,
-        stockMinimo:  10,
-        proveedor:    'Farivet',
-        precioUnidad: 1750,
-        activo:       true,
-    }
-];
+const SELECT_JOIN = `
+    SELECT
+        i.id             AS inv_id,
+        i.uuid           AS inv_uuid,
+        i.activo         AS inv_activo,
+        i.cantidad,
+        i.stock_minimo,
+        i.proveedor_id,
+        prov.nombre_empresa      AS nombre_proveedor,
+        i.creado_por_usuario_id,
+        i.creado_por_colaborador_id,
+        i.version,
+        i.fecha_creacion,
+        i.fecha_actualizacion,
+        p.id             AS prod_id,
+        p.codigo, 
+        p.nombre,
+        p.categoria,
+        p.unidad,
+        p.precio_unidad,
+        p.fecha_ingreso,
+        p.fecha_caducidad,
+        p.estado
+    FROM  inventario i
+    INNER JOIN productos p ON i.producto_id = p.id
+    LEFT JOIN proveedores prov ON i.proveedor_id = prov.id
+    WHERE i.grupo_datos = ?
+    AND   i.activo = TRUE
+    AND   i.deleted_at IS NULL
+    AND   p.activo = TRUE
+    AND   p.deleted_at IS NULL
+`;
 
 /*
 //////////////////////////////////////////////////////////
@@ -119,142 +73,192 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export function findAll() {
+export async function findAll(grupoDatos) {
     /*
     Descripcion:
-    Obtiene todos los productos activos del inventario.
-
+    Obtiene todos los registros de inventario activos del
+    grupo_datos actual, enriquecidos con datos del producto.
+ 
     Parametros:
     No posee.
-
+ 
     Retorna:
-    - Array de productos activos.
+    - Lista de registros de inventario (formato camelCase).
     */
-    return productos.filter(p => p.activo === true);
+    const [rows] = await pool.execute(
+        SELECT_JOIN + ' ORDER BY i.id ASC', 
+        [grupoDatos]
+    );
+    return rows.map(mapearInventario);
 }
 
-export function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
-    Busca un producto activo por su ID.
-
+    Busca un registro de inventario activo por su ID, dentro
+    del grupo_datos actual.
+ 
     Parametros:
-    - id: ID del producto a buscar.
-
+    - id: ID del registro de inventario.
+ 
     Retorna:
-    - El producto activo o null.
+    - Registro de inventario (formato camelCase) o null.
     */
-    const numeroId = Number(id);
-    const encontrado = productos.find(p => p.id === numeroId);
-    if (!encontrado || encontrado.activo === false) {
-        return null;
-    }
-    return encontrado;
+    const [rows] = await pool.execute(
+        SELECT_JOIN + ' AND i.id = ?',
+        [grupoDatos, Number(id)]
+    );
+    return rows[0] ? mapearInventario(rows[0]) : null;
 }
 
-export function findByCodigo(codigo) {
+export async function findByProductoId(productoId, grupoDatos) {
     /*
     Descripcion:
-    Busca un producto activo por su codigo (case-insensitive).
-
+    Busca el registro de inventario de un producto especifico
+    (relacion 1 a 1, ver UNIQUE(grupo_datos, producto_id) en
+    la DB). Usado para bloquear duplicados al crear.
+ 
     Parametros:
-    - codigo: Codigo del producto.
-
+    - productoId: ID del producto.
+ 
     Retorna:
-    - El producto activo o null.
+    - Registro de inventario (formato camelCase) o null.
     */
-    if (!codigo) return null;
-    const codigoNormalizado = codigo.trim().toLowerCase();
-    return productos.find(p => 
-        p.codigo && p.codigo.trim().toLowerCase() === codigoNormalizado && 
-        p.activo === true
-    ) || null;
+    const [rows] = await pool.execute(
+        SELECT_JOIN + ' AND i.producto_id = ? LIMIT 1',
+        [grupoDatos, Number(productoId)]
+    );
+    return rows[0] ? mapearInventario(rows[0]) : null;
 }
-
-export function findByCodigoIgnorandoId(codigo, idIgnorado) {
+ 
+export async function verificarProveedorExiste(proveedorId, grupoDatos) {
     /*
     Descripcion:
-    Busca un producto activo por codigo ignorando un ID especifico.
-
+    Verifica que el proveedor exista y este activo, dentro
+    del grupo_datos actual.
+ 
     Parametros:
-    - codigo: Codigo a buscar.
-    - idIgnorado: ID que se omitira de la busqueda.
-
+    - proveedorId: ID del proveedor a verificar.
+ 
     Retorna:
-    - El producto duplicado encontrado o null.
+    - true si existe y esta activo, false en caso contrario.
     */
-    if (!codigo) return null;
-    const codigoNormalizado = codigo.trim().toLowerCase();
-    const numeroIgnorado = Number(idIgnorado);
-    return productos.find(p => 
-        p.codigo && p.codigo.trim().toLowerCase() === codigoNormalizado && 
-        p.activo === true && 
-        p.id !== numeroIgnorado
-    ) || null;
+    if (!proveedorId) return false;
+    const [rows] = await pool.execute(`
+        SELECT id FROM proveedores
+        WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
+    `, [Number(proveedorId), grupoDatos]);
+    return rows.length > 0;
 }
-
-export function create(dto) {
+ 
+export async function verificarProductoExiste(productoId, grupoDatos) {
     /*
     Descripcion:
-    Agrega un nuevo producto a la lista (con activo = true).
-
+    Verifica que el producto exista y este activo, dentro del
+    grupo_datos actual.
+ 
     Parametros:
-    - dto: Objeto con los datos del nuevo producto.
-
+    - productoId: ID del producto a verificar.
+ 
     Retorna:
-    - El producto creado con su ID asignado.
+    - true si existe y esta activo, false en caso contrario.
     */
-    const maximoId = productos.reduce((max, p) => Math.max(max, p.id), 0);
-    const nuevo = { 
-        ...dto, 
-        id: maximoId + 1,
-        activo: true 
-    };
-    productos.push(nuevo);
-    return nuevo;
+    if (!productoId) return false;
+    const [rows] = await pool.execute(`
+        SELECT id FROM productos
+        WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
+    `, [Number(productoId), grupoDatos]);
+    return rows.length > 0;
 }
-
-export function update(id, dto) {
+ 
+ 
+export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Actualiza los datos de un producto activo por su ID.
-
+    Crea el registro de inventario para un producto existente,
+    asociado al grupo_datos actual. cantidad siempre inicia en
+    0 (ver InventarioCreateDTO); la carga inicial de stock se
+    hace con un primer movimiento tipo 'Entrada'.
+ 
     Parametros:
-    - id: ID del producto.
-    - dto: Nuevos datos.
-
+    - dto: InventarioCreateDTO con producto_id, proveedor_id y
+      stock_minimo.
+ 
     Retorna:
-    - El producto actualizado o null.
+    - Registro de inventario recien creado (formato camelCase).
     */
-    const numeroId = Number(id);
-    const index = productos.findIndex(p => p.id === numeroId);
-    if (index === -1 || productos[index].activo === false) {
-        return null;
-    }
-    productos[index] = { 
-        ...productos[index], 
-        ...dto, 
-        id: productos[index].id 
-    };
-    return productos[index];
+    const [result] = await pool.execute(`
+        INSERT INTO inventario (
+            grupo_datos, producto_id, proveedor_id, cantidad, stock_minimo,
+            creado_por_usuario_id, creado_por_colaborador_id
+        ) VALUES (?, ?, ?, 0, ?, ?, ?)
+    `, [
+        grupoDatos,
+        dto.producto_id,
+        dto.proveedor_id,
+        dto.stock_minimo,
+        dto.creado_por_usuario_id,
+        dto.creado_por_colaborador_id,
+    ]);
+    return findById(result.insertId, grupoDatos);
 }
-
-export function remove(id) {
+ 
+export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
-    Realiza un borrado logico del producto (activo = false).
-
+    Actualiza SOLO proveedor_id y stock_minimo de un registro
+    de inventario activo, dentro del grupo_datos actual.
+    cantidad no se toca aqui, ver movimientoInventario.model.js.
+ 
     Parametros:
-    - id: ID del producto a eliminar.
-
+    - id:  ID del registro de inventario.
+    - dto: InventarioUpdateDTO con proveedor_id y stock_minimo.
+ 
     Retorna:
-    - El producto desactivado o null.
+    - Registro de inventario actualizado (formato camelCase) o null.
     */
-    const numeroId = Number(id);
-    const index = productos.findIndex(p => p.id === numeroId);
-    if (index === -1 || productos[index].activo === false) {
-        return null;
-    }
-    productos[index].activo = false;
-    return productos[index];
+    const [result] = await pool.execute(`
+        UPDATE inventario
+        SET    proveedor_id = ?,
+               stock_minimo = ?,
+               version      = version + 1
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [dto.proveedor_id, dto.stock_minimo, Number(id), grupoDatos]);
+ 
+    if (result.affectedRows === 0) return null;
+    return findById(id, grupoDatos);
+}
+ 
+export async function remove(id, grupoDatos) {
+    /*
+    Descripcion:
+    Realiza un borrado logico del registro de inventario
+    (activo = false, deleted_at = NOW()), dentro del
+    grupo_datos actual.
+ 
+    Parametros:
+    - id: ID del registro de inventario a eliminar.
+ 
+    Retorna:
+    - Registro de inventario desactivado (formato camelCase) o null.
+    */
+    const actual = await findById(id, grupoDatos);
+    if (!actual) return null;
+ 
+    const [result] = await pool.execute(`
+        UPDATE inventario
+        SET    activo     = FALSE,
+               deleted_at = NOW(),
+               version    = version + 1
+        WHERE  id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+    `, [Number(id), grupoDatos]);
+ 
+    if (result.affectedRows === 0) return null;
+    return { ...actual, activo: false };
 }

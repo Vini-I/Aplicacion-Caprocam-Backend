@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.middleware.js
 Autor: Gerald Alfaro
-Fecha: 18/07/2026
+Fecha: 31/07/2026
 Modulo: Estanques
 Descripcion:
 Middleware de validacion de body para estanques.
@@ -31,6 +31,9 @@ CONSTANTES
 Campos minimos requeridos en el body para estanques.
 El grupoDatos no se recibe desde el frontend porque se
 obtiene desde el JWT.
+
+fechaMantenimiento y precria son opcionales porque la
+tabla permite null y un valor por defecto.
 */
 
 const camposRequeridos = [
@@ -40,9 +43,7 @@ const camposRequeridos = [
     "estado",
     "largo",
     "ancho",
-    "profundidad",
-    "fechaSiembra",
-    "densidadSiembra"
+    "profundidad"
 ];
 
 /*

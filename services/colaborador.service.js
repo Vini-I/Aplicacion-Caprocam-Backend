@@ -4,86 +4,57 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.service.js
 Autor: Marco Vásquez
-Fecha: 28/06/2026
+Fecha: 08/08/2026
 Modulo: Colaboradores
 Descripcion:
-Define las reglas de negocio de colaboradores.
+Define las reglas de negocio, validaciones y hasheo
+de PINs para el modulo de colaboradores (Bcrypt costo 12).
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
+import bcrypt from 'bcrypt';
 
-Expresiones regulares para validacion de campos.
-*/
+const BCRYPT_SALT_ROUNDS = 12;
 
 const emailRegex  = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 const phoneRegex  = /^\d{8}$/;
-const cedulaRegex = /^\d{9}$/;
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
-
-Contiene las funciones exportables de validacion
-que utiliza el controller para verificar los datos.
-*/
+const cedulaRegex = /^\d{9,12}$/;
+const pinRegex    = /^\d{4}$/;
 
 export function isEmail(email) {
-    /*
-    Descripcion:
-    Valida que un string tenga formato de email.
-
-    Parametros:
-    - email: String a validar.
-
-    Retorna:
-    - true si es un email valido, false si no.
-    */
-    return emailRegex.test(email.trim());
+    return emailRegex.test(String(email ?? '').trim());
 }
 
 export function isPhone(phone) {
-    /*
-    Descripcion:
-    Valida que un string sea un telefono de 8 digitos.
-
-    Parametros:
-    - phone: String a validar.
-
-    Retorna:
-    - true si es un telefono valido, false si no.
-    */
-    return phoneRegex.test(phone.trim());
+    return phoneRegex.test(String(phone ?? '').trim());
 }
 
 export function isCedula(cedula) {
+    return cedulaRegex.test(String(cedula ?? '').trim());
+}
+
+export function isPin(pin) {
+    return pinRegex.test(String(pin ?? '').trim());
+}
+
+export async function hashPin(pin) {
     /*
     Descripcion:
-    Valida que un string sea una cedula de 9 digitos.
+    Genera un hash bcrypt costo 12 a partir de un PIN de 4 digitos.
 
     Parametros:
-    - cedula: String a validar.
+    - pin: String o numero con el PIN a cifrar.
 
     Retorna:
-    - true si es una cedula valida, false si no.
+    - El hash bcrypt generado con costo 12.
     */
-    return cedulaRegex.test(cedula.trim());
+    return await bcrypt.hash(String(pin), BCRYPT_SALT_ROUNDS);
+}
+
+export async function isPinValido(pin, hash) {
+    return await bcrypt.compare(String(pin), hash);
 }
 
 export function isEmpty(string) {
-    /*
-    Descripcion:
-    Verifica si un string esta vacio o solo tiene espacios.
-
-    Parametros:
-    - string: String a verificar.
-
-    Retorna:
-    - true si esta vacio, false si tiene contenido.
-    */
-    return string.trim().length === 0;
+    return String(string ?? '').trim().length === 0;
 }

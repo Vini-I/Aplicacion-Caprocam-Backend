@@ -3,7 +3,7 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: trazabilidad.dto.js
-Autor: Samuel
+Autor: Brandon
 Fecha: 29/06/2026
 Modulo: Trazabilidad
 Descripcion:
@@ -32,6 +32,8 @@ export class TrazabilidadDTO {
         estanqueOrigenId,
         estanqueDestinoId,
         colaboradorId,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
         fecha,
         tamano,
         dias,
@@ -50,7 +52,14 @@ export class TrazabilidadDTO {
         - fincaId: Identificador de la finca.
         - estanqueOrigenId: Estanque origen.
         - estanqueDestinoId: Estanque destino.
-        - colaboradorId: Colaborador responsable.
+        - colaboradorId: Colaborador responsable del
+          movimiento en campo (opcional, lo manda el
+          front si aplica).
+        - creadoPorUsuarioId: Usuario web que registro el
+          movimiento (resuelto por obtenerContextoPeticion).
+        - creadoPorColaboradorId: Colaborador movil (APK)
+          que registro el movimiento (resuelto por
+          obtenerContextoPeticion).
         - fecha: Fecha del movimiento.
         - tamano: Tamaño promedio.
         - dias: Dias de cultivo.
@@ -64,6 +73,8 @@ export class TrazabilidadDTO {
         this.estanqueOrigenId = estanqueOrigenId;
         this.estanqueDestinoId = estanqueDestinoId;
         this.colaboradorId = colaboradorId;
+        this.creadoPorUsuarioId = creadoPorUsuarioId;
+        this.creadoPorColaboradorId = creadoPorColaboradorId;
         this.fecha = fecha;
         this.tamano = tamano;
         this.dias = dias;

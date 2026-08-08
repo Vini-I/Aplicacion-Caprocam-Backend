@@ -3,74 +3,144 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: inventario.dto.js
-Autor: Brayan / Joan
-Fecha: 30/06/2026
+Autor: Joan Campos
+Fecha: 4/08/2026
 Modulo: Inventario
 Descripcion:
-Archivo de transferencia de datos para inventario.
-Es un caparazon para almacenar los datos requeridos.
+DTO de entrada y mapper de salida, SOLO para los campos
+propios de la tabla inventario (producto_id, proveedor_id,
+cantidad, stock_minimo). El catalogo (nombre, categoria,
+precio, etc.) vive en el modulo "producto", separado.
+ 
+cantidad NO se acepta en el DTO de actualizacion: solo cambia
+via movimientos_inventario, para mantener el registro de
+auditoria como unica fuente de verdad.
 //////////////////////////////////////////////////////////
 */
-
-/*
-//////////////////////////////////////////////////////////
-ENUM
-//////////////////////////////////////////////////////////
-
-Define los valores permitidos para el campo unidad.
-*/
-
-export const UnidadInventario = Object.freeze({
-    KILOGRAMOS: 'kg',
-    LITROS:     'litros',
-    UNIDADES:   'unidades',
-    SACOS:      'sacos',
-    GRAMOS:     'gramos',
-});
 
 /*
 //////////////////////////////////////////////////////////
 DTO
 //////////////////////////////////////////////////////////
-
+ 
 Caparazon de datos para el modulo de inventario.
 */
 
-export class InventarioDTO {
+export class InventarioCreateDTO {
     constructor({
-        id,
-        codigo,
-        nombre,
-        categoria,
-        cantidad,
-        unidad,
+        productoId,
+        proveedorId,
         stockMinimo,
-        proveedor,
-        precioUnidad,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
     }) {
         /*
         Descripcion:
-        Construye un objeto InventarioDTO con los datos recibidos.
-
+        DTO de entrada para crear un registro de inventario.
+        cantidad siempre inicia en 0; la carga inicial de stock
+        se hace con un primer movimiento tipo 'Entrada'.
+ 
         Parametros:
-        - id: Identificador unico (opcional en creacion)
-        - codigo: Codigo del producto (opcional, ej. "ALI-001")
-        - nombre: Nombre del producto (requerido)
-        - categoria: Categoria del producto (requerido)
-        - cantidad: Cantidad actual en stock (requerido)
-        - unidad: Unidad de medida (requerido, usar UnidadInventario)
-        - stockMinimo: Cantidad minima antes de alertar stock bajo
-        - proveedor: Proveedor del producto (requerido)
-        - precioUnidad: Precio por unidad (requerido)
+        - productoId:   ID del producto ya existente (requerido).
+        - proveedorId:  ID del proveedor (opcional, FK nullable).
+        - stockMinimo:  Cantidad minima antes de alertar (requerido).
+        - creadoPorUsuarioId:    FK a usuarios - web (resuelto por
+          obtenerContextoPeticion, nunca por el body del cliente).
+        - creadoPorColaboradorId: FK a colaboradores - movil (idem).
         */
-        this.id           = id;
-        this.codigo       = codigo ? String(codigo).trim() : null;
-        this.nombre       = String(nombre).trim();
-        this.categoria    = String(categoria).trim();
-        this.cantidad     = Number(cantidad);
-        this.unidad       = String(unidad).trim();
-        this.stockMinimo  = Number(stockMinimo);
-        this.proveedor    = String(proveedor).trim();
-        this.precioUnidad = Number(precioUnidad);
+        this.producto_id  = Number(productoId);
+        this.proveedor_id = proveedorId ? Number(proveedorId) : null;
+        this.stock_minimo = Number(stockMinimo);
+        this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
+        this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
     }
+}
+
+/*
+//////////////////////////////////////////////////////////
+DTO DE ENTRADA — actualizacion (sin cantidad)
+//////////////////////////////////////////////////////////
+*/
+ 
+export class InventarioUpdateDTO {
+    constructor({
+        proveedorId,
+        stockMinimo,
+    }) {
+        /*
+        Descripcion:
+        DTO de entrada para actualizar un registro de inventario.
+        Solo permite tocar proveedor_id y stock_minimo. cantidad
+        NO se acepta aqui: cambia unicamente via movimientos.
+ 
+        Parametros:
+        - proveedorId:  ID del proveedor (opcional, FK nullable).
+        - stockMinimo:  Cantidad minima antes de alertar (requerido).
+        */
+        this.proveedor_id = proveedorId ? Number(proveedorId) : null;
+        this.stock_minimo = Number(stockMinimo);
+    }
+}
+ 
+function formatearFechaDDMMAAAA(valor) {
+    if (!valor) return null;
+
+    const fecha = valor instanceof Date ? valor : new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return null;
+
+    const dia = String(fecha.getDate()).padStart(2, "0");
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const anio = fecha.getFullYear();
+
+    return `${dia}/${mes}/${anio}`;
+}
+
+/*
+//////////////////////////////////////////////////////////
+MAPPER DE SALIDA — fila JOIN (inventario + productos) -> camelCase
+//////////////////////////////////////////////////////////
+ 
+Se sigue usando JOIN solo para enriquecer la respuesta con el
+nombre/categoria del producto; el modulo de productos sigue
+siendo el dueño de esos datos.
+*/
+
+export function mapearInventario(row) {
+    /*
+    Descripcion:
+    Convierte una fila cruda del JOIN inventario+productos
+    (con los alias definidos en SELECT_JOIN) a un objeto de
+    respuesta en camelCase para el frontend.
+ 
+    Parametros:
+    - row: Fila cruda devuelta por mysql2 (con alias inv_id,
+      inv_uuid, inv_activo, prod_id, etc).
+ 
+    Retorna:
+    - Objeto formateado para el frontend, o null.
+    */
+    if (!row) return null;
+    return {
+        id:                 row.inv_id,
+        uuid:               row.inv_uuid,
+        productoId:         row.prod_id,
+        codigo:             row.codigo, 
+        nombre:             row.nombre,
+        categoria:          row.categoria,
+        unidad:             row.unidad,
+        precioUnidad:       row.precio_unidad !== undefined
+            ? Number(row.precio_unidad) : undefined,
+        proveedorId:        row.proveedor_id,
+        nombreProveedor:    row.nombre_proveedor,
+        cantidad:           Number(row.cantidad),
+        stockMinimo:        Number(row.stock_minimo),
+        fechaCaducidad:     formatearFechaDDMMAAAA(row.fecha_caducidad),  
+        estado:             row.estado,
+        creadoPorUsuarioId:     row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
+        activo:             Boolean(row.inv_activo),
+        version:            row.version,
+        fechaCreacion:      row.fecha_creacion,
+        fechaActualizacion: row.fecha_actualizacion,
+    };
 }

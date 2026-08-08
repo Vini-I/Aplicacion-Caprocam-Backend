@@ -29,7 +29,6 @@ import {
     obtenerTodosLosRegistros,
     obtenerRegistroPorId,
     registrarRegistro,
-    desactivarRegistro,
 } from '../controllers/trazabilidad.controller.js';
 
 /*
@@ -44,12 +43,15 @@ const router = Router();
 //////////////////////////////////////////////////////////
 RUTAS
 //////////////////////////////////////////////////////////
+
+Trazabilidad es un historico de movimientos: no existe
+edicion ni borrado (ni fisico ni logico). Solo Registrar,
+GetAll y GetPorId, segun lo pedido.
 */
 
-router.get('/',           verificarAuth,                       obtenerTodosLosRegistros);
-router.get('/:id',        verificarAuth,                       obtenerRegistroPorId);
+router.get('/',                          verificarAuth, obtenerTodosLosRegistros);
+router.get('/:id',                       verificarAuth, obtenerRegistroPorId);
 router.post('/',          verificarAuth, validarTrazabilidad,  registrarRegistro);
-router.put('/:id/activo', verificarAuth,                       desactivarRegistro);
 
 /*
 //////////////////////////////////////////////////////////

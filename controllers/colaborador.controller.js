@@ -4,11 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.controller.js
 Autor: Marco Vásquez
-Fecha: 20/07/2026
+Fecha: 08/08/2026
 Modulo: Colaboradores
 Descripcion:
-Recibe las peticiones HTTP, delega al servicio y modelo,
-y devuelve la respuesta al cliente.
+Recibe las peticiones HTTP de colaboradores, valida campos,
+hashea el PIN de 4 digitos con bcrypt y soporta consulta
+por cedula para el flujo del APK movil (sin roles).
 //////////////////////////////////////////////////////////
 */
 
@@ -23,7 +24,14 @@ DTOs
 import { ColaboradorDTO } from '../dtos/colaborador.dto.js';
 
 // Servicios
-import { isEmail, isPhone, isEmpty } from '../services/colaborador.service.js';
+import {
+    isEmail,
+    isPhone,
+    isCedula,
+    isPin,
+    hashPin,
+    isEmpty,
+} from '../services/colaborador.service.js';
 
 // Modelos
 import * as ColaboradorModel from '../models/colaborador.model.js';
@@ -39,13 +47,13 @@ FUNCIONES SECUNDARIAS
 createColaborador() y updateColaborador() dependen de validarCuerpo().
 */
 
-function validarCuerpo({ nombre, apellidos, telefono, email, rolId }, res) {
+function validarCuerpo({ nombre, apellidos, telefono, email, cedula }, res) {
     /*
     Descripcion:
     Valida los campos del body antes de construir el DTO.
 
     Parametros:
-    - nombre, apellidos, telefono, email, rolId: Campos del body
+    - nombre, apellidos, telefono, email, cedula: Campos
     - res: Objeto response de Express
 
     Retorna:
@@ -54,14 +62,14 @@ function validarCuerpo({ nombre, apellidos, telefono, email, rolId }, res) {
     if (isEmpty(nombre) || isEmpty(apellidos))
         return error(res, 'Nombre y apellidos son requeridos.', null, 400);
 
-    if (!rolId)
-        return error(res, 'El rol es requerido.', null, 400);
-
     if (email && !isEmail(email))
-        return error(res, 'El email no tiene un formato válido.', null, 422);
+        return error(res, 'El email no tiene un formato valido.', null, 422);
 
     if (telefono && !isPhone(telefono))
-        return error(res, 'El teléfono debe tener 8 dígitos.', null, 422);
+        return error(res, 'El telefono debe tener 8 digitos.', null, 422);
+
+    if (cedula && !isCedula(cedula))
+        return error(res, 'La cedula debe tener entre 9 y 12 digitos.', null, 422);
 
     return null;
 }
@@ -75,7 +83,7 @@ FUNCIONES PRINCIPALES
 export async function getColaboradores(req, res) {
     /*
     Descripcion:
-    Obtiene todos los colaboradores del grupo.
+    Obtiene todos los colaboradores del grupo de datos.
 
     Parametros:
     - req: Objeto request de Express
@@ -119,10 +127,48 @@ export async function getColaboradorById(req, res) {
     }
 }
 
+export async function getColaboradoresByCedula(req, res) {
+    /*
+    Descripcion:
+    Flujo APK Movil: Consulta un colaborador por su cedula,
+    obtiene su grupo_datos y retorna la lista completa de
+    colaboradores de ese grupo para popular el selector movil.
+
+    Parametros:
+    - req.params.cedula: Numero de cedula a consultar
+
+    Retorna:
+    - 200 con grupoDatos y lista de colaboradores del grupo
+    - 404 si la cedula no existe
+    */
+    try {
+        const cedula = req.params.cedula;
+
+        if (!isCedula(cedula))
+            return error(res, 'Formato de cedula invalido.', null, 422);
+
+        const colaborador = await ColaboradorModel.findByCedula(cedula);
+
+        if (!colaborador)
+            return error(res, 'No se encontro colaborador con esa cedula.', null, 404);
+
+        const listaGrupo = await ColaboradorModel.findAll(colaborador.grupoDatos);
+
+        return exito(res, 'Datos de grupo obtenidos para APK.', {
+            grupoDatos:         colaborador.grupoDatos,
+            colaboradorInicial: colaborador,
+            colaboradores:      listaGrupo,
+        });
+    } catch (err) {
+        return error(res, 'Error al consultar colaborador por cedula.', err);
+    }
+}
+
 export async function createColaborador(req, res) {
     /*
     Descripcion:
-    Crea un nuevo colaborador.
+    Crea un nuevo colaborador. Extrae pin / pinHash / pin_hash del body
+    y lo cifra con bcrypt obligatoriamente.
 
     Parametros:
     - req: Objeto request de Express (req.body)
@@ -130,18 +176,49 @@ export async function createColaborador(req, res) {
 
     Retorna:
     - 201 con el colaborador creado
-    - 400/422 si hay errores de validacion
+    - 400/422 si hay errores de validacion o falta PIN
     */
     try {
         const grupoDatos = req.user.grupoDatos;
-        const { nombre, apellidos, telefono, email, rolId,
-                fincaId, nombreUsuario, pinHash, tipoColaborador } = req.body;
+        const { nombre, apellidos, cedula, telefono, email,
+                fincaId, tipoColaborador } = req.body;
 
-        const err = validarCuerpo({ nombre, apellidos, telefono, email, rolId }, res);
+        const nombreUsuario = req.body.nombreUsuario ?? req.body.usuario;
+        const pinRaw        = req.body.pin ?? req.body.pinHash ?? req.body.pin_hash;
+
+        const err = validarCuerpo({ nombre, apellidos, telefono, email, cedula }, res);
         if (err) return err;
 
-        const dto   = new ColaboradorDTO({ nombre, apellidos, telefono, email, rolId,
-                                           fincaId, nombreUsuario, pinHash, tipoColaborador });
+        if (!nombreUsuario)
+            return error(res, 'El nombre de usuario es requerido.', null, 400);
+
+        if (!pinRaw)
+            return error(res, 'El PIN es requerido.', null, 400);
+
+        let finalPinHash;
+        const strPin = String(pinRaw);
+
+        if (strPin.startsWith('$2a$') || strPin.startsWith('$2b$')) {
+            finalPinHash = strPin;
+        } else {
+            if (!isPin(strPin))
+                return error(res, 'El PIN debe ser de 4 digitos numericos.', null, 422);
+            finalPinHash = await hashPin(strPin);
+        }
+
+        const dto = new ColaboradorDTO({
+            grupoDatos,
+            fincaId,
+            nombre,
+            apellidos,
+            cedula,
+            telefono,
+            email,
+            nombreUsuario,
+            pinHash: finalPinHash,
+            tipoColaborador,
+        });
+
         const nuevo = await ColaboradorModel.create(dto, grupoDatos);
 
         return exito(res, 'Colaborador creado correctamente.', nuevo, 201);
@@ -153,7 +230,8 @@ export async function createColaborador(req, res) {
 export async function updateColaborador(req, res) {
     /*
     Descripcion:
-    Actualiza un colaborador existente por su ID.
+    Actualiza un colaborador existente por su ID. Si viene un PIN
+    en texto plano, lo cifra con bcrypt.
 
     Parametros:
     - req: Objeto request de Express (req.params.id, req.body)
@@ -166,15 +244,45 @@ export async function updateColaborador(req, res) {
     */
     try {
         const grupoDatos = req.user.grupoDatos;
-        const { nombre, apellidos, telefono, email, rolId,
+        const { nombre, apellidos, cedula, telefono, email,
                 fincaId, tipoColaborador } = req.body;
 
-        const err = validarCuerpo({ nombre, apellidos, telefono, email, rolId }, res);
+        const pinRaw = req.body.pin ?? req.body.pinHash ?? req.body.pin_hash;
+
+        const err = validarCuerpo({ nombre, apellidos, telefono, email, cedula }, res);
         if (err) return err;
 
-        const dto         = new ColaboradorDTO({ nombre, apellidos, telefono, email,
-                                                 rolId, fincaId, tipoColaborador });
-        const actualizado = await ColaboradorModel.update(req.params.id, dto, grupoDatos);
+        let finalPinHash = null;
+
+        if (pinRaw) {
+            const strPin = String(pinRaw);
+            if (strPin.startsWith('$2a$') || strPin.startsWith('$2b$')) {
+                finalPinHash = strPin;
+            } else {
+                if (!isPin(strPin))
+                    return error(res, 'El PIN debe ser de 4 digitos.', null, 422);
+                finalPinHash = await hashPin(strPin);
+            }
+        }
+
+        const dto = new ColaboradorDTO({
+            grupoDatos,
+            fincaId,
+            nombre,
+            apellidos,
+            cedula,
+            telefono,
+            email,
+            nombreUsuario: req.body.nombreUsuario ?? req.body.usuario,
+            pinHash: finalPinHash,
+            tipoColaborador,
+        });
+
+        const actualizado = await ColaboradorModel.update(
+            req.params.id,
+            dto,
+            grupoDatos
+        );
 
         if (!actualizado)
             return error(res, 'Colaborador no encontrado.', null, 404);

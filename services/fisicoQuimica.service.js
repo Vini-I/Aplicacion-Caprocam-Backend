@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: fisicoQuimica.service.js
-Autor: Samuel
-Fecha: 29/06/2026
+Autor: Samuel Cerdas
+Fecha: 31/07/2026
 Modulo: Fisico Quimica
 Descripcion:
 Define las reglas de negocio y validaciones del modulo
@@ -14,11 +14,51 @@ de Fisico Quimica.
 
 /*
 //////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+
+Contiene las funciones internas utilizadas para validar
+las mediciones del modulo.
+*/
+
+function isMedicionValida(medicion) {
+    /*
+    Descripcion:
+    Valida la estructura de una medicion fisico quimica.
+
+    Parametros:
+    - medicion: Objeto con valor y etiqueta.
+
+    Retorna:
+    - true si la medicion es valida.
+    - false si la medicion es invalida.
+    */
+    if (
+        !medicion ||
+        typeof medicion !== 'object' ||
+        Array.isArray(medicion)
+    ) {
+        return false;
+    }
+
+    if (!isNumeroValido(medicion.valor)) {
+        return false;
+    }
+
+    if (isEmpty(medicion.etiqueta)) {
+        return false;
+    }
+
+    return true;
+}
+
+/*
+//////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
 Contiene las funciones exportables de validacion
-que utiliza el controller para verificar los datos.
+que utiliza el middleware para verificar los datos.
 */
 
 export function isEmpty(valor) {
@@ -33,22 +73,39 @@ export function isEmpty(valor) {
     - true si esta vacio.
     - false si tiene contenido.
     */
-
-    if (valor === undefined) {
+    if (valor === undefined || valor === null) {
         return true;
     }
 
-    if (valor === null) {
+    if (
+        typeof valor === 'string' &&
+        valor.trim().length === 0
+    ) {
         return true;
-    }
-
-    if (typeof valor === "string") {
-        if (valor.trim().length === 0) {
-            return true;
-        }
     }
 
     return false;
+}
+
+export function isNumeroValido(valor) {
+    /*
+    Descripcion:
+    Valida que un valor sea numerico y finito.
+
+    Parametros:
+    - valor: Valor a validar.
+
+    Retorna:
+    - true si es numerico.
+    - false si no es numerico.
+    */
+    if (isEmpty(valor)) {
+        return false;
+    }
+
+    return Number.isFinite(
+        Number(valor)
+    );
 }
 
 export function isNumeroMayorCero(valor) {
@@ -61,61 +118,86 @@ export function isNumeroMayorCero(valor) {
 
     Retorna:
     - true si es valido.
-    - false si no.
+    - false si no es valido.
     */
-
-    const numero = Number(valor);
-
-    if (Number.isNaN(numero)) {
+    if (!isNumeroValido(valor)) {
         return false;
     }
 
-    if (numero <= 0) {
-        return false;
-    }
-
-    return true;
+    return Number(valor) > 0;
 }
 
 export function isArrayValido(arreglo) {
     /*
     Descripcion:
-    Valida que un arreglo exista y contenga
-    al menos un elemento.
+    Valida que un arreglo exista y, si contiene elementos,
+    que cada medicion tenga las propiedades valor y etiqueta.
+    Permite arreglos vacios para parametros no registrados.
 
     Parametros:
-    - arreglo: Arreglo a validar.
+    - arreglo: Arreglo de mediciones a validar.
 
     Retorna:
-    - true si es valido.
-    - false si no.
+    - true si el arreglo es valido o esta vacio.
+    - false si no es un arreglo o contiene datos invalidos.
     */
-
     if (!Array.isArray(arreglo)) {
         return false;
     }
 
     if (arreglo.length === 0) {
-        return false;
+        return true;
     }
 
-    return true;
+    return arreglo.every(
+        isMedicionValida
+    );
 }
 
 export function isFechaValida(fecha) {
     /*
     Descripcion:
-    Verifica que una fecha tenga contenido.
+    Verifica que una fecha tenga formato YYYY-MM-DD,
+    sea una fecha real y no sea posterior a la fecha actual.
 
     Parametros:
     - fecha: Fecha recibida.
 
     Retorna:
     - true si la fecha es valida.
-    - false si esta vacia.
+    - false si la fecha es invalida.
     */
+    if (
+        typeof fecha !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(fecha)
+    ) {
+        return false;
+    }
 
-    return !isEmpty(fecha);
+    const fechaIngresada = new Date(
+        `${fecha}T00:00:00`
+    );
+
+    if (
+        Number.isNaN(
+            fechaIngresada.getTime()
+        )
+    ) {
+        return false;
+    }
+
+    if (
+        fechaIngresada
+            .toISOString()
+            .slice(0, 10) !== fecha
+    ) {
+        return false;
+    }
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    return fechaIngresada <= hoy;
 }
 
 export function isIdValido(id) {
@@ -129,76 +211,69 @@ export function isIdValido(id) {
 
     Retorna:
     - true si es valido.
-    - false si no.
+    - false si no es valido.
     */
-
     return isNumeroMayorCero(id);
 }
 
 export function isPhValido(ph) {
     /*
     Descripcion:
-    Valida que el arreglo de mediciones de pH
-    contenga informacion.
+    Valida el arreglo de mediciones de pH.
 
     Parametros:
     - ph: Arreglo de mediciones.
 
     Retorna:
     - true si es valido.
-    - false si no.
+    - false si no es valido.
     */
-
     return isArrayValido(ph);
 }
 
 export function isSalinidadValida(salinidad) {
     /*
     Descripcion:
-    Valida que el arreglo de salinidad
-    contenga informacion.
+    Valida el arreglo de mediciones de salinidad.
 
     Parametros:
     - salinidad: Arreglo de mediciones.
 
     Retorna:
     - true si es valido.
-    - false si no.
+    - false si no es valido.
     */
-
     return isArrayValido(salinidad);
 }
 
 export function isTemperaturaValida(temperatura) {
     /*
     Descripcion:
-    Valida que el arreglo de temperatura
-    contenga informacion.
+    Valida el arreglo de mediciones de temperatura.
 
     Parametros:
     - temperatura: Arreglo de mediciones.
 
     Retorna:
     - true si es valido.
-    - false si no.
+    - false si no es valido.
     */
-
     return isArrayValido(temperatura);
 }
 
-export function isOxigeno(oxigeno) {
+export function isOxigeno(oxigenoDisuelto) {
     /*
     Descripcion:
-    Valida que el arreglo de oxigeno disuelto
-    contenga informacion.
+    Valida el arreglo de mediciones de oxigeno disuelto.
 
     Parametros:
     - oxigenoDisuelto: Arreglo de mediciones.
 
     Retorna:
     - true si es valido.
-    - false si no.
+    - false si no es valido.
     */
-
-    return isArrayValido(oxigeno);
+    return isArrayValido(
+        oxigenoDisuelto
+    );
 }

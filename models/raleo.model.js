@@ -94,7 +94,6 @@ export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
             grupo_datos,
             finca_id,
             estanque_id,
-            colaborador_id,
             fecha,
             porcentaje,
             peso_estimado,
@@ -102,6 +101,8 @@ export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
             objetivo,
             metodos,
             observaciones,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,            
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -143,32 +144,93 @@ export async function create(dto, grupoDatos) {
             grupo_datos,
             finca_id,
             estanque_id,
-            colaborador_id,
             fecha,
             porcentaje,
             peso_estimado,
             biomasa_estimada,
             objetivo,
             metodos,
-            observaciones
+            observaciones,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
-            dto.idColaborador,
             dto.fecha,
             dto.porcentaje,
             dto.pesoEstimado,
             dto.biomasaEstimado,
             dto.objetivo,
             dto.metodo,
-            dto.observaciones
+            dto.observaciones,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId
         ]
     );
     return await findById(result.insertId, grupoDatos);
+}
+
+export async function update(id, dto, grupoDatos) {
+    /*
+    Descripcion:
+    Actualiza un raleo existente en la base de datos.
+    Tambien incrementa la version del registro para control de cambios.
+
+    Parametros:
+    - id: Identificador del raleo que se desea actualizar.
+    - dto: Objeto RaleoDTO con los datos actualizados del raleo.
+    - grupoDatos: Grupo de datos del usuario en sesion.
+
+    Retorna:
+    - El raleo actualizado.
+    - null si el raleo no existe, no pertenece al grupo, o fue eliminado logicamente.
+    */
+
+    const actual = await findById(id, grupoDatos);
+
+    if (!actual) {
+        return null;
+    }
+
+    await pool.execute(
+        `
+        UPDATE raleos
+        SET
+            finca_id = ?,
+            estanque_id = ?,
+            fecha = ?,
+            porcentaje = ?,
+            peso_estimado = ?,
+            biomasa_estimada = ?,
+            objetivo = ?,
+            metodos = ?,
+            observaciones = ?,
+            version = version + 1
+        WHERE id = ?
+        AND grupo_datos = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        `,
+        [
+            dto.idFinca,
+            dto.idEstanque,
+            dto.fecha,
+            dto.porcentaje,
+            dto.pesoEstimado,
+            dto.biomasaEstimado,
+            dto.objetivo,
+            dto.metodo,
+            dto.observaciones,
+            id,
+            grupoDatos
+        ]
+    );
+
+    return await findById(id, grupoDatos);
 }
 
 export async function remove(id, grupoDatos) {
@@ -224,7 +286,6 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         idFinca: row.finca_id,
         idEstanque: row.estanque_id,
-        idColaborador: row.colaborador_id,
         fecha: formatearFecha(row.fecha),
         porcentaje: Number(row.porcentaje),
         pesoEstimado: Number(row.peso_estimado),
@@ -232,6 +293,8 @@ function mapearFila(row) {
         objetivo: row.objetivo,
         metodo: row.metodos,
         observaciones: row.observaciones,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,        
         activo: Boolean(row.activo),
         fechaCreacion: row.fecha_creacion,
         fechaActualizacion: row.fecha_actualizacion,
@@ -268,55 +331,3 @@ function formatearFecha(valor) {
 
     return String(valor);
 }
-
-function obtenerGrupoDatos(valor) {
-    /*
-    Descripcion:
-    Obtiene el grupo de datos del registro.
-    Si no viene definido, utiliza el grupo 1 como valor temporal
-    para pruebas mientras se implementa la autenticacion.
-
-    Parametros:
-    - valor: Valor recibido como grupo de datos.
-
-    Retorna:
-    - Numero del grupo de datos.
-    */
-
-    if (valor === undefined) {
-        return 1;
-    }
-
-    if (valor === null) {
-        return 1;
-    }
-
-    if (String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
-}
-
-function mapearLista(rows) {
-    /*
-    Descripcion:
-    Convierte una lista de filas de MySQL al formato usado por
-    el backend y el frontend.
-
-    Parametros:
-    - rows: Lista de filas obtenidas desde MySQL.
-
-    Retorna:
-    - Lista de estanques mapeados.
-    */
-
-    const resultado = [];
-
-    for (let i = 0; i < rows.length; i++) {
-        resultado.push(mapearFila(rows[i]));
-    }
-
-    return resultado;
-}
-

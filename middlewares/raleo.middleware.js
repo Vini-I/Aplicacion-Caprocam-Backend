@@ -22,11 +22,13 @@ import { error } from '../common/respuestaJson.js';
 CONSTANTES
 //////////////////////////////////////////////////////////
 Campos minimos requeridos en el body para raleo.
+idColaborador NO esta aqui: es opcional (columna colaborador_id
+nullable en BD, igual que en crecimientos), representa el
+colaborador que realizo el raleo, elegido en un Select.
 */
 const camposRequeridos = [
     "idFinca",
     "idEstanque",
-    "idColaborador",
     "fecha",
     "porcentaje",
     "pesoEstimado",

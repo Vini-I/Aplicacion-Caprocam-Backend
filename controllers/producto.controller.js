@@ -4,11 +4,11 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.controller.js
 Autor: Jose Espinoza
-Fecha: 05/07/2026
+Fecha: 26/07/2026
 Modulo: Productos
 Descripcion:
-Recibe peticiones HTTP de productos, invoca las validaciones del servicio
-y responde consumiendo el modelo asíncrono de la base de datos.
+Recibe las peticiones HTTP de productos, delega al modelo
+y devuelve la respuesta al cliente soportando contexto dual.
 //////////////////////////////////////////////////////////
 */
 
@@ -16,19 +16,15 @@ y responde consumiendo el modelo asíncrono de la base de datos.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
+
+Modelos y DTOs
 */
-import { ProductoDTO, CategoriasProducto } from '../dtos/producto.dto.js';
-import * as ProductoService from '../services/producto.service.js';
+
 import * as ProductoModel from '../models/producto.model.js';
+import { ProductoDTO } from '../dtos/producto.dto.js';
+
+// Common
 import { exito, error } from '../common/respuestaJson.js';
-
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
 
 /*
 //////////////////////////////////////////////////////////
@@ -36,23 +32,23 @@ FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 */
 
-function validarCuerpo({ nombre, categoria, cantidad, stockMinimo, precioUnidad }, res) {
-    if (ProductoService.isEmpty(nombre) || ProductoService.isEmpty(categoria))
-        return error(res, 'Nombre y categoria son requeridos.', null, 400);
+function obtenerContextoPeticion(req) {
+    /*
+    Descripcion:
+    Extrae grupoDatos e identificadores de auditoria independientemente
+    de si la peticion proviene de un Usuario Web o Colaborador Mobil.
 
-    if (!Object.values(CategoriasProducto).includes(categoria))
-        return error(res, `Categoria invalida. Opciones: ${Object.values(CategoriasProducto).join(', ')}`, null, 422);
+    Parametros:
+    - req: Objeto request de Express.
 
-    if (ProductoService.isNumericNegative(cantidad))
-        return error(res, 'La cantidad no puede ser negativa.', null, 422);
+    Retorna:
+    - Objeto con { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId }
+    */
+    const grupoDatos = req.user?.grupoDatos || req.colaborador?.grupoDatos;
+    const creadoPorUsuarioId = req.user?.id || null;
+    const creadoPorColaboradorId = req.colaborador?.id || null;
 
-    if (ProductoService.isNumericNegative(stockMinimo))
-        return error(res, 'El stock minimo no puede ser negativo.', null, 422);
-
-    if (ProductoService.isPrecioInvalido(precioUnidad))
-        return error(res, 'El precio por unidad debe ser mayor que cero.', null, 422);
-
-    return null;
+    return { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId };
 }
 
 /*
@@ -62,62 +58,133 @@ FUNCIONES PRINCIPALES
 */
 
 export async function getProductos(req, res) {
+    /*
+    Descripcion:
+    Obtiene todos los productos del grupo.
+
+    Parametros:
+    - req: Objeto request de Express
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con lista de productos
+    */
     try {
-        const data = await ProductoModel.findAll();
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const data = await ProductoModel.findAll(grupoDatos);
         return exito(res, 'Productos obtenidos correctamente.', data);
     } catch (err) {
-        return error(res, 'Error al obtener los productos.', err.message, 500);
+        return error(res, 'Error al obtener productos.', err);
     }
 }
 
 export async function getProductoById(req, res) {
+    /*
+    Descripcion:
+    Obtiene un producto por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el producto encontrado
+    - 404 si no existe
+    */
     try {
-        const producto = await ProductoModel.findById(req.params.id);
-        if (!producto) return error(res, 'Producto no encontrado.', null, 404);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const producto = await ProductoModel.findById(req.params.id, grupoDatos);
+
+        if (!producto)
+            return error(res, 'Producto no encontrado.', null, 404);
+
         return exito(res, 'Producto obtenido correctamente.', producto);
     } catch (err) {
-        return error(res, 'Error al obtener el producto.', err.message, 500);
+        return error(res, 'Error al obtener producto.', err);
     }
 }
 
 export async function createProducto(req, res) {
+    /*
+    Descripcion:
+    Crea un nuevo producto capturando auditoria de sesion.
+
+    Parametros:
+    - req: Objeto request de Express (req.body)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 201 con el producto creado
+    */
     try {
-        const { nombre, categoria, cantidad, stockMinimo, precioUnidad } = req.body;
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } = obtenerContextoPeticion(req);
+        const dto = new ProductoDTO({
+            ...req.body,
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
+        });
+        const nuevo = await ProductoModel.create(dto, grupoDatos);
 
-        const err = validarCuerpo({ nombre, categoria, cantidad, stockMinimo, precioUnidad }, res);
-        if (err) return err;
-
-        const dto = new ProductoDTO({ nombre, categoria, cantidad, stockMinimo, precioUnidad });
-        const nuevo = await ProductoModel.create(dto);
         return exito(res, 'Producto creado correctamente.', nuevo, 201);
     } catch (err) {
-        return error(res, 'Error al crear el producto.', err.message, 500);
+        return error(res, 'Error al crear producto.', err);
     }
 }
 
 export async function updateProducto(req, res) {
+    /*
+    Descripcion:
+    Actualiza un producto existente por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id, req.body)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el producto actualizado
+    - 404 si no existe
+    */
     try {
-        const { nombre, categoria, cantidad, stockMinimo, precioUnidad } = req.body;
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const dto = new ProductoDTO({ ...req.body, grupoDatos });
+        const actualizado = await ProductoModel.update(
+            req.params.id, 
+            dto, 
+            grupoDatos
+        );
 
-        const err = validarCuerpo({ nombre, categoria, cantidad, stockMinimo, precioUnidad }, res);
-        if (err) return err;
-
-        const dto = new ProductoDTO({ nombre, categoria, cantidad, stockMinimo, precioUnidad });
-        const actualizado = await ProductoModel.update(req.params.id, dto);
-        if (!actualizado) return error(res, 'Producto no encontrado.', null, 404);
+        if (!actualizado)
+            return error(res, 'Producto no encontrado.', null, 404);
 
         return exito(res, 'Producto actualizado correctamente.', actualizado);
     } catch (err) {
-        return error(res, 'Error al actualizar el producto.', err.message, 500);
+        return error(res, 'Error al actualizar producto.', err);
     }
 }
 
 export async function deleteProducto(req, res) {
+    /*
+    Descripcion:
+    Borrado logico de un producto por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el producto desactivado
+    - 404 si no existe
+    */
     try {
-        const desactivado = await ProductoModel.removeLogicamente(req.params.id);
-        if (!desactivado) return error(res, 'Producto no encontrado.', null, 404);
-        return exito(res, 'Producto desactivado correctamente.', desactivado);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const eliminado = await ProductoModel.remove(req.params.id, grupoDatos);
+
+        if (!eliminado)
+            return error(res, 'Producto no encontrado.', null, 404);
+
+        return exito(res, 'Producto eliminado correctamente.', eliminado);
     } catch (err) {
-        return error(res, 'Error al desactivar el producto.', err.message, 500);
+        return error(res, 'Error al eliminar producto.', err);
     }
 }

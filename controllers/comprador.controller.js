@@ -4,10 +4,11 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: comprador.controller.js
 Autor: Jose Espinoza
-Fecha: 05/07/2026
+Fecha: 26/07/2026
 Modulo: Compradores
 Descripcion:
-Controlador de compradores asíncrono alineado al uso de la base de datos MySQL.
+Recibe las peticiones HTTP de compradores, delega al modelo
+y devuelve la respuesta al cliente soportando contexto dual.
 //////////////////////////////////////////////////////////
 */
 
@@ -15,19 +16,15 @@ Controlador de compradores asíncrono alineado al uso de la base de datos MySQL.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
+
+Modelos y DTOs
 */
-import { CompradorDTO } from '../dtos/comprador.dto.js';
-import * as CompradorService from '../services/comprador.service.js';
+
 import * as CompradorModel from '../models/comprador.model.js';
+import { CompradorDTO } from '../dtos/comprador.dto.js';
+
+// Common
 import { exito, error } from '../common/respuestaJson.js';
-
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
 
 /*
 //////////////////////////////////////////////////////////
@@ -35,14 +32,23 @@ FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 */
 
-function validarCuerpo({ nombre, contacto, telefono }, res) {
-    if (CompradorService.isEmpty(nombre) || CompradorService.isEmpty(contacto))
-        return error(res, 'Nombre y contacto son requeridos.', null, 400);
+function obtenerContextoPeticion(req) {
+    /*
+    Descripcion:
+    Extrae grupoDatos e identificadores de auditoria independientemente
+    de si la peticion proviene de un Usuario Web o Colaborador Mobil.
 
-    if (telefono && !CompradorService.isPhone(telefono))
-        return error(res, 'El teléfono debe tener 8 dígitos.', null, 422);
+    Parametros:
+    - req: Objeto request de Express.
 
-    return null;
+    Retorna:
+    - Objeto con { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId }
+    */
+    const grupoDatos = req.user?.grupoDatos || req.colaborador?.grupoDatos;
+    const creadoPorUsuarioId = req.user?.id || null;
+    const creadoPorColaboradorId = req.colaborador?.id || null;
+
+    return { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId };
 }
 
 /*
@@ -52,62 +58,133 @@ FUNCIONES PRINCIPALES
 */
 
 export async function getCompradores(req, res) {
+    /*
+    Descripcion:
+    Obtiene todos los compradores del grupo.
+
+    Parametros:
+    - req: Objeto request de Express
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con lista de compradores
+    */
     try {
-        const data = await CompradorModel.findAll();
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const data = await CompradorModel.findAll(grupoDatos);
         return exito(res, 'Compradores obtenidos correctamente.', data);
     } catch (err) {
-        return error(res, 'Error al obtener los compradores.', err.message, 500);
+        return error(res, 'Error al obtener compradores.', err);
     }
 }
 
 export async function getCompradorById(req, res) {
+    /*
+    Descripcion:
+    Obtiene un comprador por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el comprador encontrado
+    - 404 si no existe
+    */
     try {
-        const comprador = await CompradorModel.findById(req.params.id);
-        if (!comprador) return error(res, 'Comprador no encontrado.', null, 404);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const comprador = await CompradorModel.findById(req.params.id, grupoDatos);
+
+        if (!comprador)
+            return error(res, 'Comprador no encontrado.', null, 404);
+
         return exito(res, 'Comprador obtenido correctamente.', comprador);
     } catch (err) {
-        return error(res, 'Error al obtener el comprador.', err.message, 500);
+        return error(res, 'Error al obtener comprador.', err);
     }
 }
 
 export async function createComprador(req, res) {
+    /*
+    Descripcion:
+    Crea un nuevo comprador.
+
+    Parametros:
+    - req: Objeto request de Express (req.body)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 201 con el comprador creado
+    */
     try {
-        const { nombre, contacto, telefono } = req.body;
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } = obtenerContextoPeticion(req);
+        const dto = new CompradorDTO({
+            ...req.body,
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
+        });
+        const nuevo = await CompradorModel.create(dto, grupoDatos);
 
-        const err = validarCuerpo({ nombre, contacto, telefono }, res);
-        if (err) return err;
-
-        const dto = new CompradorDTO({ nombre, contacto, telefono });
-        const nuevo = await CompradorModel.create(dto);
         return exito(res, 'Comprador creado correctamente.', nuevo, 201);
     } catch (err) {
-        return error(res, 'Error al crear el comprador.', err.message, 500);
+        return error(res, 'Error al crear comprador.', err);
     }
 }
 
 export async function updateComprador(req, res) {
+    /*
+    Descripcion:
+    Actualiza un comprador existente por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id, req.body)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el comprador actualizado
+    - 404 si no existe
+    */
     try {
-        const { nombre, contacto, telefono } = req.body;
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const dto = new CompradorDTO({ ...req.body, grupoDatos });
+        const actualizado = await CompradorModel.update(
+            req.params.id, 
+            dto, 
+            grupoDatos
+        );
 
-        const err = validarCuerpo({ nombre, contacto, telefono }, res);
-        if (err) return err;
-
-        const dto = new CompradorDTO({ nombre, contacto, telefono });
-        const actualizado = await CompradorModel.update(req.params.id, dto);
-        if (!actualizado) return error(res, 'Comprador no encontrado.', null, 404);
+        if (!actualizado)
+            return error(res, 'Comprador no encontrado.', null, 404);
 
         return exito(res, 'Comprador actualizado correctamente.', actualizado);
     } catch (err) {
-        return error(res, 'Error al actualizar el comprador.', err.message, 500);
+        return error(res, 'Error al actualizar comprador.', err);
     }
 }
 
 export async function deleteComprador(req, res) {
+    /*
+    Descripcion:
+    Borrado logico de un comprador por su ID.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el comprador desactivado
+    - 404 si no existe
+    */
     try {
-        const desactivado = await CompradorModel.removeLogicamente(req.params.id);
-        if (!desactivado) return error(res, 'Comprador no encontrado.', null, 404);
-        return exito(res, 'Comprador desactivado correctamente.', desactivado);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const eliminado = await CompradorModel.remove(req.params.id, grupoDatos);
+
+        if (!eliminado)
+            return error(res, 'Comprador no encontrado.', null, 404);
+
+        return exito(res, 'Comprador eliminado correctamente.', eliminado);
     } catch (err) {
-        return error(res, 'Error al desactivar el comprador.', err.message, 500);
+        return error(res, 'Error al eliminar comprador.', err);
     }
 }

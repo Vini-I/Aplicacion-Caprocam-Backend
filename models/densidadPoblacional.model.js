@@ -4,7 +4,6 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: densidadPoblacional.model.js
 Autor: Eduard Salas
-Fecha: 6/07/2026
 Modulo: Densidad Poblacional
 Descripcion:
 Capa de datos del modulo de densidad poblacional.
@@ -27,6 +26,47 @@ import pool from "../config/database.js";
 
 /*
 //////////////////////////////////////////////////////////
+CONSTANTES
+//////////////////////////////////////////////////////////
+
+Columnas seleccionadas en todas las consultas de lectura.
+dp = densidad_poblacional, u = usuarios (LEFT JOIN).
+*/
+
+const SELECT_BASE = `
+    SELECT
+        dp.id,
+        dp.uuid,
+        dp.grupo_datos,
+        dp.finca_id,
+        dp.estanque_id,
+        dp.colaborador_id,
+        c.nombre AS usuario_nombre,
+        dp.creado_por_usuario_id,
+        dp.creado_por_colaborador_id,
+        dp.fecha,
+        dp.cantidad_siembra,
+        dp.area_estanque,
+        dp.numero_camarones,
+        dp.tiros_atarraya,
+        dp.area_atarraya,
+        dp.promedio_por_tiro,
+        dp.sobrevivencia,
+        dp.densidad,
+        dp.notas_conteo,
+        dp.creado_por_usuario_id,
+        dp.creado_por_colaborador_id,
+        dp.activo,
+        dp.fecha_creacion,
+        dp.fecha_actualizacion,
+        dp.deleted_at,
+        dp.version
+    FROM densidad_poblacional dp
+    LEFT JOIN colaboradores c ON c.id = dp.colaborador_id
+`;
+
+/*
+//////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
@@ -39,115 +79,78 @@ export async function findAll(filtros) {
     Descripcion:
     Obtiene todos los registros de densidad poblacional activos
     desde la base de datos.
-    Permite filtrar por finca, estanque y por grupo de datos.
+    Permite filtrar por finca, estanque, grupo de datos y por el
+    usuario que hizo el registro.
 
     Parametros:
     - filtros: Objeto con filtros opcionales.
         - idFinca: Identificador de la finca.
         - idEstanque: Identificador del estanque.
         - grupoDatos: Codigo del grupo de datos.
+        - idUsuario: Identificador del usuario que hizo el registro.
 
     Retorna:
     - Lista de registros de densidad poblacional encontrados.
     */
 
-    let sql = `
-        SELECT
-            id,
-            uuid,
-            grupo_datos,
-            finca_id,
-            estanque_id,
-            fecha,
-            cantidad_siembra,
-            area_estanque,
-            numero_camarones,
-            tiros_atarraya,
-            area_atarraya,
-            promedio_por_tiro,
-            sobrevivencia,
-            densidad,
-            notas_conteo,
-            activo,
-            fecha_creacion,
-            fecha_actualizacion,
-            deleted_at,
-            version
-        FROM densidad_poblacional
-        WHERE deleted_at IS NULL
-        AND activo = TRUE
-    `;
+    let sql = SELECT_BASE + " WHERE dp.deleted_at IS NULL AND dp.activo = TRUE";
 
     const params = [];
 
     if (filtros) {
         if (filtros.idFinca) {
-            sql = sql + " AND finca_id = ?";
+            sql = sql + " AND dp.finca_id = ?";
             params.push(filtros.idFinca);
         }
 
         if (filtros.idEstanque) {
-            sql = sql + " AND estanque_id = ?";
+            sql = sql + " AND dp.estanque_id = ?";
             params.push(filtros.idEstanque);
         }
 
         if (filtros.grupoDatos) {
-            sql = sql + " AND grupo_datos = ?";
+            sql = sql + " AND dp.grupo_datos = ?";
             params.push(filtros.grupoDatos);
+        }
+
+        if (filtros.idUsuario) {
+            sql = sql + " AND dp.colaborador_id = ?";
+            params.push(filtros.idUsuario);
         }
     }
 
-    sql = sql + " ORDER BY id DESC";
+    sql = sql + " ORDER BY dp.id DESC";
 
     const [rows] = await pool.execute(sql, params);
 
     return mapearLista(rows);
 }
 
-export async function findById(id) {
+export async function findById(id, grupoDatos) {
     /*
     Descripcion:
     Busca un registro de densidad poblacional activo por su
-    identificador numerico.
+    identificador numerico, dentro del grupo de datos del usuario
+    autenticado.
 
     Parametros:
     - id: Identificador del registro.
+    - grupoDatos: Grupo de datos del usuario autenticado.
 
     Retorna:
     - El registro encontrado.
-    - null si no existe o si fue eliminado logicamente.
+    - null si no existe, no pertenece al grupo, o fue eliminado logicamente.
     */
 
     const [rows] = await pool.execute(
-        `
-        SELECT
-            id,
-            uuid,
-            grupo_datos,
-            finca_id,
-            estanque_id,
-            fecha,
-            cantidad_siembra,
-            area_estanque,
-            numero_camarones,
-            tiros_atarraya,
-            area_atarraya,
-            promedio_por_tiro,
-            sobrevivencia,
-            densidad,
-            notas_conteo,
-            activo,
-            fecha_creacion,
-            fecha_actualizacion,
-            deleted_at,
-            version
-        FROM densidad_poblacional
-        WHERE id = ?
-        AND deleted_at IS NULL
-        AND activo = TRUE
+        SELECT_BASE + `
+        WHERE dp.id = ?
+        AND dp.grupo_datos = ?
+        AND dp.deleted_at IS NULL
+        AND dp.activo = TRUE
         LIMIT 1
         `,
-        [id]
+        [id, grupoDatos]
     );
 
     if (rows.length === 0) {
@@ -157,10 +160,11 @@ export async function findById(id) {
     return mapearFila(rows[0]);
 }
 
-export async function findByFechaAndEstanque(fecha, idEstanque, idIgnorado) {
+export async function findByFechaAndEstanque(fecha, idEstanque, idIgnorado, grupoDatos) {
     /*
     Descripcion:
-    Busca un registro de densidad poblacional por fecha y estanque.
+    Busca un registro de densidad poblacional por fecha y estanque,
+    dentro del grupo de datos del usuario autenticado.
     Se utiliza para evitar registrar dos conteos el mismo dia
     para el mismo estanque.
     Permite ignorar un id especifico cuando se esta actualizando un registro.
@@ -169,46 +173,26 @@ export async function findByFechaAndEstanque(fecha, idEstanque, idIgnorado) {
     - fecha: Fecha del conteo.
     - idEstanque: Identificador del estanque.
     - idIgnorado: Identificador que se debe ignorar en la busqueda.
+    - grupoDatos: Grupo de datos del usuario autenticado.
 
     Retorna:
     - El registro encontrado.
     - null si no existe coincidencia.
     */
 
-    let sql = `
-        SELECT
-            id,
-            uuid,
-            grupo_datos,
-            finca_id,
-            estanque_id,
-            fecha,
-            cantidad_siembra,
-            area_estanque,
-            numero_camarones,
-            tiros_atarraya,
-            area_atarraya,
-            promedio_por_tiro,
-            sobrevivencia,
-            densidad,
-            notas_conteo,
-            activo,
-            fecha_creacion,
-            fecha_actualizacion,
-            deleted_at,
-            version
-        FROM densidad_poblacional
-        WHERE fecha = ?
-        AND estanque_id = ?
-        AND deleted_at IS NULL
-        AND activo = TRUE
+    let sql = SELECT_BASE + `
+        WHERE dp.fecha = ?
+        AND dp.estanque_id = ?
+        AND dp.grupo_datos = ?
+        AND dp.deleted_at IS NULL
+        AND dp.activo = TRUE
     `;
 
-    const params = [fecha, idEstanque];
+    const params = [fecha, idEstanque, grupoDatos];
 
     if (idIgnorado !== null) {
         if (idIgnorado !== undefined) {
-            sql = sql + " AND id <> ?";
+            sql = sql + " AND dp.id <> ?";
             params.push(idIgnorado);
         }
     }
@@ -228,15 +212,50 @@ export async function create(dto) {
     /*
     Descripcion:
     Inserta un nuevo registro de densidad poblacional en la base de datos.
+    grupoDatos debe venir ya resuelto desde el JWT (ver controller y
+    dto): si falta o es invalido, se rechaza la insercion en vez de
+    asumir un valor por defecto. De creadoPorUsuarioId/
+    creadoPorColaboradorId debe venir presente exactamente uno.
 
     Parametros:
     - dto: Objeto DensidadPoblacionalDTO con los datos normalizados.
 
     Retorna:
     - El registro creado consultado nuevamente desde la base de datos.
+
+    Lanza:
+    - Error si dto.grupoDatos no es valido.
+    - Error si dto.creadoPorUsuarioId y dto.creadoPorColaboradorId
+      estan ambos ausentes.
     */
 
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
+    const grupoDatos = obtenerNumeroValido(dto.grupoDatos);
+    const creadoPorUsuarioId = obtenerNumeroValido(dto.creadoPorUsuarioId);
+    const creadoPorColaboradorId = obtenerNumeroValido(dto.creadoPorColaboradorId);
+
+    if (grupoDatos === null) {
+        throw new Error("No se pudo determinar el grupo de datos del usuario autenticado.");
+    }
+
+    if (creadoPorUsuarioId === null && creadoPorColaboradorId === null) {
+        throw new Error("No se pudo determinar quien hizo el registro (usuario o colaborador autenticado).");
+    }
+
+    /*
+    colaborador_id (quien realizo el conteo/medicion) es distinto de
+    creado_por_colaborador_id (quien autentico la peticion). Antes
+    este valor se llenaba con el id crudo del JWT sin distinguir si
+    era un Usuario Web o un Colaborador APK, lo que podia violar la
+    llave foranea hacia "colaboradores" o guardar un id equivocado.
+    Ahora: si el body trae un colaborador especifico (dto.idColaborador),
+    se usa ese; si no, se asume el colaborador que autentico la
+    peticion (cuando fue registrado desde la APK). Si fue un Usuario
+    Web sin colaborador especificado, queda en NULL (la columna lo
+    permite).
+    */
+    const idColaboradorEnviado = obtenerNumeroValido(dto.idColaborador);
+    const colaboradorId = idColaboradorEnviado !== null ? idColaboradorEnviado : creadoPorColaboradorId;
+
     const fecha = normalizarFechaMysql(dto.fecha);
 
     const [result] = await pool.execute(
@@ -245,6 +264,7 @@ export async function create(dto) {
             grupo_datos,
             finca_id,
             estanque_id,
+            colaborador_id,
             fecha,
             cantidad_siembra,
             area_estanque,
@@ -254,14 +274,17 @@ export async function create(dto) {
             promedio_por_tiro,
             sobrevivencia,
             densidad,
-            notas_conteo
+            notas_conteo,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
+            colaboradorId,
             fecha,
             dto.cantidadSiembra,
             dto.areaEstanque,
@@ -271,44 +294,58 @@ export async function create(dto) {
             dto.promedioPorTiro,
             dto.sobrevivencia,
             dto.densidad,
-            dto.notasConteo
+            dto.notasConteo,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
         ]
     );
 
-    return await findById(result.insertId);
+    return await findById(result.insertId, grupoDatos);
 }
 
-export async function update(id, dto) {
+export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
     Actualiza un registro de densidad poblacional existente en la base de datos.
     Tambien incrementa la version del registro para control de cambios.
 
+    IMPORTANTE: usuario_id (quien hizo el registro originalmente)
+    es un campo de auditoria y NUNCA se modifica aqui, sin importar
+    quien este editando el registro.
+
     Parametros:
     - id: Identificador del registro que se desea actualizar.
     - dto: Objeto DensidadPoblacionalDTO con los datos actualizados.
+    - grupoDatos: Grupo de datos del usuario autenticado.
 
     Retorna:
     - El registro actualizado.
-    - null si el registro no existe o fue eliminado logicamente.
+    - null si el registro no existe, no pertenece al grupo, o fue eliminado logicamente.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(id, grupoDatos);
 
     if (!actual) {
         return null;
     }
 
-    const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
     const fecha = normalizarFechaMysql(dto.fecha);
+
+    /*
+    Si el dto no trae idColaborador (no se reenvio desde el
+    formulario), se conserva el valor que ya tenia el registro en
+    vez de sobreescribirlo con null.
+    */
+    const idColaboradorEnviado = obtenerNumeroValido(dto.idColaborador);
+    const colaboradorId = idColaboradorEnviado !== null ? idColaboradorEnviado : actual.idColaborador;
 
     await pool.execute(
         `
         UPDATE densidad_poblacional
         SET
-            grupo_datos = ?,
             finca_id = ?,
             estanque_id = ?,
+            colaborador_id = ?,
             fecha = ?,
             cantidad_siembra = ?,
             area_estanque = ?,
@@ -321,13 +358,14 @@ export async function update(id, dto) {
             notas_conteo = ?,
             version = version + 1
         WHERE id = ?
+        AND grupo_datos = ?
         AND deleted_at IS NULL
         AND activo = TRUE
         `,
         [
-            grupoDatos,
             dto.idFinca,
             dto.idEstanque,
+            colaboradorId,
             fecha,
             dto.cantidadSiembra,
             dto.areaEstanque,
@@ -338,14 +376,15 @@ export async function update(id, dto) {
             dto.sobrevivencia,
             dto.densidad,
             dto.notasConteo,
-            id
+            id,
+            grupoDatos
         ]
     );
 
-    return await findById(id);
+    return await findById(id, grupoDatos);
 }
 
-export async function remove(id) {
+export async function remove(id, grupoDatos) {
     /*
     Descripcion:
     Elimina logicamente un registro de densidad poblacional.
@@ -354,13 +393,14 @@ export async function remove(id) {
 
     Parametros:
     - id: Identificador del registro que se desea eliminar.
+    - grupoDatos: Grupo de datos del usuario autenticado.
 
     Retorna:
     - El registro eliminado logicamente.
-    - null si el registro no existe o ya fue eliminado.
+    - null si el registro no existe, no pertenece al grupo, o ya fue eliminado.
     */
 
-    const actual = await findById(id);
+    const actual = await findById(id, grupoDatos);
 
     if (!actual) {
         return null;
@@ -376,8 +416,9 @@ export async function remove(id) {
         WHERE id = ?
         AND deleted_at IS NULL
         AND activo = TRUE
+        AND grupo_datos = ?
         `,
-        [id]
+        [id, grupoDatos]
     );
 
     return actual;
@@ -419,6 +460,10 @@ function mapearFila(row) {
     Descripcion:
     Convierte una fila de MySQL en un objeto con formato camelCase.
     Tambien convierte tipos de datos como numeros, fechas y booleanos.
+    Incluye usuarioId (id de quien hizo el registro) y
+    usuarioNombre (su nombre, obtenido por el LEFT JOIN con
+    usuarios; viene null si el registro es anterior a esta
+    migracion y no tiene usuario_id asignado).
 
     Parametros:
     - row: Fila obtenida desde MySQL.
@@ -433,6 +478,11 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         idFinca: row.finca_id,
         idEstanque: row.estanque_id,
+        idColaborador: row.colaborador_id,
+        usuarioId: row.colaborador_id,
+        usuarioNombre: row.usuario_nombre,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         fecha: formatearFecha(row.fecha),
         cantidadSiembra: convertirNumero(row.cantidad_siembra),
         areaEstanque: convertirNumero(row.area_estanque),
@@ -443,6 +493,8 @@ function mapearFila(row) {
         sobrevivencia: convertirNumero(row.sobrevivencia),
         densidad: convertirNumero(row.densidad),
         notasConteo: row.notas_conteo,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         activo: Boolean(row.activo),
         fechaCreacion: row.fecha_creacion,
         fechaActualizacion: row.fecha_actualizacion,
@@ -451,33 +503,32 @@ function mapearFila(row) {
     };
 }
 
-function obtenerGrupoDatos(valor) {
+function obtenerNumeroValido(valor) {
     /*
     Descripcion:
-    Obtiene el grupo de datos del registro.
-    Si no viene definido, utiliza el grupo 1 como valor temporal
-    para pruebas mientras se implementa la autenticacion.
+    Valida que un valor sea numerico y mayor que cero.
+    Se usa para grupoDatos y usuarioId antes de insertar, ya que
+    ambos son obligatorios y deben venir del JWT (nunca del body).
 
     Parametros:
-    - valor: Valor recibido como grupo de datos.
+    - valor: Valor recibido.
 
     Retorna:
-    - Numero del grupo de datos.
+    - Numero valido cuando el valor es numerico y mayor que cero.
+    - null si el valor no existe, no es numerico o es menor o igual a cero.
     */
 
-    if (valor === undefined) {
-        return 1;
+    if (valor === undefined || valor === null) {
+        return null;
     }
 
-    if (valor === null) {
-        return 1;
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero) || numero <= 0) {
+        return null;
     }
 
-    if (String(valor).trim() === "") {
-        return 1;
-    }
-
-    return Number(valor);
+    return numero;
 }
 
 function normalizarFechaMysql(valor) {
