@@ -28,10 +28,10 @@ CONSTANTES
 //////////////////////////////////////////////////////////
 
 Campos minimos requeridos en el body para un registro.
-colaboradorId ya NO se pide aqui: se toma del JWT
-(req.user.colaboradorId), ver trazabilidad.controller.js.
-Pendiente de que el login de operarios incluya
-colaboradorId en el payload del token.
+colaboradorId se elimino del modulo (09/08/2026): ya no se
+usa en ningun modulo del backend. Quien hizo el movimiento
+se resuelve solo con creadoPorUsuarioId / creadoPorColabora
+dorId, via obtenerContextoPeticion() en el controller.
 */
 
 const camposRequeridos = [
@@ -161,16 +161,6 @@ export function validarTrazabilidad(req, res, next) {
                 400
             );
     }
-
-    // colaboradorId es opcional (el "colaborador responsable" en
-    // campo). Si el front lo manda, se valida su formato aqui.
-    if (!estaVacio(req.body.colaboradorId) && !esNumeroMayorCero(req.body.colaboradorId))
-        return error(
-            res,
-            'El campo colaboradorId debe ser numerico y mayor a cero.',
-            null,
-            400
-        );
 
     next();
 }
