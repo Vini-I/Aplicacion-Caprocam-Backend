@@ -59,11 +59,13 @@ Normaliza la estructura de un registro de enfermedad.
 Instancia con la estructura del modulo.
 
 Parametros:
+
 - La auditoria utiliza creadoPorUsuarioId y
 - creadoPorColaboradorId.
 - No utiliza colaboradorId.
 
 Retorna:
+
 - grupoDatos: Grupo resuelto desde el JWT.
 - fincaId: Identificador de la finca.
 - estanqueId: Identificador del estanque.
@@ -87,7 +89,6 @@ export class EnfermedadDTO {
         enfermedadNombre,
         severidad,
         severidadNombre,
-        mortalidadRegistrada,
         reporte,
         activo,
         fechaCreacion,
@@ -101,8 +102,7 @@ export class EnfermedadDTO {
         this.fincaId = fincaId;
         this.estanqueId = estanqueId;
         this.creadoPorUsuarioId = creadoPorUsuarioId ?? null;
-        this.creadoPorColaboradorId =
-            creadoPorColaboradorId ?? null;
+        this.creadoPorColaboradorId = creadoPorColaboradorId ?? null;
         this.tipoRegistro = tipoRegistro ?? 'enfermedad';
         this.fechaReporte = fechaReporte;
         this.responsable = responsable ?? null;
@@ -110,8 +110,6 @@ export class EnfermedadDTO {
         this.enfermedadNombre = enfermedadNombre;
         this.severidad = severidad;
         this.severidadNombre = severidadNombre;
-        this.mortalidadRegistrada =
-            mortalidadRegistrada ?? null;
         this.reporte = reporte ?? null;
         this.activo = activo;
         this.fechaCreacion = fechaCreacion;

@@ -4,53 +4,24 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loginUsuarios.model.js
 Autor: Rodolfo Chaves
-Fecha: 28/06/2026
+Fecha: 08/08/2026
 Modulo: Login
 Descripcion:
 Capa de datos del modulo de login para usuarios y
-colaboradores.
+colaboradores (sin roles).
 Trabaja con las tablas reales de MySQL.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Librerias externas
-*/
-
 import pool from "../config/database.js";
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
-
-Contiene las funciones exportables que interactuan
-con la fuente de datos del modulo de login para usuarios.
-*/
 export async function findUsuarioByIdentificador(identificador) {
-    /*
-    Descripcion:
-    Busca un usuario por su campo identificador.
-    Usado en el login web donde el admin puede ingresar
-    con su identificador.
-
-    Parametros:
-    - identificador: String con el identificador del usuario.
-
-    Retorna:
-    - El objeto usuario si existe, o null si no se encuentra.
-    */
     const [rows] = await pool.execute(
         `
         SELECT
             id,
             uuid,
             grupo_datos,
-            rol_id,
             nombre,
             apellidos,
             email,
@@ -77,23 +48,12 @@ export async function findUsuarioByIdentificador(identificador) {
 }
 
 export async function findUsuarioById(id) {
-    /*
-    Descripcion:
-    Busca un usuario por su ID numerico.
-
-    Parametros:
-    - id: ID del usuario (numero o string numerico).
-
-    Retorna:
-    - El objeto usuario si existe, o null si no se encuentra.
-    */
     const [rows] = await pool.execute(
         `
         SELECT
             id,
             uuid,
             grupo_datos,
-            rol_id,
             nombre,
             apellidos,
             email,
@@ -117,17 +77,6 @@ export async function findUsuarioById(id) {
 }
 
 export async function findUsuarioByCorreo(correo) {
-     /*
-    Descripcion:
-    Busca un usuario por su correo electronico.
-    Usada para validar unicidad al registrar un admin.
-
-    Parametros:
-    - correo: String con el correo a buscar.
-
-    Retorna:
-    - El objeto usuario si existe, o null si no se encuentra.
-    */
     const [rows] = await pool.execute(
         `
         SELECT id
@@ -144,17 +93,6 @@ export async function findUsuarioByCorreo(correo) {
 }
 
 export async function findUsuarioByNombreUsuario(nombreUsuario) {
-    /*
-    Descripcion:
-    Busca un usuario por su nombre de usuario.
-    Usada para validar unicidad al registrar un admin.
-
-    Parametros:
-    - usuario: String con el nombre de usuario a buscar.
-
-    Retorna:
-    - El objeto usuario si existe, o null si no se encuentra.
-    */
     const [rows] = await pool.execute(
         `
         SELECT id
@@ -177,18 +115,16 @@ export async function createUsuario(dto) {
         `
         INSERT INTO usuarios (
             grupo_datos,
-            rol_id,
             nombre,
             apellidos,
             email,
             nombre_usuario,
             password_hash
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
-            dto.rolId,
             dto.nombre,
             dto.apellidos,
             dto.email,
@@ -208,7 +144,6 @@ export async function findColaboradorById(id) {
             uuid,
             grupo_datos,
             finca_id,
-            rol_id,
             nombre,
             apellidos,
             telefono,
@@ -241,7 +176,6 @@ export async function findColaboradorByNombreUsuario(nombreUsuario) {
             uuid,
             grupo_datos,
             finca_id,
-            rol_id,
             nombre,
             apellidos,
             telefono,
@@ -274,7 +208,6 @@ export async function createColaborador(dto) {
         INSERT INTO colaboradores (
             grupo_datos,
             finca_id,
-            rol_id,
             nombre,
             apellidos,
             telefono,
@@ -283,12 +216,11 @@ export async function createColaborador(dto) {
             pin_hash,
             tipo_colaborador
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
             dto.fincaId ?? null,
-            dto.rolId,
             dto.nombre,
             dto.apellidos,
             dto.telefono ?? null,
@@ -310,7 +242,6 @@ export async function findAllColaboradores() {
             uuid,
             grupo_datos,
             finca_id,
-            rol_id,
             nombre,
             apellidos,
             telefono,
@@ -338,7 +269,6 @@ function mapearUsuario(row) {
         id: row.id,
         uuid: row.uuid,
         grupoDatos: row.grupo_datos,
-        rolId: row.rol_id,
         nombre: row.nombre,
         apellidos: row.apellidos,
         email: row.email,
@@ -361,7 +291,6 @@ function mapearColaborador(row) {
         uuid: row.uuid,
         grupoDatos: row.grupo_datos,
         fincaId: row.finca_id,
-        rolId: row.rol_id,
         nombre: row.nombre,
         apellidos: row.apellidos,
         telefono: row.telefono,
@@ -383,6 +312,5 @@ function obtenerGrupoDatos(valor) {
     if (valor === undefined || valor === null || String(valor).trim() === "") {
         return 1;
     }
-
     return Number(valor);
 }

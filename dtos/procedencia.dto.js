@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: procedencia.dto.js
-Autor: Joan
-Fecha: 19/07/2026
+Autor: oscar mario
+Fecha: 01/08/2026
 Modulo: Procedencia
 Descripcion:
 DTO para transferir y normalizar datos del modulo de procedencia.
@@ -12,21 +12,31 @@ DTO para transferir y normalizar datos del modulo de procedencia.
 */
 
 export class ProcedenciaDTO {
-    constructor({ id, uuid, grupo_datos, nombre, descripcion, activo, fecha_creacion, fecha_actualizacion }) {
+    constructor({ 
+        id, 
+        uuid, 
+        grupoDatos, 
+        nombre, 
+        descripcion, 
+        creadoPorUsuarioId, 
+        creadoPorColaboradorId, 
+        activo, 
+        fechaCreacion, 
+        fechaActualizacion 
+    }) {
         /*
         Descripcion:
-        Constructor del Data Transfer Object (DTO) para procedencia. Se encarga de recibir datos crudos (ya sea del request del cliente o de una fila cruda de base de datos) y normalizarlos en una estructura segura, aplicando transformaciones de tipo, resolviendo llaves foraneas y seteando valores por defecto (ej. estados predeterminados).
-
-        Parametros:
-        - Objeto literal destructurado con las propiedades originales a mapear (incluyendo snake_case desde BD o camelCase desde JSON).
+        Constructor del Data Transfer Object (DTO) para procedencia. Se encarga de recibir datos crudos y normalizarlos en una estructura segura.
         */
-this.id = id;
+        this.id = id;
         this.uuid = uuid;
-        this.grupoDatos = grupo_datos;
+        this.grupoDatos = grupoDatos;
         this.nombre = String(nombre ?? "").trim();
         this.descripcion = descripcion ? String(descripcion).trim() : null;
-        this.activo = Boolean(activo);
-        this.fechaCreacion = fecha_creacion;
-        this.fechaActualizacion = fecha_actualizacion;
+        this.creado_por_usuario_id = creadoPorUsuarioId ?? null;
+        this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
+        this.activo = activo !== undefined ? Boolean(activo) : true;
+        this.fechaCreacion = fechaCreacion;
+        this.fechaActualizacion = fechaActualizacion;
     }
 }

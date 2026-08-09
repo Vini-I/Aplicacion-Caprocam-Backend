@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.model.js
 Autor: Gerald Alfaro
-Fecha: 18/07/2026
+Fecha: 31/07/2026
 Modulo: Estanques
 Descripcion:
 Capa de datos del modulo de estanques.
@@ -54,16 +54,10 @@ export async function findAll(filtros) {
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -123,16 +117,10 @@ export async function findById(
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -185,16 +173,10 @@ export async function findByCodigoAndFinca(
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -214,14 +196,15 @@ export async function findByCodigoAndFinca(
         grupoDatos
     ];
 
-    if (idIgnorado !== null) {
-        if (idIgnorado !== undefined) {
-            sql = sql + " AND id <> ?";
+    if (
+        idIgnorado !== null &&
+        idIgnorado !== undefined
+    ) {
+        sql = sql + " AND id <> ?";
 
-            params.push(
-                idIgnorado
-            );
-        }
+        params.push(
+            idIgnorado
+        );
     }
 
     sql = sql + " LIMIT 1";
@@ -277,18 +260,8 @@ export async function create(dto) {
     /*
     Descripcion:
     Inserta un nuevo estanque utilizando el grupo de datos
-    recibido desde el controller.
+    y la identidad del creador recibidos desde el controller.
     */
-
-    const fechaSiembra =
-        normalizarFechaMysqlOpcional(
-            dto.fechaSiembra
-        );
-
-    const fechaInicioEngorde =
-        normalizarFechaMysqlOpcional(
-            dto.fechaInicioEngorde
-        );
 
     const fechaMantenimiento =
         normalizarFechaMysqlOpcional(
@@ -307,21 +280,12 @@ export async function create(dto) {
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
-        VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-            ?, ?, ?, ?, ?, ?, ?, ?, ?
-        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             dto.grupoDatos,
@@ -333,16 +297,10 @@ export async function create(dto) {
             dto.ancho,
             dto.profundidad,
             dto.fuenteAgua,
-            dto.especie,
-            fechaSiembra,
-            fechaInicioEngorde,
             fechaMantenimiento,
-            dto.densidadSiembra,
             dto.precria,
-            dto.metodoAlimentacion,
-            dto.proveedorAlimento,
-            dto.numeroAireadores,
-            dto.tieneAlimentadorAutomatico
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId
         ]
     );
 
@@ -360,7 +318,8 @@ export async function update(
     /*
     Descripcion:
     Actualiza un estanque que pertenece al grupo del usuario.
-    El campo grupo_datos no se modifica.
+    El campo grupo_datos y los campos de auditoria del
+    creador no se modifican.
     */
 
     const actual = await findById(
@@ -371,16 +330,6 @@ export async function update(
     if (!actual) {
         return null;
     }
-
-    const fechaSiembra =
-        normalizarFechaMysqlOpcional(
-            dto.fechaSiembra
-        );
-
-    const fechaInicioEngorde =
-        normalizarFechaMysqlOpcional(
-            dto.fechaInicioEngorde
-        );
 
     const fechaMantenimiento =
         normalizarFechaMysqlOpcional(
@@ -399,16 +348,8 @@ export async function update(
             ancho = ?,
             profundidad = ?,
             fuente_agua = ?,
-            especie = ?,
-            fecha_siembra = ?,
-            fecha_inicio_engorde = ?,
             fecha_mantenimiento = ?,
-            densidad_siembra = ?,
             precria = ?,
-            metodo_alimentacion = ?,
-            proveedor_alimento = ?,
-            numero_aireadores = ?,
-            tiene_alimentador_automatico = ?,
             version = version + 1
         WHERE id = ?
         AND grupo_datos = ?
@@ -424,16 +365,8 @@ export async function update(
             dto.ancho,
             dto.profundidad,
             dto.fuenteAgua,
-            dto.especie,
-            fechaSiembra,
-            fechaInicioEngorde,
             fechaMantenimiento,
-            dto.densidadSiembra,
             dto.precria,
-            dto.metodoAlimentacion,
-            dto.proveedorAlimento,
-            dto.numeroAireadores,
-            dto.tieneAlimentadorAutomatico,
             id,
             grupoDatos
         ]
@@ -445,14 +378,124 @@ export async function update(
     );
 }
 
+export async function actualizarEstanqueOrigen(
+    connection,
+    idEstanque,
+    grupoDatos,
+    estado
+) {
+    /*
+    Descripcion:
+    Actualiza el estado del estanque de origen durante
+    un movimiento realizado desde el modulo Trazabilidad.
+
+    Esta funcion no crea ni confirma una transaccion.
+    Utiliza la connection recibida desde Trazabilidad
+    para formar parte de la misma transaccion.
+
+    Parametros:
+    - connection: Conexion MySQL con transaccion activa.
+    - idEstanque: Identificador del estanque de origen.
+    - grupoDatos: Grupo de datos obtenido desde el JWT.
+    - estado: Nuevo estado definido por la logica del
+      movimiento de Trazabilidad.
+
+    Retorna:
+    - true si el estanque fue actualizado.
+    - false si no se encontro un estanque valido.
+    */
+
+    const [resultado] =
+        await connection.execute(
+            `
+            UPDATE estanques
+            SET
+                estado = ?,
+                version = version + 1
+            WHERE id = ?
+            AND grupo_datos = ?
+            AND deleted_at IS NULL
+            AND activo = TRUE
+            `,
+            [
+                estado,
+                idEstanque,
+                grupoDatos
+            ]
+        );
+
+    return (
+        resultado.affectedRows > 0
+    );
+}
+
+export async function actualizarEstanqueDestino(
+    connection,
+    idEstanque,
+    grupoDatos,
+    estado
+) {
+    /*
+    Descripcion:
+    Actualiza el estado del estanque de destino durante
+    un movimiento realizado desde el modulo Trazabilidad.
+
+    Esta funcion no crea ni confirma una transaccion.
+    Utiliza la connection recibida desde Trazabilidad
+    para formar parte de la misma transaccion.
+
+    Parametros:
+    - connection: Conexion MySQL con transaccion activa.
+    - idEstanque: Identificador del estanque de destino.
+    - grupoDatos: Grupo de datos obtenido desde el JWT.
+    - estado: Nuevo estado definido por la logica del
+      movimiento de Trazabilidad.
+
+    Retorna:
+    - true si el estanque fue actualizado.
+    - false si no se encontro un estanque valido.
+    */
+
+    const [resultado] =
+        await connection.execute(
+            `
+            UPDATE estanques
+            SET
+                estado = ?,
+                version = version + 1
+            WHERE id = ?
+            AND grupo_datos = ?
+            AND deleted_at IS NULL
+            AND activo = TRUE
+            `,
+            [
+                estado,
+                idEstanque,
+                grupoDatos
+            ]
+        );
+
+    return (
+        resultado.affectedRows > 0
+    );
+}
+
 export async function remove(
     id,
     grupoDatos
 ) {
     /*
     Descripcion:
-    Elimina logicamente un estanque que pertenece al grupo
-    de datos del usuario autenticado.
+    Elimina logicamente un estanque y deja sin asignar
+    los equipos que se encontraban relacionados.
+
+    Parametros:
+    - id: Identificador del estanque.
+    - grupoDatos: Grupo de datos obtenido desde el JWT.
+
+    Retorna:
+    - Estanque eliminado logicamente.
+    - null si el estanque no existe.
     */
 
     const actual = await findById(
@@ -464,25 +507,72 @@ export async function remove(
         return null;
     }
 
-    await pool.execute(
-        `
-        UPDATE estanques
-        SET
-            activo = FALSE,
-            deleted_at = CURRENT_TIMESTAMP,
-            version = version + 1
-        WHERE id = ?
-        AND grupo_datos = ?
-        AND deleted_at IS NULL
-        AND activo = TRUE
-        `,
-        [
-            id,
-            grupoDatos
-        ]
-    );
+    const connection =
+        await pool.getConnection();
 
-    return actual;
+    try {
+        await connection.beginTransaction();
+
+        /*
+        Deja sin asignar los equipos relacionados,
+        pero no elimina ni desactiva los equipos.
+        */
+
+        await connection.execute(
+            `
+            UPDATE equipos
+            SET
+                estanque_id = NULL,
+                version = version + 1
+            WHERE estanque_id = ?
+            AND grupo_datos = ?
+            AND deleted_at IS NULL
+            `,
+            [
+                id,
+                grupoDatos
+            ]
+        );
+
+        /*
+        Realiza la eliminacion logica del estanque.
+        */
+
+        const [resultado] =
+            await connection.execute(
+                `
+                UPDATE estanques
+                SET
+                    activo = FALSE,
+                    deleted_at = CURRENT_TIMESTAMP,
+                    version = version + 1
+                WHERE id = ?
+                AND grupo_datos = ?
+                AND deleted_at IS NULL
+                AND activo = TRUE
+                `,
+                [
+                    id,
+                    grupoDatos
+                ]
+            );
+
+        if (resultado.affectedRows === 0) {
+            await connection.rollback();
+
+            return null;
+        }
+
+        await connection.commit();
+
+        return actual;
+    } catch (err) {
+        await connection.rollback();
+
+        throw err;
+    } finally {
+        connection.release();
+    }
 }
 
 /*
@@ -521,10 +611,6 @@ function mapearFila(row) {
     Convierte una fila de MySQL en un objeto camelCase.
     */
 
-    const precria = Boolean(
-        row.precria
-    );
-
     return {
         id: row.id,
         uuid: row.uuid,
@@ -549,47 +635,23 @@ function mapearFila(row) {
             row.profundidad
         ),
 
-        fuenteAgua: row.fuente_agua,
-        especie: row.especie,
+        fuenteAgua:
+            row.fuente_agua,
 
-        fechaSiembra: formatearFecha(
-            row.fecha_siembra
+        fechaMantenimiento:
+            formatearFecha(
+                row.fecha_mantenimiento
+            ),
+
+        precria: Boolean(
+            row.precria
         ),
 
-        fechaInicioEngorde: formatearFecha(
-            row.fecha_inicio_engorde
-        ),
+        creadoPorUsuarioId:
+            row.creado_por_usuario_id,
 
-        fechaMantenimiento: formatearFecha(
-            row.fecha_mantenimiento
-        ),
-
-        densidadSiembra: convertirNumero(
-            row.densidad_siembra
-        ),
-
-        precria: precria,
-
-        /*
-        Alias mantenido para compatibilidad con codigo
-        anterior del frontend.
-        */
-
-        precria: precria,
-
-        metodoAlimentacion:
-            row.metodo_alimentacion,
-
-        proveedorAlimento:
-            row.proveedor_alimento,
-
-        numeroAireadores: convertirNumero(
-            row.numero_aireadores
-        ),
-
-        tieneAlimentadorAutomatico: Boolean(
-            row.tiene_alimentador_automatico
-        ),
+        creadoPorColaboradorId:
+            row.creado_por_colaborador_id,
 
         activo: Boolean(
             row.activo
@@ -700,26 +762,5 @@ function formatearFecha(valor) {
         );
     }
 
-    return String(
-        valor
-    );
-}
-
-function convertirNumero(valor) {
-    /*
-    Descripcion:
-    Convierte un valor recibido desde MySQL a numero.
-    */
-
-    if (valor === undefined) {
-        return null;
-    }
-
-    if (valor === null) {
-        return null;
-    }
-
-    return Number(
-        valor
-    );
+    return String(valor);
 }

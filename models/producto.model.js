@@ -68,21 +68,21 @@ function mapearProducto(fila) {
     */
     if (!fila) return null;
     return {
-        id:                     fila.id,
-        codigo:                 fila.codigo || null,
-        uuid:                   fila.uuid || null,
-        grupoDatos:             fila.grupo_datos,
-        proveedorId:            fila.proveedor_id || null,
-        nombre:                 fila.nombre,
-        categoria:              fila.categoria || null,
-        unidad:                 fila.unidad || 'unidades',
-        precioUnidad:           fila.precio_unidad ? Number(fila.precio_unidad) : 0,
-        cantidad:               fila.cantidad ? Number(fila.cantidad) : 0,
-        stockMinimo:            fila.stock_minimo ? Number(fila.stock_minimo) : 0,
-        entryDate:              normalizarFecha(fila.fecha_ingreso),
-        expirationDate:         normalizarFecha(fila.fecha_caducidad),
-        estado:                 fila.estado,
-        creadoPorUsuarioId:     fila.creado_por_usuario_id || null,
+        id: fila.id,
+        codigo: fila.codigo || null,
+        uuid: fila.uuid || null,
+        grupoDatos: fila.grupo_datos,
+        proveedorId: fila.proveedor_id || null,
+        nombre: fila.nombre,
+        categoria: fila.categoria || null,
+        unidad: fila.unidad || 'unidades',
+        precioUnidad: fila.precio_unidad ? Number(fila.precio_unidad) : 0,
+        cantidad: fila.cantidad ? Number(fila.cantidad) : 0,
+        stockMinimo: fila.stock_minimo ? Number(fila.stock_minimo) : 0,
+        entryDate: normalizarFecha(fila.fecha_ingreso),
+        expirationDate: normalizarFecha(fila.fecha_caducidad),
+        estado: fila.estado,
+        creadoPorUsuarioId: fila.creado_por_usuario_id || null,
         creadoPorColaboradorId: fila.creado_por_colaborador_id || null,
     };
 }
@@ -163,8 +163,8 @@ export async function create(dto, grupoDatos) {
     - El producto recien creado.
     */
     const { codigo, proveedorId, nombre, categoria, unidad,
-            precioUnidad, cantidad, stockMinimo, entryDate,
-            expirationDate, creadoPorUsuarioId, creadoPorColaboradorId } = dto;
+        precioUnidad, cantidad, stockMinimo, entryDate,
+        expirationDate, creadoPorUsuarioId, creadoPorColaboradorId } = dto;
 
     const fechaIng = normalizarFecha(entryDate);
     const fechaExp = normalizarFecha(expirationDate);
@@ -188,11 +188,12 @@ export async function create(dto, grupoDatos) {
     try {
         await pool.query(
             `INSERT INTO inventario 
-                (producto_id, proveedor_id, cantidad, stock_minimo, grupo_datos)
-             VALUES (?, ?, ?, ?, ?)`,
+            (producto_id, proveedor_id, cantidad, stock_minimo, grupo_datos, creado_por_usuario_id, creado_por_colaborador_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 productoId, proveedorId || null,
-                cantidad || 0, stockMinimo || 0, grupoDatos
+                cantidad || 0, stockMinimo || 0, grupoDatos,
+                creadoPorUsuarioId || null, creadoPorColaboradorId || null
             ]
         );
     } catch (invError) {
@@ -216,8 +217,8 @@ export async function update(id, dto, grupoDatos) {
     - El producto actualizado o null si no existe.
     */
     const { codigo, proveedorId, nombre, categoria, unidad,
-            precioUnidad, cantidad, stockMinimo, entryDate,
-            expirationDate } = dto;
+        precioUnidad, cantidad, stockMinimo, entryDate,
+        expirationDate } = dto;
 
     const fechaIng = normalizarFecha(entryDate);
     const fechaExp = normalizarFecha(expirationDate);

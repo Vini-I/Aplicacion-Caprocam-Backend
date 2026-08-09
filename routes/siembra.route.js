@@ -19,6 +19,7 @@ import {
     obtenerSiembraActiva,
     obtenerSiembra,
     crearSiembra,
+    crearSiembraConLote,
     actualizarSiembra,
     finalizarSiembra,
     eliminarSiembra
@@ -30,6 +31,9 @@ router.get("/", verificarAuth, listarSiembra);
 router.get("/activa", verificarAuth, obtenerSiembraActiva);
 router.get("/:id", verificarAuth, obtenerSiembra);
 router.post("/", verificarAuth, validarBodySiembra, crearSiembra);
+// Crea el lote de larva y la siembra en una sola transaccion atomica
+// (evita el "lote huerfano" que dejaban las 2 peticiones separadas).
+router.post("/con-lote", verificarAuth, validarBodySiembra, crearSiembraConLote);
 router.put("/:id", verificarAuth, validarBodySiembra, actualizarSiembra);
 router.post("/:id/finalizar", verificarAuth, finalizarSiembra);
 router.delete("/:id", verificarAuth, eliminarSiembra);

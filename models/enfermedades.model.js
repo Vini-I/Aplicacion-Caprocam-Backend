@@ -46,25 +46,65 @@ Retorna:
 */
 
 export async function findAll(filtros) {
-    const valores = [filtros.grupoDatos];
+    const valores = [
+        filtros.grupoDatos
+    ];
+
     const condiciones = [
         'grupo_datos = ?',
         'activo = TRUE',
         'deleted_at IS NULL',
     ];
 
-    agregarFiltro(condiciones, valores, 'finca_id', filtros.fincaId);
-    agregarFiltro(condiciones, valores, 'estanque_id', filtros.estanqueId);
-    agregarFiltro(condiciones, valores, 'enfermedad', filtros.enfermedad);
-    agregarFiltro(condiciones, valores, 'severidad', filtros.severidad);
-    agregarFiltro(condiciones, valores, 'fecha_reporte', filtros.fechaReporte);
+    agregarFiltro(
+        condiciones,
+        valores,
+        'finca_id',
+        filtros.fincaId
+    );
 
-    const sql = seleccionarCampos() +
-        ' WHERE ' + condiciones.join(' AND ') +
+    agregarFiltro(
+        condiciones,
+        valores,
+        'estanque_id',
+        filtros.estanqueId
+    );
+
+    agregarFiltro(
+        condiciones,
+        valores,
+        'enfermedad',
+        filtros.enfermedad
+    );
+
+    agregarFiltro(
+        condiciones,
+        valores,
+        'severidad',
+        filtros.severidad
+    );
+
+    agregarFiltro(
+        condiciones,
+        valores,
+        'fecha_reporte',
+        filtros.fechaReporte
+    );
+
+    const sql =
+        seleccionarCampos() +
+        ' WHERE ' +
+        condiciones.join(' AND ') +
         ' ORDER BY fecha_reporte DESC, id DESC';
 
-    const [rows] = await db.execute(sql, valores);
-    return mapearFilas(rows);
+    const [rows] = await db.execute(
+        sql,
+        valores
+    );
+
+    return mapearFilas(
+        rows
+    );
 }
 
 /*
@@ -79,17 +119,33 @@ Retorna:
 - Registro mapeado o null.
 */
 
-export async function findById(id, grupoDatos) {
-    const sql = seleccionarCampos() + `
-        WHERE id = ?
+export async function findById(
+    id,
+    grupoDatos
+) {
+    const sql =
+        seleccionarCampos() +
+        ` WHERE id = ?
         AND grupo_datos = ?
         AND activo = TRUE
         AND deleted_at IS NULL
-        LIMIT 1
-    `;
+        LIMIT 1`;
 
-    const [rows] = await db.execute(sql, [id, grupoDatos]);
-    return rows.length > 0 ? mapearFila(rows[0]) : null;
+    const [rows] = await db.execute(
+        sql,
+        [
+            id,
+            grupoDatos
+        ]
+    );
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return mapearFila(
+        rows[0]
+    );
 }
 
 /*
@@ -97,8 +153,14 @@ Descripcion:
 Verifica que finca y estanque existan, esten activos,
 pertenezcan al grupo y mantengan relacion entre si.
 
+Parametros:
+- fincaId: Identificador de la finca.
+- estanqueId: Identificador del estanque.
+- grupoDatos: Grupo obtenido desde el JWT.
+
 Retorna:
-- true si la relacion es valida o false.
+- true si la relacion es valida.
+- false si la relacion no es valida.
 */
 
 export async function existeRelacionFincaEstanqueGrupo(
@@ -107,7 +169,8 @@ export async function existeRelacionFincaEstanqueGrupo(
     grupoDatos
 ) {
     const sql = `
-        SELECT estanques.id
+        SELECT
+            estanques.id
         FROM estanques
         INNER JOIN fincas
             ON fincas.id = estanques.finca_id
@@ -122,12 +185,15 @@ export async function existeRelacionFincaEstanqueGrupo(
         LIMIT 1
     `;
 
-    const [rows] = await db.execute(sql, [
-        fincaId,
-        estanqueId,
-        grupoDatos,
-        grupoDatos
-    ]);
+    const [rows] = await db.execute(
+        sql,
+        [
+            fincaId,
+            estanqueId,
+            grupoDatos,
+            grupoDatos
+        ]
+    );
 
     return rows.length > 0;
 }
@@ -136,15 +202,16 @@ export async function existeRelacionFincaEstanqueGrupo(
 Descripcion:
 Inserta una enfermedad con auditoria dual.
 
-Registro creado.
-
 Parametros:
-- No utiliza colaborador_id.
-- El creador se almacena solo en creado_por_usuario_id o
-- creado_por_colaborador_id.
+- dto: Datos normalizados por EnfermedadDTO.
 
 Retorna:
-- dto: Datos normalizados por EnfermedadDTO.
+- Registro creado.
+
+Consideraciones:
+- No utiliza colaborador_id.
+- El creador se almacena en creado_por_usuario_id o
+  creado_por_colaborador_id.
 */
 
 export async function create(dto) {
@@ -153,48 +220,64 @@ export async function create(dto) {
             grupo_datos,
             finca_id,
             estanque_id,
-            creado_por_usuario_id,
-            creado_por_colaborador_id,
             tipo_registro,
             fecha_reporte,
             responsable,
             enfermedad,
             severidad,
-            mortalidad_registrada,
-            reporte
+            reporte,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const [resultado] = await db.execute(sql, [
-        dto.grupoDatos,
-        dto.fincaId,
-        dto.estanqueId,
-        dto.creadoPorUsuarioId,
-        dto.creadoPorColaboradorId,
-        dto.tipoRegistro,
-        dto.fechaReporte,
-        dto.responsable,
-        dto.enfermedad,
-        dto.severidad,
-        dto.mortalidadRegistrada,
-        dto.reporte
-    ]);
+    const [resultado] = await db.execute(
+        sql,
+        [
+            dto.grupoDatos,
+            dto.fincaId,
+            dto.estanqueId,
+            dto.tipoRegistro,
+            dto.fechaReporte,
+            dto.responsable,
+            dto.enfermedad,
+            dto.severidad,
+            dto.reporte,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId
+        ]
+    );
 
-    return findById(resultado.insertId, dto.grupoDatos);
+    return findById(
+        resultado.insertId,
+        dto.grupoDatos
+    );
 }
 
 /*
 Descripcion:
 Actualiza solamente los campos funcionales del registro.
 
-Registro actualizado o null.
-
 Parametros:
+- id: Identificador del registro.
+- grupoDatos: Grupo obtenido desde el JWT.
+- dto: Datos funcionales actualizados.
+
+Retorna:
+- Registro actualizado.
+- null si no existe.
+
+Consideraciones:
 - Los campos de auditoria no forman parte del UPDATE.
+- El responsable original tampoco se modifica.
 */
 
-export async function update(id, grupoDatos, dto) {
+export async function update(
+    id,
+    grupoDatos,
+    dto
+) {
     const sql = `
         UPDATE enfermedades
         SET
@@ -203,7 +286,6 @@ export async function update(id, grupoDatos, dto) {
             fecha_reporte = ?,
             enfermedad = ?,
             severidad = ?,
-            mortalidad_registrada = ?,
             reporte = ?,
             version = version + 1
         WHERE id = ?
@@ -212,32 +294,47 @@ export async function update(id, grupoDatos, dto) {
         AND deleted_at IS NULL
     `;
 
-    const [resultado] = await db.execute(sql, [
-        dto.fincaId,
-        dto.estanqueId,
-        dto.fechaReporte,
-        dto.enfermedad,
-        dto.severidad,
-        dto.mortalidadRegistrada,
-        dto.reporte,
+    const [resultado] = await db.execute(
+        sql,
+        [
+            dto.fincaId,
+            dto.estanqueId,
+            dto.fechaReporte,
+            dto.enfermedad,
+            dto.severidad,
+            dto.reporte,
+            id,
+            grupoDatos
+        ]
+    );
+
+    if (resultado.affectedRows === 0) {
+        return null;
+    }
+
+    return findById(
         id,
         grupoDatos
-    ]);
-
-    return resultado.affectedRows === 0
-        ? null
-        : findById(id, grupoDatos);
+    );
 }
 
 /*
 Descripcion:
 Realiza la eliminacion logica de una enfermedad.
 
+Parametros:
+- id: Identificador del registro.
+- grupoDatos: Grupo obtenido desde el JWT.
+
 Retorna:
-- Registro eliminado logicamente o null.
+- Registro eliminado logicamente.
+- null si no existe.
 */
 
-export async function remove(id, grupoDatos) {
+export async function remove(
+    id,
+    grupoDatos
+) {
     const sql = `
         UPDATE enfermedades
         SET
@@ -250,11 +347,22 @@ export async function remove(id, grupoDatos) {
         AND deleted_at IS NULL
     `;
 
-    const [resultado] = await db.execute(sql, [id, grupoDatos]);
+    const [resultado] = await db.execute(
+        sql,
+        [
+            id,
+            grupoDatos
+        ]
+    );
 
-    return resultado.affectedRows === 0
-        ? null
-        : findByIdIncluyendoEliminados(id, grupoDatos);
+    if (resultado.affectedRows === 0) {
+        return null;
+    }
+
+    return findByIdIncluyendoEliminados(
+        id,
+        grupoDatos
+    );
 }
 
 /*
@@ -279,15 +387,15 @@ function seleccionarCampos() {
             grupo_datos AS grupoDatos,
             finca_id AS fincaId,
             estanque_id AS estanqueId,
-            creado_por_usuario_id AS creadoPorUsuarioId,
-            creado_por_colaborador_id AS creadoPorColaboradorId,
             tipo_registro AS tipoRegistro,
             fecha_reporte AS fechaReporte,
             responsable,
             enfermedad,
             severidad,
-            mortalidad_registrada AS mortalidadRegistrada,
             reporte,
+            creado_por_usuario_id AS creadoPorUsuarioId,
+            creado_por_colaborador_id
+                AS creadoPorColaboradorId,
             activo,
             fecha_creacion AS fechaCreacion,
             fecha_actualizacion AS fechaActualizacion,
@@ -300,9 +408,23 @@ function seleccionarCampos() {
 /*
 Descripcion:
 Agrega una condicion SQL cuando el filtro tiene valor.
+
+Parametros:
+- condiciones: Lista de condiciones SQL.
+- valores: Lista de valores parametrizados.
+- campo: Nombre de la columna.
+- valor: Valor recibido.
+
+Retorna:
+- No retorna valor.
 */
 
-function agregarFiltro(condiciones, valores, campo, valor) {
+function agregarFiltro(
+    condiciones,
+    valores,
+    campo,
+    valor
+) {
     if (
         valor === undefined ||
         valor === null ||
@@ -311,27 +433,53 @@ function agregarFiltro(condiciones, valores, campo, valor) {
         return;
     }
 
-    condiciones.push(campo + ' = ?');
-    valores.push(valor);
+    condiciones.push(
+        campo + ' = ?'
+    );
+
+    valores.push(
+        valor
+    );
 }
 
 /*
 Descripcion:
 Busca un registro incluyendo los eliminados logicamente.
 
+Parametros:
+- id: Identificador del registro.
+- grupoDatos: Grupo obtenido desde el JWT.
+
 Retorna:
-- Registro mapeado o null.
+- Registro mapeado.
+- null si no existe.
 */
 
-async function findByIdIncluyendoEliminados(id, grupoDatos) {
-    const sql = seleccionarCampos() + `
-        WHERE id = ?
+async function findByIdIncluyendoEliminados(
+    id,
+    grupoDatos
+) {
+    const sql =
+        seleccionarCampos() +
+        ` WHERE id = ?
         AND grupo_datos = ?
-        LIMIT 1
-    `;
+        LIMIT 1`;
 
-    const [rows] = await db.execute(sql, [id, grupoDatos]);
-    return rows.length > 0 ? mapearFila(rows[0]) : null;
+    const [rows] = await db.execute(
+        sql,
+        [
+            id,
+            grupoDatos
+        ]
+    );
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    return mapearFila(
+        rows[0]
+    );
 }
 
 /*
@@ -346,7 +494,21 @@ Retorna:
 */
 
 function mapearFilas(rows) {
-    return rows.map(mapearFila);
+    const lista = [];
+
+    for (
+        let i = 0;
+        i < rows.length;
+        i++
+    ) {
+        lista.push(
+            mapearFila(
+                rows[i]
+            )
+        );
+    }
+
+    return lista;
 }
 
 /*
@@ -368,22 +530,64 @@ function mapearFila(row) {
         grupoDatos: row.grupoDatos,
         fincaId: row.fincaId,
         estanqueId: row.estanqueId,
-        creadoPorUsuarioId: row.creadoPorUsuarioId,
-        creadoPorColaboradorId: row.creadoPorColaboradorId,
-        tipoRegistro: row.tipoRegistro,
-        fechaReporte: formatearFecha(row.fechaReporte),
-        responsable: row.responsable,
-        enfermedad: row.enfermedad,
-        enfermedadNombre: obtenerNombreEnfermedad(row.enfermedad),
-        severidad: row.severidad,
-        severidadNombre: obtenerNombreSeveridad(row.severidad),
-        mortalidadRegistrada: row.mortalidadRegistrada,
-        reporte: row.reporte,
-        activo: row.activo === 1 || row.activo === true,
-        fechaCreacion: formatearFechaHora(row.fechaCreacion),
-        fechaActualizacion: formatearFechaHora(row.fechaActualizacion),
-        deletedAt: formatearFechaHora(row.deletedAt),
-        version: row.version,
+
+        tipoRegistro:
+            row.tipoRegistro,
+
+        fechaReporte:
+            formatearFecha(
+                row.fechaReporte
+            ),
+
+        responsable:
+            row.responsable,
+
+        enfermedad:
+            row.enfermedad,
+
+        enfermedadNombre:
+            obtenerNombreEnfermedad(
+                row.enfermedad
+            ),
+
+        severidad:
+            row.severidad,
+
+        severidadNombre:
+            obtenerNombreSeveridad(
+                row.severidad
+            ),
+
+        reporte:
+            row.reporte,
+
+        creadoPorUsuarioId:
+            row.creadoPorUsuarioId,
+
+        creadoPorColaboradorId:
+            row.creadoPorColaboradorId,
+
+        activo:
+            row.activo === 1 ||
+            row.activo === true,
+
+        fechaCreacion:
+            formatearFechaHora(
+                row.fechaCreacion
+            ),
+
+        fechaActualizacion:
+            formatearFechaHora(
+                row.fechaActualizacion
+            ),
+
+        deletedAt:
+            formatearFechaHora(
+                row.deletedAt
+            ),
+
+        version:
+            row.version
     };
 }
 
@@ -399,11 +603,24 @@ Retorna:
 */
 
 function formatearFecha(valor) {
-    if (valor === undefined || valor === null) return null;
+    if (
+        valor === undefined ||
+        valor === null
+    ) {
+        return null;
+    }
 
-    return valor instanceof Date
-        ? valor.toISOString().slice(0, 10)
-        : String(valor).slice(0, 10);
+    if (valor instanceof Date) {
+        return valor.toISOString().slice(
+            0,
+            10
+        );
+    }
+
+    return String(valor).slice(
+        0,
+        10
+    );
 }
 
 /*
@@ -418,9 +635,18 @@ Retorna:
 */
 
 function formatearFechaHora(valor) {
-    if (valor === undefined || valor === null) return null;
+    if (
+        valor === undefined ||
+        valor === null
+    ) {
+        return null;
+    }
 
-    return valor instanceof Date
-        ? valor.toISOString()
-        : String(valor);
+    if (valor instanceof Date) {
+        return valor.toISOString();
+    }
+
+    return String(
+        valor
+    );
 }

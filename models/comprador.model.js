@@ -107,7 +107,7 @@ export async function findById(id, grupoDatos) {
 export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Inserta un nuevo comprador registrando auditoria.
+    Inserta un nuevo comprador registrando auditoria previa validacion de cedula.
 
     Parametros:
     - dto: Objeto CompradorDTO con la informacion a crear.
@@ -116,6 +116,18 @@ export async function create(dto, grupoDatos) {
     Retorna:
     - El comprador recien creado.
     */
+    if (dto.cedula) {
+        const [existente] = await pool.query(
+            `SELECT id FROM compradores
+             WHERE cedula = ? AND grupo_datos = ? AND estado = "ACTIVO"
+               AND deleted_at IS NULL`,
+            [dto.cedula, grupoDatos]
+        );
+        if (existente.length > 0) {
+            throw new Error('Ya existe un comprador registrado con esta cedula.');
+        }
+    }
+
     const [result] = await pool.query(
         `INSERT INTO compradores 
             (grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado,
@@ -139,7 +151,7 @@ export async function create(dto, grupoDatos) {
 export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
-    Actualiza un comprador existente en la base de datos.
+    Actualiza un comprador existente en la base de datos validando duplicados de cedula.
 
     Parametros:
     - id: ID del comprador a modificar.
@@ -149,6 +161,18 @@ export async function update(id, dto, grupoDatos) {
     Retorna:
     - El comprador actualizado o null si no existe.
     */
+    if (dto.cedula) {
+        const [existente] = await pool.query(
+            `SELECT id FROM compradores
+             WHERE cedula = ? AND grupo_datos = ? AND id != ? AND estado = "ACTIVO"
+               AND deleted_at IS NULL`,
+            [dto.cedula, grupoDatos, id]
+        );
+        if (existente.length > 0) {
+            throw new Error('Ya existe otro comprador registrado con esta cedula.');
+        }
+    }
+
     const [result] = await pool.query(
         `UPDATE compradores
          SET nombre = ?, cedula = ?, telefono = ?, correo = ?, direccion = ?, notas = ?
