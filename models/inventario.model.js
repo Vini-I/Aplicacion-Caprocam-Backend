@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: inventario.model.js
-Autor: oscar mario alvarez
-Fecha: 01/08/2026
+Autor: Joan
+Fecha: 4/08/2026
 Modulo: Inventario
 Descripcion:
 Capa de datos SOLO de la tabla inventario. Ya no crea ni

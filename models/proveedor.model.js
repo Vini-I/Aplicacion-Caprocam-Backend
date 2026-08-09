@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: proveedor.model.js
-Autor: oscar mario
-Fecha: 01/08/2026
+Autor: Joan
+Fecha: 4/08/2026
 Modulo: Proveedores
 Descripcion:
 Capa de datos del modulo de proveedores.

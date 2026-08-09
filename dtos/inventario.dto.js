@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: inventario.dto.js
-Autor: oscar mario
-Fecha: 01/08/2026
+Autor: Joan Campos
+Fecha: 4/08/2026
 Modulo: Inventario
 Descripcion:
 DTO de entrada y mapper de salida, SOLO para los campos
@@ -28,11 +28,8 @@ Caparazon de datos para el modulo de inventario.
 
 export class InventarioCreateDTO {
     constructor({
-        producto_id,
         productoId,
-        proveedor_id,
         proveedorId,
-        stock_minimo,
         stockMinimo,
         creadoPorUsuarioId,
         creadoPorColaboradorId,
@@ -44,20 +41,16 @@ export class InventarioCreateDTO {
         se hace con un primer movimiento tipo 'Entrada'.
  
         Parametros:
-        - producto_id:   ID del producto ya existente (requerido).
-        - proveedor_id:  ID del proveedor (opcional, FK nullable).
-        - stock_minimo:  Cantidad minima antes de alertar (requerido).
+        - productoId:   ID del producto ya existente (requerido).
+        - proveedorId:  ID del proveedor (opcional, FK nullable).
+        - stockMinimo:  Cantidad minima antes de alertar (requerido).
         - creadoPorUsuarioId:    FK a usuarios - web (resuelto por
           obtenerContextoPeticion, nunca por el body del cliente).
         - creadoPorColaboradorId: FK a colaboradores - movil (idem).
         */
-        const productoDb  = producto_id ?? productoId;
-        const proveedorDb = proveedor_id ?? proveedorId;
-        const stockMinDb  = stock_minimo ?? stockMinimo;
- 
-        this.producto_id  = Number(productoDb);
-        this.proveedor_id = proveedorDb ? Number(proveedorDb) : null;
-        this.stock_minimo = Number(stockMinDb);
+        this.producto_id  = Number(productoId);
+        this.proveedor_id = proveedorId ? Number(proveedorId) : null;
+        this.stock_minimo = Number(stockMinimo);
         this.creado_por_usuario_id     = creadoPorUsuarioId     ?? null;
         this.creado_por_colaborador_id = creadoPorColaboradorId ?? null;
     }
@@ -71,9 +64,7 @@ DTO DE ENTRADA — actualizacion (sin cantidad)
  
 export class InventarioUpdateDTO {
     constructor({
-        proveedor_id,
         proveedorId,
-        stock_minimo,
         stockMinimo,
     }) {
         /*
@@ -83,20 +74,14 @@ export class InventarioUpdateDTO {
         NO se acepta aqui: cambia unicamente via movimientos.
  
         Parametros:
-        - proveedor_id:  ID del proveedor (opcional, FK nullable).
-        - stock_minimo:  Cantidad minima antes de alertar (requerido).
+        - proveedorId:  ID del proveedor (opcional, FK nullable).
+        - stockMinimo:  Cantidad minima antes de alertar (requerido).
         */
-        const proveedorDb = proveedor_id ?? proveedorId;
-        const stockMinDb  = stock_minimo ?? stockMinimo;
- 
-        this.proveedor_id = proveedorDb ? Number(proveedorDb) : null;
-        this.stock_minimo = Number(stockMinDb);
+        this.proveedor_id = proveedorId ? Number(proveedorId) : null;
+        this.stock_minimo = Number(stockMinimo);
     }
 }
  
-
- 
-
 function formatearFechaDDMMAAAA(valor) {
     if (!valor) return null;
 

@@ -16,7 +16,7 @@ Maneja las peticiones HTTP y la logica de loteLarva.
 IMPORTS
 //////////////////////////////////////////////////////////
 */
-import { LoteLarvaDTO } from "../dtos/loteLarva.dto.js";
+import { LoteLarvaDTO, EstadoLote } from "../dtos/loteLarva.dto.js";
 import {
     isEmpty,
     isFechaValida,
@@ -36,35 +36,49 @@ FUNCIONES SECUNDARIAS
 function validarCuerpo(body, res) {
     const errores = [];
     const proveedorIdValor = body.proveedor_id ?? body.proveedorId;
+    const laboratorioIdValor  = body.laboratorio_id ?? body.laboratorioId;
+    const procedenciaIdValor  = body.procedencia_id ?? body.procedenciaId;
  
-    if (isEmpty(body.codigo_lote)) {
+    const codigoLoteFinal = body.codigo_lote ?? body.codigoLote;
+    const certLarvaFinal = body.certificado_larva ?? body.certificadoLarva;
+    const cantInicialFinal = body.cantidad_inicial ?? body.cantidadInicial;
+    const fechaIngresoFinal = body.fecha_ingreso ?? body.fechaIngreso;
+    const plInicialFinal = body.pl_inicial ?? body.plInicial;
+
+    if (isEmpty(codigoLoteFinal)) {
         errores.push("El campo codigo_lote es requerido.");
-    } else if (!isCodigoLarvaValido(body.codigo_lote)) {
+    } else if (!isCodigoLarvaValido(codigoLoteFinal)) {
         errores.push(
             "El campo codigo_lote solo puede contener letras y numeros, con un maximo de 14 caracteres."
         );
     }
-    if (!isEmpty(body.certificado_larva) && !isCodigoLarvaValido(body.certificado_larva)) {
+    if (!isEmpty(certLarvaFinal) && !isCodigoLarvaValido(certLarvaFinal)) {
         errores.push(
             "El campo certificado_larva solo puede contener letras y numeros, con un maximo de 14 caracteres."
         );
     }
-    if (!isEnteroPositivo(body.cantidad_inicial)) {
+    if (!isEnteroPositivo(cantInicialFinal)) {
         errores.push("El campo cantidad_inicial debe ser un entero positivo.");
     }
-    if (!isFechaValida(body.fecha_ingreso)) {
+    if (!isFechaValida(fechaIngresoFinal)) {
         errores.push("El campo fecha_ingreso debe ser una fecha valida.");
     }
     if (
-        body.pl_inicial !== undefined && body.pl_inicial !== null &&
-        !isEnteroPositivo(body.pl_inicial)
+        plInicialFinal !== undefined && plInicialFinal !== null &&
+        !isEnteroPositivo(plInicialFinal)
     ) {
         errores.push("El campo pl_inicial debe ser un entero positivo.");
     }
     if (!isEmpty(proveedorIdValor) && !isEnteroPositivo(proveedorIdValor)) {
         errores.push("El proveedor_id debe ser un entero positivo.");
     }
- 
+    if (!isEmpty(laboratorioIdValor) && !isEnteroPositivo(laboratorioIdValor)) {
+        errores.push("El laboratorio_id debe ser un entero positivo.");
+    }
+    if (!isEmpty(procedenciaIdValor) && !isEnteroPositivo(procedenciaIdValor)) {
+        errores.push("El procedencia_id debe ser un entero positivo.");
+    }
+
     if (errores.length > 0) {
         return error(res, "Datos invalidos para el lote.", errores, 422);
     }
@@ -88,7 +102,7 @@ export async function listarLotes(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const lotes = await loteLarvaModel.findAll(grupoDatos);
         return exito(res, "Lotes de larva obtenidos correctamente.", lotes);
@@ -108,7 +122,7 @@ export async function obtenerLote(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-try {
+    try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const { id } = req.params;
         const lote = await loteLarvaModel.findById(id, grupoDatos);
@@ -130,30 +144,58 @@ export async function crearLote(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-const err = validarCuerpo(req.body, res);
+    const err = validarCuerpo(req.body, res);
     if (err) return err;
  
     try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
             obtenerContextoPeticion(req);
-        const existente = await loteLarvaModel.findByCodigo(req.body.codigo_lote, grupoDatos);
+        
+        const codigoLoteFinal = req.body.codigo_lote ?? req.body.codigoLote;
+        const proveedorIdFinal = req.body.proveedor_id ?? req.body.proveedorId;
+        const laboratorioIdFinal = req.body.laboratorio_id ?? req.body.laboratorioId;
+        const procedenciaIdFinal = req.body.procedencia_id ?? req.body.procedenciaId;
+
+        const existente = await loteLarvaModel.findByCodigo(codigoLoteFinal, grupoDatos);
         if (existente) {
             return error(res, "Ya existe un lote con ese codigo.", null, 409);
         }
  
-        const proveedorId = req.body.proveedor_id ?? req.body.proveedorId;
-        if (!isEmpty(proveedorId)) {
-            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorId, grupoDatos);
+        if (!isEmpty(proveedorIdFinal)) {
+            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorIdFinal, grupoDatos);
             if (!existe) {
                 return error(res, "El proveedor indicado no existe.", null, 400);
             }
         }
  
+        if (!isEmpty(laboratorioIdFinal)) {
+            const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioIdFinal, grupoDatos);
+            if (!existe) {
+                return error(res, "El laboratorio indicado no existe.", null, 400);
+            }
+        }
+ 
+        if (!isEmpty(procedenciaIdFinal)) {
+            const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaIdFinal, grupoDatos);
+            if (!existe) {
+                return error(res, "La procedencia indicada no existe.", null, 400);
+            }
+        }
+ 
         const dto = new LoteLarvaDTO({
-            ...req.body,
+            codigoLote: codigoLoteFinal,
+            proveedorId: proveedorIdFinal,
+            laboratorioId: laboratorioIdFinal,
+            procedenciaId: procedenciaIdFinal,
+            certificadoLarva: req.body.certificado_larva ?? req.body.certificadoLarva,
+            plInicial: req.body.pl_inicial ?? req.body.plInicial,
+            cantidadInicial: req.body.cantidad_inicial ?? req.body.cantidadInicial,
+            fechaIngreso: req.body.fecha_ingreso ?? req.body.fechaIngreso,
+            estadoLote: req.body.estado_lote ?? req.body.estadoLote,
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
+
         const nuevo = await loteLarvaModel.createLote(dto, grupoDatos);
         return exito(res, "Lote de larva creado correctamente.", nuevo, 201);
     } catch (err) {
@@ -175,7 +217,7 @@ export async function actualizarLote(req, res) {
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-const { id } = req.params;
+    const { id } = req.params;
     const err = validarCuerpo(req.body, res);
     if (err) return err;
  
@@ -184,22 +226,64 @@ const { id } = req.params;
         const actual = await loteLarvaModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Lote de larva no encontrado.", null, 404);
  
+        if (actual.estado_lote !== EstadoLote.DISPONIBLE) {
+            return error(
+                res,
+                "No se puede actualizar un lote que ya no esta Disponible " +
+                    `(estado actual: ${actual.estado_lote}). Una vez que un lote ` +
+                    "entra a pre-cria o se siembra, sus datos de origen quedan fijos.",
+                null,
+                409
+            );
+        }
+
+        const codigoLoteFinal = req.body.codigo_lote ?? req.body.codigoLote;
+        const proveedorIdFinal = req.body.proveedor_id ?? req.body.proveedorId;
+        const laboratorioIdFinal = req.body.laboratorio_id ?? req.body.laboratorioId;
+        const procedenciaIdFinal = req.body.procedencia_id ?? req.body.procedenciaId;
+
         const existente = await loteLarvaModel.findByCodigoIgnorandoId(
-            req.body.codigo_lote, id, grupoDatos
+            codigoLoteFinal, id, grupoDatos
         );
         if (existente) {
             return error(res, "Ya existe otro lote con ese codigo.", null, 409);
         }
  
-        const proveedorId = req.body.proveedor_id ?? req.body.proveedorId;
-        if (!isEmpty(proveedorId)) {
-            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorId, grupoDatos);
+        if (!isEmpty(proveedorIdFinal)) {
+            const existe = await loteLarvaModel.verificarProveedorExiste(proveedorIdFinal, grupoDatos);
             if (!existe) {
                 return error(res, "El proveedor indicado no existe.", null, 400);
             }
         }
+        
+        if (!isEmpty(laboratorioIdFinal)) {
+            const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioIdFinal, grupoDatos);
+            if (!existe) {
+                return error(res, "El laboratorio indicado no existe.", null, 400);
+            }
+        }
  
-        const dto = new LoteLarvaDTO(req.body);
+        if (!isEmpty(procedenciaIdFinal)) {
+            const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaIdFinal, grupoDatos);
+            if (!existe) {
+                return error(res, "La procedencia indicada no existe.", null, 400);
+            }
+        }
+ 
+        const dto = new LoteLarvaDTO({
+            codigoLote: codigoLoteFinal,
+            proveedorId: proveedorIdFinal,
+            laboratorioId: laboratorioIdFinal,
+            procedenciaId: procedenciaIdFinal,
+            certificadoLarva: req.body.certificado_larva ?? req.body.certificadoLarva,
+            plInicial: req.body.pl_inicial ?? req.body.plInicial,
+            cantidadInicial: req.body.cantidad_inicial ?? req.body.cantidadInicial,
+            fechaIngreso: req.body.fecha_ingreso ?? req.body.fechaIngreso,
+            estadoLote: req.body.estado_lote ?? req.body.estadoLote,
+            creadoPorUsuarioId: null,
+            creadoPorColaboradorId: null,
+        });
+        
         const actualizado = await loteLarvaModel.update(id, dto, grupoDatos);
         return exito(res, "Lote de larva actualizado correctamente.", actualizado);
     } catch (err) {
@@ -217,11 +301,11 @@ export async function eliminarLote(req, res) {
     Parametros:
     - req: Objeto Request de Express (contiene body, params y user autenticado).
     - res: Objeto Response de Express para envio estructurado de JSON.
-
+ 
     Retorna:
     - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
     */
-const { id } = req.params;
+    const { id } = req.params;
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const eliminado = await loteLarvaModel.remove(id, grupoDatos);

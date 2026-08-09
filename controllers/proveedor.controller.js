@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: proveedor.controller.js
-Autor: oscar mario
-Fecha: 01/08/2026
+Autor: Joan Campos
+Fecha: 4/08/2026
 Modulo: Proveedores
 Descripcion:
 Recibe las peticiones HTTP, delega al modelo,
@@ -42,13 +42,6 @@ import * as proveedorModel from "../models/proveedor.model.js";
 import { exito, error } from "../common/respuestaJson.js";
 import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const { grupoDatos } = obtenerContextoPeticion(req);
 
 /*
 //////////////////////////////////////////////////////////
@@ -70,10 +63,14 @@ function validarCuerpo(body, res) {
     */
     const errores = [];
 
-    if (isEmpty(body.nombre_empresa)) {
+    const nombreFinal = body.nombre_empresa ?? body.nombre;
+    const tipoFinal = body.tipo_producto ?? body.tipoProducto;
+    const correoFinal = body.correo_electronico ?? body.correo;
+
+    if (isEmpty(nombreFinal)) {
         errores.push("El campo nombre es requerido.");
     }
-    if (isEmpty(body.tipo_producto)) {
+    if (isEmpty(tipoFinal)) {
         errores.push("El campo tipoProducto es requerido.");
     }
     if (isEmpty(body.telefono)) {
@@ -82,10 +79,10 @@ function validarCuerpo(body, res) {
     if (!isEmpty(body.telefono) && !isTelefonoValido(body.telefono)) {
         errores.push("Formato de telefono invalido. Debe contener 8 digitos.");
     }
-    if (!isEmpty(body.correo) && !isCorreoValido(body.correo)) {
+    if (!isEmpty(correoFinal) && !isCorreoValido(correoFinal)) {
         errores.push("Formato de correo electronico invalido.");
     }
-    if (!isEmpty(body.tipoProducto) && !isTipoProductoValido(body.tipoProducto)) {
+    if (!isEmpty(tipoFinal) && !isTipoProductoValido(tipoFinal)) {
         errores.push(
             "Tipo de producto invalido. Opciones: " +
                 Object.values(tipoProductos).join(", ")
@@ -115,6 +112,7 @@ function validarIdParametro(id, res) {
     }
     return null;
 }
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
@@ -199,20 +197,29 @@ export async function crearProveedor(req, res) {
     try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
             obtenerContextoPeticion(req);
-        const nombre = req.body.nombre_empresa ?? req.body.nombre;
-        const existente = await proveedorModel.findByName(nombre, grupoDatos);
+        
+        const nombreFinal = req.body.nombre_empresa ?? req.body.nombre;
+        const tipoFinal = req.body.tipo_producto ?? req.body.tipoProducto;
+        const correoFinal = req.body.correo_electronico ?? req.body.correo;
+        
+        const existente = await proveedorModel.findByName(nombreFinal, grupoDatos);
         if (existente) {
             return error(
                 res, "Ya existe un proveedor con ese nombre.", null, 409
             );
         }
 
-        const dto    = new proveedorDto({
-            ...req.body,
+        const dto = new proveedorDto({
+            nombre: nombreFinal,
+            tipoProducto: tipoFinal,
+            telefono: req.body.telefono,
+            correo: correoFinal,
+            direccion: req.body.direccion,
+            notas: req.body.notas,
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
-        const nuevo  = await proveedorModel.create(dto, grupoDatos);
+        const nuevo = await proveedorModel.create(dto, grupoDatos);
 
         return exito(
             res,
@@ -257,8 +264,12 @@ export async function actualizarProveedor(req, res) {
             return error(res, "Proveedor no encontrado.", null, 404);
         }
 
+        const nombreFinal = req.body.nombre_empresa ?? req.body.nombre;
+        const tipoFinal = req.body.tipo_producto ?? req.body.tipoProducto;
+        const correoFinal = req.body.correo_electronico ?? req.body.correo;
+
         const existente = await proveedorModel.findByNameIgnorandoId(
-            req.body.nombre_empresa,
+            nombreFinal,
             req.params.id, grupoDatos
         );
         if (existente) {
@@ -267,7 +278,16 @@ export async function actualizarProveedor(req, res) {
             );
         }
 
-        const dto        = new proveedorDto(req.body);
+        const dto = new proveedorDto({
+            nombre: nombreFinal,
+            tipoProducto: tipoFinal,
+            telefono: req.body.telefono,
+            correo: correoFinal,
+            direccion: req.body.direccion,
+            notas: req.body.notas,
+            creadoPorUsuarioId: null,
+            creadoPorColaboradorId: null,
+        });
         const actualizado = await proveedorModel.update(req.params.id, grupoDatos ,dto);
 
         return exito(

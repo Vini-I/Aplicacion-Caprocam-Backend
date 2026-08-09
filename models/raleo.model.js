@@ -94,8 +94,6 @@ export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
             grupo_datos,
             finca_id,
             estanque_id,
-            creado_por_usuario_id,
-            creado_por_colaborador_id,
             fecha,
             porcentaje,
             peso_estimado,
@@ -103,6 +101,8 @@ export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
             objetivo,
             metodos,
             observaciones,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,            
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -144,15 +144,15 @@ export async function create(dto, grupoDatos) {
             grupo_datos,
             finca_id,
             estanque_id,
-            creado_por_usuario_id,
-            creado_por_colaborador_id,
             fecha,
             porcentaje,
             peso_estimado,
             biomasa_estimada,
             objetivo,
             metodos,
-            observaciones
+            observaciones,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
@@ -160,18 +160,77 @@ export async function create(dto, grupoDatos) {
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
-            dto.creadoPorUsuarioId,
-            dto.creadoPorColaboradorId,
             dto.fecha,
             dto.porcentaje,
             dto.pesoEstimado,
             dto.biomasaEstimado,
             dto.objetivo,
             dto.metodo,
-            dto.observaciones
+            dto.observaciones,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId
         ]
     );
     return await findById(result.insertId, grupoDatos);
+}
+
+export async function update(id, dto, grupoDatos) {
+    /*
+    Descripcion:
+    Actualiza un raleo existente en la base de datos.
+    Tambien incrementa la version del registro para control de cambios.
+
+    Parametros:
+    - id: Identificador del raleo que se desea actualizar.
+    - dto: Objeto RaleoDTO con los datos actualizados del raleo.
+    - grupoDatos: Grupo de datos del usuario en sesion.
+
+    Retorna:
+    - El raleo actualizado.
+    - null si el raleo no existe, no pertenece al grupo, o fue eliminado logicamente.
+    */
+
+    const actual = await findById(id, grupoDatos);
+
+    if (!actual) {
+        return null;
+    }
+
+    await pool.execute(
+        `
+        UPDATE raleos
+        SET
+            finca_id = ?,
+            estanque_id = ?,
+            fecha = ?,
+            porcentaje = ?,
+            peso_estimado = ?,
+            biomasa_estimada = ?,
+            objetivo = ?,
+            metodos = ?,
+            observaciones = ?,
+            version = version + 1
+        WHERE id = ?
+        AND grupo_datos = ?
+        AND deleted_at IS NULL
+        AND activo = TRUE
+        `,
+        [
+            dto.idFinca,
+            dto.idEstanque,
+            dto.fecha,
+            dto.porcentaje,
+            dto.pesoEstimado,
+            dto.biomasaEstimado,
+            dto.objetivo,
+            dto.metodo,
+            dto.observaciones,
+            id,
+            grupoDatos
+        ]
+    );
+
+    return await findById(id, grupoDatos);
 }
 
 export async function remove(id, grupoDatos) {
@@ -227,8 +286,6 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         idFinca: row.finca_id,
         idEstanque: row.estanque_id,
-        creadoPorUsuarioId: row.creado_por_usuario_id,
-        creadoPorColaboradorId: row.creado_por_colaborador_id,
         fecha: formatearFecha(row.fecha),
         porcentaje: Number(row.porcentaje),
         pesoEstimado: Number(row.peso_estimado),
@@ -236,6 +293,8 @@ function mapearFila(row) {
         objetivo: row.objetivo,
         metodo: row.metodos,
         observaciones: row.observaciones,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,        
         activo: Boolean(row.activo),
         fechaCreacion: row.fecha_creacion,
         fechaActualizacion: row.fecha_actualizacion,
