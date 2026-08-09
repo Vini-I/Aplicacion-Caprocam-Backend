@@ -4,17 +4,10 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.dto.js
 Autor: Marco Vásquez
-Fecha: 29/07/2026
+Fecha: 08/08/2026
 Modulo: Colaboradores
 Descripcion:
-Archivo de transferencia de datos para colaboradores.
-Adaptado a la estructura de la tabla colaboradores en DB.
-//////////////////////////////////////////////////////////
-*/
-
-/*
-//////////////////////////////////////////////////////////
-ENUM
+Archivo de transferencia de datos para colaboradores (sin roles).
 //////////////////////////////////////////////////////////
 */
 
@@ -24,18 +17,11 @@ export const TipoColaborador = Object.freeze({
     EXTERNAL_COLLAB: 'external_collab',
 });
 
-/*
-//////////////////////////////////////////////////////////
-DTO
-//////////////////////////////////////////////////////////
-*/
-
 export class ColaboradorDTO {
     constructor({
         id,
         grupoDatos,
         fincaId,
-        rolId,
         nombre,
         apellidos,
         cedula,
@@ -46,29 +32,9 @@ export class ColaboradorDTO {
         tipoColaborador,
         activo,
     }) {
-        /*
-        Descripcion:
-        Construye un objeto ColaboradorDTO con los datos recibidos.
-
-        Parametros:
-        - id:              Identificador unico (opcional en creacion)
-        - grupoDatos:      Grupo de datos al que pertenece (requerido)
-        - fincaId:         FK a fincas (opcional)
-        - rolId:           FK a roles (requerido)
-        - nombre:          Nombre del colaborador (requerido)
-        - apellidos:       Apellidos del colaborador (requerido)
-        - cedula:          Cedula unica por grupo (opcional)
-        - telefono:        Telefono (opcional)
-        - email:           Correo electronico (opcional)
-        - nombreUsuario:   Nombre de usuario unico por grupo (requerido)
-        - pinHash:         PIN hasheado para login movil (requerido)
-        - tipoColaborador: Tipo de colaborador (usar TipoColaborador)
-        - activo:          Estado activo (default true)
-        */
         this.id              = id;
         this.grupoDatos      = grupoDatos;
         this.fincaId         = fincaId         ?? null;
-        this.rolId           = rolId;
         this.nombre          = nombre;
         this.apellidos       = apellidos;
         this.cedula          = cedula           ?? null;

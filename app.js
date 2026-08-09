@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: app.js
-Autor: Greivin Arguedas, Marco Vásquez, Eduard Salas, Felipe Salas
-Fecha: 06/07/2026
+Autor: Greivin Arguedas, Marco Vásquez
+Fecha: 08/08/2026
 Modulo: Core
 Descripcion:
 Punto de entrada del servidor. Configura Express,
@@ -51,6 +51,7 @@ import proveedorRouter from './routes/proveedor.route.js';
 import inventarioRouter from './routes/inventario.routes.js';
 import mantenimientoTareaRouter   from './routes/mantenimientoTarea.routes.js';
 import mantenimientoProductoRouter from './routes/mantenimientoProducto.routes.js';
+import sincronizacionRouter from './routes/sync.routes.js';
 
 
 /*
@@ -61,7 +62,6 @@ CONSTANTES
 
 const app = express();
 
-const PORT = 4000;
 /*
 //////////////////////////////////////////////////////////
 MIDDLEWARES GLOBALES
@@ -72,6 +72,7 @@ app.use(cors({
     origin: 'http://localhost:8081', // direccion del frontend en desarrollo
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['X-Renewed-Token'],
 }));
 app.use(express.json());
 
@@ -107,9 +108,9 @@ app.use('/api/v0/lotes-larva', loteLarvaRouter);
 app.use('/api/v0/precrias', precriaRouter);
 app.use('/api/v0/proveedores', proveedorRouter);
 app.use('/api/v0/inventario', inventarioRouter);
-
 app.use('/api/v0/mantenimientos', mantenimientoTareaRouter);
 app.use('/api/v0/mantenimientos', mantenimientoProductoRouter);
+app.use('/api/v0/sync', sincronizacionRouter);
 
 /*
 //////////////////////////////////////////////////////////
@@ -124,17 +125,6 @@ app.get("/", (req, res) => {
         success: true,
         message: "API CAPROCAM funcionando correctamente."
     });
-});
-
-/*
-//////////////////////////////////////////////////////////
-INICIALIZACION DEL SERVIDOR
-//////////////////////////////////////////////////////////
-Levanta el servicio HTTP para comenzar a escuchar las
-peticiones entrantes.
-*/
-app.listen(PORT, () => {
-    console.log(`Servidor ejecutándose en puerto http://localhost:${PORT}`);
 });
 
 /*

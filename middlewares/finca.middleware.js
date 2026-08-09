@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantFinca.middleware.js
 Autor: Greivin Arguedas
-Fecha: 04/07/2026
+Fecha: 01/08/2026
 Modulo: Finca
 Descripcion:
 Archivo de middleware para el modulo de finca.
@@ -19,6 +19,7 @@ IMPORTS
 */
 
 import { error } from "../common/respuestaJson.js";
+import { tieneCodigoCBODuplicado } from "../services/finca.service.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -26,7 +27,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export function validarMantFinca(req, res, next) {
+export async function validarMantFinca(req, res, next) {
   /*
     Descripcion:
     Valida los datos recibidos para la creacion o actualizacion de un registro de finca.
@@ -40,13 +41,8 @@ export function validarMantFinca(req, res, next) {
     - Llama a next() si los datos son validos.
     - Retorna un error si los datos son invalidos.
     */
-  
-  if (req.user && req.user.grupoDatos) {
-    req.body.grupoDatos = req.user.grupoDatos;
-  }
 
   const {
-    grupoDatos,
     codigoCBO,
     nombreFinca,
     provincia,
@@ -54,14 +50,9 @@ export function validarMantFinca(req, res, next) {
     distrito,
     otrasSenas,
     propietarioResponsable,
-    telefono,
     areaTotal,
     espejosAgua,
   } = req.body;
-
-  if (!grupoDatos) {
-    return error(res, "El grupo de datos es obligatorio.", null, 400);
-  }
 
   if (!codigoCBO || String(codigoCBO).trim() === "") {
     return error(res, "El ID CBO es obligatorio.", null, 400);
@@ -91,8 +82,15 @@ export function validarMantFinca(req, res, next) {
     return error(res, "El propietario responsable es obligatorio.", null, 400);
   }
 
-  if (!telefono || String(telefono).trim() === "") {
-    return error(res, "El teléfono es obligatorio.", null, 400);
+  const codigoActual = String(req.params.id ?? "").trim();
+  const codigoDuplicado = await tieneCodigoCBODuplicado(
+    req,
+    codigoCBO,
+    codigoActual
+  );
+
+  if (codigoDuplicado) {
+    return error(res, "Ya existe una finca con ese ID CBO.", null, 409);
   }
 
   if (areaTotal === undefined || isNaN(areaTotal) || Number(areaTotal) <= 0) {

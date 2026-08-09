@@ -21,14 +21,12 @@ Librerias externas
 */
 import { TrazabilidadDTO } from '../dtos/trazabilidad.dto.js';
 
-// Servicios
-import { isIdValido } from '../services/trazabilidad.service.js';
-
 // Modelos
 import * as TrazabilidadModel from '../models/trazabilidad.model.js';
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
+import { obtenerContextoPeticion } from '../common/contextoPeticion.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -57,7 +55,7 @@ export async function obtenerTodosLosRegistros(req, res) {
     - 500 si ocurre un error inesperado
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
 
         const data = await TrazabilidadModel.findAll(grupoDatos);
         return exito(res, 'Registros obtenidos correctamente.', data);
@@ -81,7 +79,7 @@ export async function obtenerRegistroPorId(req, res) {
     - 500 si ocurre un error inesperado
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
 
         const data = await TrazabilidadModel.findById(req.params.id, grupoDatos);
 
@@ -97,26 +95,27 @@ export async function obtenerRegistroPorId(req, res) {
 export async function registrarRegistro(req, res) {
     /*
     Descripcion:
-    Registra un nuevo movimiento de trazabilidad. El
-    colaborador responsable se toma del JWT (quien esta
-    autenticado), no del body, para que quede registrado
-    automaticamente quien hizo el movimiento.
+    Registra un nuevo movimiento de trazabilidad.
 
-    IMPORTANTE: esto depende de que el token incluya
-    colaboradorId en su payload. Mientras el login de
-    operarios (verificar-pin) no emita ese JWT con
-    colaboradorId, esta ruta va a fallar con 401/400
-    para ese flujo -- es un pendiente confirmado con
-    el lider de backend (Marco), no un bug de este modulo.
+    creadoPorUsuarioId / creadoPorColaboradorId se resuelven
+    con obtenerContextoPeticion(), el helper estandar del
+    proyecto: si inicio sesion un usuario web, llena
+    creadoPorUsuarioId y deja creadoPorColaboradorId en null;
+    si inicio sesion un colaborador por PIN (APK), es al reves.
+
+    NOTA (09/08/2026): se elimino colaboradorId de este modulo.
+    Ya no se usa en ningun modulo del backend -- quien hizo el
+    movimiento se resuelve unicamente con creadoPorUsuarioId /
+    creadoPorColaboradorId (auditoria estandar).
 
     Parametros:
-    - req: Objeto request de Express (req.body, req.user)
+    - req: Objeto request de Express (req.body, req.user,
+      req.colaborador)
     - res: Objeto response de Express
 
     Retorna:
     - 201 con el registro creado
     - 400 si hay errores de validacion
-    - 401 si el token no trae colaboradorId
     - 500 si ocurre un error inesperado
     */
     const {
@@ -129,19 +128,9 @@ export async function registrarRegistro(req, res) {
         pl,
     } = req.body;
 
-    const colaboradorId = req.user?.colaboradorId;
-
-    if (!isIdValido(colaboradorId))
-        return error(
-            res,
-            'No se pudo identificar al colaborador desde la ' +
-            'sesion (token sin colaboradorId).',
-            null,
-            401
-        );
-
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
 
         const estanqueOcupado = await TrazabilidadModel.estanqueDestinoOcupado(
             estanqueDestinoId,
@@ -162,7 +151,8 @@ export async function registrarRegistro(req, res) {
             fincaId,
             estanqueOrigenId,
             estanqueDestinoId,
-            colaboradorId,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
             fecha,
             tamano,
             dias,
@@ -171,7 +161,8 @@ export async function registrarRegistro(req, res) {
         const data = await TrazabilidadModel.create(dto);
         return exito(res, 'Registro guardado correctamente.', data, 201);
     } catch (err) {
-        return error(res, 'Error al guardar el registro.', err);
+        const status = err?.status ?? 500;
+        return error(res, 'Error al guardar el registro.', err, status);
     }
 }
 

@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: fisicoQuimica.routes.js
 Autor: Samuel Cerdas
-Fecha: 27/07/2026
+Fecha: 29/07/2026
 Modulo: Fisico Quimica
 Descripcion:
 Define las rutas HTTP del modulo de fisico quimica.
@@ -18,6 +18,7 @@ IMPORTS
 
 Librerias externas
 */
+
 import { Router } from 'express';
 
 // Middlewares
@@ -29,6 +30,7 @@ import {
 // Controladores
 import {
     obtenerTodasLasLecturas,
+    obtenerLecturaPorEstanqueYFecha,
     obtenerLecturaPorId,
     registrarLectura,
     actualizarLectura,
@@ -56,6 +58,12 @@ router.get(
 );
 
 router.get(
+    '/estanque/:estanqueId',
+    verificarAuth,
+    obtenerLecturaPorEstanqueYFecha
+);
+
+router.get(
     '/:id',
     verificarAuth,
     obtenerLecturaPorId
@@ -77,6 +85,12 @@ router.put(
 
 router.put(
     '/:id/activo',
+    verificarAuth,
+    desactivarLectura
+);
+
+router.delete(
+    '/:id',
     verificarAuth,
     desactivarLectura
 );

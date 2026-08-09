@@ -57,3 +57,15 @@ export function normalizarEstadoLote(estado) {
 export function isEstadoLoteValido(estado) {
     return normalizarEstadoLote(estado) !== null;
 }
+
+export function isCodigoLarvaValido(valor) {
+    /*
+    Descripcion:
+    Valida el formato de codigo_lote y certificado_larva.
+    Segun el criterio de negocio (documento de preguntas de siembra):
+    unicamente letras y numeros, maximo 14 caracteres
+    (ejemplo valido: "1823092503E").
+    */
+    if (isEmpty(valor)) return false;
+    return /^[A-Za-z0-9]{1,14}$/.test(String(valor).trim());
+}

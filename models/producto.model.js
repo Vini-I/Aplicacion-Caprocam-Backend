@@ -8,7 +8,7 @@ Fecha: 26/07/2026
 Modulo: Productos
 Descripcion:
 Capa de datos del modulo de productos e inventario.
-Conectado a MySQL via pool. Usa borrado logico.
+Conectado a MySQL via pool. Usa borrado logico y auditoria dual.
 //////////////////////////////////////////////////////////
 */
 
@@ -26,8 +26,6 @@ import pool from '../config/database.js';
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
-
-Todas las funciones principales dependen de mapearProducto().
 */
 
 function normalizarFecha(fecha) {
@@ -44,12 +42,10 @@ function normalizarFecha(fecha) {
     */
     if (!fecha) return null;
 
-    // Si la fecha viene como string "DD/MM/YYYY"
     if (typeof fecha === 'string' && fecha.includes('/')) {
         const partes = fecha.split('/');
         if (partes.length === 3) {
             const [dia, mes, anio] = partes;
-            // Convertimos a YYYY-MM-DD para que Date() y MySQL lo entiendan
             fecha = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
         }
     }
@@ -62,8 +58,7 @@ function normalizarFecha(fecha) {
 function mapearProducto(fila) {
     /*
     Descripcion:
-    Convierte una fila MySQL (snake_case) a camelCase
-    para el frontend.
+    Convierte una fila MySQL (snake_case) a camelCase para el frontend.
 
     Parametros:
     - fila: Objeto crudo de MySQL.
@@ -73,20 +68,22 @@ function mapearProducto(fila) {
     */
     if (!fila) return null;
     return {
-        id:             fila.id,
-        codigo:         fila.codigo || null,
-        uuid:           fila.uuid || null,
-        grupoDatos:     fila.grupo_datos,
-        proveedorId:    fila.proveedor_id || null,
-        nombre:         fila.nombre,
-        categoria:      fila.categoria || null,
-        unidad:         fila.unidad || 'unidades',
-        precioUnidad:   fila.precio_unidad ? Number(fila.precio_unidad) : 0,
-        cantidad:       fila.cantidad ? Number(fila.cantidad) : 0,
-        stockMinimo:    fila.stock_minimo ? Number(fila.stock_minimo) : 0,
-        entryDate:      normalizarFecha(fila.fecha_ingreso),
+        id: fila.id,
+        codigo: fila.codigo || null,
+        uuid: fila.uuid || null,
+        grupoDatos: fila.grupo_datos,
+        proveedorId: fila.proveedor_id || null,
+        nombre: fila.nombre,
+        categoria: fila.categoria || null,
+        unidad: fila.unidad || 'unidades',
+        precioUnidad: fila.precio_unidad ? Number(fila.precio_unidad) : 0,
+        cantidad: fila.cantidad ? Number(fila.cantidad) : 0,
+        stockMinimo: fila.stock_minimo ? Number(fila.stock_minimo) : 0,
+        entryDate: normalizarFecha(fila.fecha_ingreso),
         expirationDate: normalizarFecha(fila.fecha_caducidad),
-        estado:         fila.estado,
+        estado: fila.estado,
+        creadoPorUsuarioId: fila.creado_por_usuario_id || null,
+        creadoPorColaboradorId: fila.creado_por_colaborador_id || null,
     };
 }
 
@@ -102,16 +99,17 @@ export async function findAll(grupoDatos) {
     Obtiene todos los productos activos del grupo con stock.
 
     Parametros:
-    - grupoDatos: Grupo de datos del usuario en sesion.
+    - grupoDatos: Grupo de datos de la sesion actual.
 
     Retorna:
     - Lista de productos mapeados a camelCase.
     */
     const [filas] = await pool.query(
         `SELECT 
-            p.id, p.codigo, p.uuid, p.grupo_datos, p.proveedor_id,
+            p.id AS id, p.codigo, p.uuid, p.grupo_datos, p.proveedor_id,
             p.nombre, p.categoria, p.unidad, p.precio_unidad,
             p.fecha_ingreso, p.fecha_caducidad, p.estado,
+            p.creado_por_usuario_id, p.creado_por_colaborador_id,
             COALESCE(i.cantidad, 0) AS cantidad,
             COALESCE(i.stock_minimo, 0) AS stock_minimo
          FROM productos p
@@ -130,16 +128,17 @@ export async function findById(id, grupoDatos) {
 
     Parametros:
     - id:          ID del producto.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - grupoDatos:  Grupo de datos de la sesion actual.
 
     Retorna:
     - El producto encontrado o null.
     */
     const [filas] = await pool.query(
         `SELECT 
-            p.id, p.codigo, p.uuid, p.grupo_datos, p.proveedor_id,
+            p.id AS id, p.codigo, p.uuid, p.grupo_datos, p.proveedor_id,
             p.nombre, p.categoria, p.unidad, p.precio_unidad,
             p.fecha_ingreso, p.fecha_caducidad, p.estado,
+            p.creado_por_usuario_id, p.creado_por_colaborador_id,
             COALESCE(i.cantidad, 0) AS cantidad,
             COALESCE(i.stock_minimo, 0) AS stock_minimo
          FROM productos p
@@ -154,18 +153,18 @@ export async function findById(id, grupoDatos) {
 export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Inserta un nuevo producto y su saldo en inventario.
+    Inserta un nuevo producto y su saldo en inventario registrando auditoria.
 
     Parametros:
     - dto:         Objeto DTO con los datos.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - grupoDatos:  Grupo de datos de la sesion actual.
 
     Retorna:
     - El producto recien creado.
     */
     const { codigo, proveedorId, nombre, categoria, unidad,
-            precioUnidad, cantidad, stockMinimo, entryDate,
-            expirationDate } = dto;
+        precioUnidad, cantidad, stockMinimo, entryDate,
+        expirationDate, creadoPorUsuarioId, creadoPorColaboradorId } = dto;
 
     const fechaIng = normalizarFecha(entryDate);
     const fechaExp = normalizarFecha(expirationDate);
@@ -173,12 +172,14 @@ export async function create(dto, grupoDatos) {
     const [resultProducto] = await pool.query(
         `INSERT INTO productos 
             (codigo, grupo_datos, proveedor_id, nombre, categoria,
-             unidad, precio_unidad, fecha_ingreso, fecha_caducidad, estado)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "ACTIVO")`,
+             unidad, precio_unidad, fecha_ingreso, fecha_caducidad, estado,
+             creado_por_usuario_id, creado_por_colaborador_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "ACTIVO", ?, ?)`,
         [
             codigo || null, grupoDatos, proveedorId || null,
             nombre, categoria || null, unidad || 'unidades',
-            precioUnidad || 0, fechaIng, fechaExp
+            precioUnidad || 0, fechaIng, fechaExp,
+            creadoPorUsuarioId || null, creadoPorColaboradorId || null
         ]
     );
 
@@ -187,11 +188,12 @@ export async function create(dto, grupoDatos) {
     try {
         await pool.query(
             `INSERT INTO inventario 
-                (producto_id, proveedor_id, cantidad, stock_minimo, grupo_datos)
-             VALUES (?, ?, ?, ?, ?)`,
+            (producto_id, proveedor_id, cantidad, stock_minimo, grupo_datos, creado_por_usuario_id, creado_por_colaborador_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 productoId, proveedorId || null,
-                cantidad || 0, stockMinimo || 0, grupoDatos
+                cantidad || 0, stockMinimo || 0, grupoDatos,
+                creadoPorUsuarioId || null, creadoPorColaboradorId || null
             ]
         );
     } catch (invError) {
@@ -209,14 +211,14 @@ export async function update(id, dto, grupoDatos) {
     Parametros:
     - id:          ID del producto.
     - dto:         Objeto DTO con los nuevos datos.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - grupoDatos:  Grupo de datos de la sesion actual.
 
     Retorna:
     - El producto actualizado o null si no existe.
     */
     const { codigo, proveedorId, nombre, categoria, unidad,
-            precioUnidad, cantidad, stockMinimo, entryDate,
-            expirationDate } = dto;
+        precioUnidad, cantidad, stockMinimo, entryDate,
+        expirationDate } = dto;
 
     const fechaIng = normalizarFecha(entryDate);
     const fechaExp = normalizarFecha(expirationDate);
@@ -260,7 +262,7 @@ export async function remove(id, grupoDatos) {
 
     Parametros:
     - id:          ID del producto.
-    - grupoDatos:  Grupo de datos del usuario en sesion.
+    - grupoDatos:  Grupo de datos de la sesion actual.
 
     Retorna:
     - El producto antes de ser desactivado, o null si no existe.

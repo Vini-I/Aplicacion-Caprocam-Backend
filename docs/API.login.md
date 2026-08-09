@@ -1,5 +1,22 @@
 # Login
 
+## Contrato de errores (nuevo)
+Todos los endpoints de login ahora devuelven errores con un codigo estable (`code`) y detalles estructurados (`details`) para que backend y frontend personalicen mensajes por caso sin depender del texto en `message`.
+
+Formato:
+{
+    "success": false,
+    "message": "Mensaje legible para usuario (opcional usar en frontend)",
+    "code": "CODIGO_ESTABLE_PARA_FRONTEND",
+    "details": {
+        "field": "campo-opcional",
+        "fields": ["lista", "de", "campos"],
+        "intentosRestantes": 3,
+        "tiempoRestanteMinutos": 12
+    },
+    "error": null
+}
+
 ## POST /api/v0/login
 Autentica un administrador web con usuario o correo y contrasena.
 
@@ -35,6 +52,10 @@ Respuesta de error:
 {
     "success": false,
     "message": "Faltan campos requeridos: contrasena.",
+    "code": "LOGIN_FIELDS_REQUIRED",
+    "details": {
+        "fields": ["contrasena"]
+    },
     "error": null
 }
 
@@ -43,6 +64,8 @@ Respuesta de error:
 {
     "success": false,
     "message": "Usuario no encontrado.",
+    "code": "LOGIN_USER_NOT_FOUND",
+    "details": null,
     "error": null
 }
 
@@ -51,6 +74,10 @@ Respuesta de error:
 {
     "success": false,
     "message": "Credenciales incorrectas.",
+    "code": "LOGIN_PASSWORD_INVALID",
+    "details": {
+        "intentosRestantes": 2
+    },
     "error": null
 }
 
@@ -82,6 +109,10 @@ Respuesta de error:
 {
     "success": false,
     "message": "Faltan campos requeridos: correo.",
+    "code": "REGISTER_FIELDS_REQUIRED",
+    "details": {
+        "fields": ["correo"]
+    },
     "error": null
 }
 
@@ -90,6 +121,10 @@ Respuesta de error:
 {
     "success": false,
     "message": "El correo ya esta registrado.",
+    "code": "REGISTER_EMAIL_CONFLICT",
+    "details": {
+        "field": "correo"
+    },
     "error": null
 }
 
@@ -98,6 +133,10 @@ Respuesta de error:
 {
     "success": false,
     "message": "La contrasena debe tener minimo 8 caracteres.",
+    "code": "REGISTER_PASSWORD_WEAK",
+    "details": {
+        "field": "contrasena"
+    },
     "error": null
 }
 
@@ -127,6 +166,10 @@ Respuesta de error:
 {
     "success": false,
     "message": "Faltan campos requeridos: pin.",
+    "code": "OPERARIO_REGISTER_FIELDS_REQUIRED",
+    "details": {
+        "fields": ["pin"]
+    },
     "error": null
 }
 
@@ -135,6 +178,10 @@ Respuesta de error:
 {
     "success": false,
     "message": "El PIN debe tener exactamente 4 digitos numericos.",
+    "code": "OPERARIO_PIN_INVALID_FORMAT",
+    "details": {
+        "field": "pin"
+    },
     "error": null
 }
 
@@ -171,6 +218,10 @@ Respuesta de error:
 {
     "success": false,
     "message": "Faltan campos requeridos: pin.",
+    "code": "VERIFY_PIN_FIELDS_REQUIRED",
+    "details": {
+        "fields": ["pin"]
+    },
     "error": null
 }
 
@@ -179,6 +230,10 @@ Respuesta de error:
 {
     "success": false,
     "message": "PIN incorrecto.",
+    "code": "VERIFY_PIN_INVALID",
+    "details": {
+        "field": "pin"
+    },
     "error": null
 }
 
@@ -187,6 +242,8 @@ Respuesta de error:
 {
     "success": false,
     "message": "Operario no encontrado.",
+    "code": "VERIFY_PIN_OPERARIO_NOT_FOUND",
+    "details": null,
     "error": null
 }
 
@@ -195,6 +252,10 @@ Respuesta de error:
 {
     "success": false,
     "message": "El PIN debe tener exactamente 4 digitos numericos.",
+    "code": "VERIFY_PIN_INVALID_FORMAT",
+    "details": {
+        "field": "pin"
+    },
     "error": null
 }
 
@@ -234,5 +295,7 @@ Respuesta de error:
 {
     "success": false,
     "message": "Usuario no encontrado.",
+    "code": "USER_NOT_FOUND",
+    "details": null,
     "error": null
 }

@@ -4,12 +4,13 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: enfermedades.model.js
 Autor: Isaac Chaves
-Fecha: 18/07/2026
+Fecha: 30/07/2026
 Modulo: Enfermedades
 Descripcion:
 Capa de acceso a datos del modulo de enfermedades.
-Todas las consultas protegen los registros mediante
-el grupo de datos obtenido desde el JWT.
+Protege los registros por grupo de datos y conserva
+inmutables los campos de auditoria durante el update.
+No utiliza la columna colaborador_id.
 //////////////////////////////////////////////////////////
 */
 
@@ -17,11 +18,10 @@ el grupo de datos obtenido desde el JWT.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
-
-Configuracion de base de datos
 */
 
 import db from '../config/database.js';
+
 import {
     obtenerNombreEnfermedad,
     obtenerNombreSeveridad,
@@ -33,23 +33,28 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export async function findAll(filtros) {
-    /*
-    Descripcion:
-    Obtiene enfermedades activas del grupo autenticado.
-    */
+/*
+Descripcion:
+Obtiene enfermedades activas del grupo autenticado y
+aplica los filtros funcionales permitidos.
 
-    const valores = [];
+Parametros:
+- filtros: Grupo de datos y filtros opcionales.
+
+Retorna:
+- Lista de registros mapeados.
+*/
+
+export async function findAll(filtros) {
+    const valores = [
+        filtros.grupoDatos
+    ];
 
     const condiciones = [
         'grupo_datos = ?',
         'activo = TRUE',
         'deleted_at IS NULL',
     ];
-
-    valores.push(
-        filtros.grupoDatos
-    );
 
     agregarFiltro(
         condiciones,
@@ -63,13 +68,6 @@ export async function findAll(filtros) {
         valores,
         'estanque_id',
         filtros.estanqueId
-    );
-
-    agregarFiltro(
-        condiciones,
-        valores,
-        'colaborador_id',
-        filtros.colaboradorId
     );
 
     agregarFiltro(
@@ -109,15 +107,22 @@ export async function findAll(filtros) {
     );
 }
 
+/*
+Descripcion:
+Busca una enfermedad activa por id y grupo de datos.
+
+Parametros:
+- id: Identificador del registro.
+- grupoDatos: Grupo obtenido desde el JWT.
+
+Retorna:
+- Registro mapeado o null.
+*/
+
 export async function findById(
     id,
     grupoDatos
 ) {
-    /*
-    Descripcion:
-    Busca una enfermedad por ID y grupo de datos.
-    */
-
     const sql =
         seleccionarCampos() +
         ` WHERE id = ?
@@ -143,26 +148,26 @@ export async function findById(
     );
 }
 
+/*
+Descripcion:
+Verifica que finca y estanque existan, esten activos,
+pertenezcan al grupo y mantengan relacion entre si.
+
+Parametros:
+- fincaId: Identificador de la finca.
+- estanqueId: Identificador del estanque.
+- grupoDatos: Grupo obtenido desde el JWT.
+
+Retorna:
+- true si la relacion es valida.
+- false si la relacion no es valida.
+*/
+
 export async function existeRelacionFincaEstanqueGrupo(
     fincaId,
     estanqueId,
     grupoDatos
 ) {
-    /*
-    Descripcion:
-    Verifica que la finca y el estanque existan, se encuentren
-    activos, pertenezcan al grupo y tengan relacion entre si.
-
-    Parametros:
-    - fincaId: Identificador de la finca.
-    - estanqueId: Identificador del estanque.
-    - grupoDatos: Grupo obtenido desde el JWT.
-
-    Retorna:
-    - true si la relacion es valida.
-    - false si alguno no existe o pertenece a otro grupo.
-    */
-
     const sql = `
         SELECT
             estanques.id
@@ -190,33 +195,39 @@ export async function existeRelacionFincaEstanqueGrupo(
         ]
     );
 
-    if (rows.length === 0) {
-        return false;
-    }
-
-    return true;
+    return rows.length > 0;
 }
 
-export async function create(dto) {
-    /*
-    Descripcion:
-    Inserta una nueva enfermedad utilizando los datos
-    normalizados por el controller y el service.
-    */
+/*
+Descripcion:
+Inserta una enfermedad con auditoria dual.
 
+Parametros:
+- dto: Datos normalizados por EnfermedadDTO.
+
+Retorna:
+- Registro creado.
+
+Consideraciones:
+- No utiliza colaborador_id.
+- El creador se almacena en creado_por_usuario_id o
+  creado_por_colaborador_id.
+*/
+
+export async function create(dto) {
     const sql = `
         INSERT INTO enfermedades (
             grupo_datos,
             finca_id,
             estanque_id,
-            colaborador_id,
             tipo_registro,
             fecha_reporte,
             responsable,
             enfermedad,
             severidad,
-            mortalidad_registrada,
-            reporte
+            reporte,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
@@ -227,48 +238,54 @@ export async function create(dto) {
             dto.grupoDatos,
             dto.fincaId,
             dto.estanqueId,
-            dto.colaboradorId,
             dto.tipoRegistro,
             dto.fechaReporte,
             dto.responsable,
             dto.enfermedad,
             dto.severidad,
-            dto.mortalidadRegistrada,
-            dto.reporte
+            dto.reporte,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId
         ]
     );
 
-    return await findById(
+    return findById(
         resultado.insertId,
         dto.grupoDatos
     );
 }
+
+/*
+Descripcion:
+Actualiza solamente los campos funcionales del registro.
+
+Parametros:
+- id: Identificador del registro.
+- grupoDatos: Grupo obtenido desde el JWT.
+- dto: Datos funcionales actualizados.
+
+Retorna:
+- Registro actualizado.
+- null si no existe.
+
+Consideraciones:
+- Los campos de auditoria no forman parte del UPDATE.
+- El responsable original tampoco se modifica.
+*/
 
 export async function update(
     id,
     grupoDatos,
     dto
 ) {
-    /*
-    Descripcion:
-    Actualiza una enfermedad perteneciente al grupo
-    autenticado.
-
-    El campo grupo_datos no puede modificarse.
-    */
-
     const sql = `
         UPDATE enfermedades
         SET
             finca_id = ?,
             estanque_id = ?,
-            colaborador_id = ?,
-            tipo_registro = ?,
             fecha_reporte = ?,
-            responsable = ?,
             enfermedad = ?,
             severidad = ?,
-            mortalidad_registrada = ?,
             reporte = ?,
             version = version + 1
         WHERE id = ?
@@ -282,13 +299,9 @@ export async function update(
         [
             dto.fincaId,
             dto.estanqueId,
-            dto.colaboradorId,
-            dto.tipoRegistro,
             dto.fechaReporte,
-            dto.responsable,
             dto.enfermedad,
             dto.severidad,
-            dto.mortalidadRegistrada,
             dto.reporte,
             id,
             grupoDatos
@@ -299,22 +312,29 @@ export async function update(
         return null;
     }
 
-    return await findById(
+    return findById(
         id,
         grupoDatos
     );
 }
 
+/*
+Descripcion:
+Realiza la eliminacion logica de una enfermedad.
+
+Parametros:
+- id: Identificador del registro.
+- grupoDatos: Grupo obtenido desde el JWT.
+
+Retorna:
+- Registro eliminado logicamente.
+- null si no existe.
+*/
+
 export async function remove(
     id,
     grupoDatos
 ) {
-    /*
-    Descripcion:
-    Elimina logicamente una enfermedad perteneciente
-    al grupo autenticado.
-    */
-
     const sql = `
         UPDATE enfermedades
         SET
@@ -339,7 +359,7 @@ export async function remove(
         return null;
     }
 
-    return await findByIdIncluyendoEliminados(
+    return findByIdIncluyendoEliminados(
         id,
         grupoDatos
     );
@@ -351,12 +371,15 @@ FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 */
 
-function seleccionarCampos() {
-    /*
-    Descripcion:
-    Define los campos retornados por las consultas SELECT.
-    */
+/*
+Descripcion:
+Centraliza los campos y alias usados por las consultas.
 
+Retorna:
+- Fragmento SELECT del modulo.
+*/
+
+function seleccionarCampos() {
     return `
         SELECT
             id,
@@ -364,14 +387,15 @@ function seleccionarCampos() {
             grupo_datos AS grupoDatos,
             finca_id AS fincaId,
             estanque_id AS estanqueId,
-            colaborador_id AS colaboradorId,
             tipo_registro AS tipoRegistro,
             fecha_reporte AS fechaReporte,
             responsable,
             enfermedad,
             severidad,
-            mortalidad_registrada AS mortalidadRegistrada,
             reporte,
+            creado_por_usuario_id AS creadoPorUsuarioId,
+            creado_por_colaborador_id
+                AS creadoPorColaboradorId,
             activo,
             fecha_creacion AS fechaCreacion,
             fecha_actualizacion AS fechaActualizacion,
@@ -381,27 +405,31 @@ function seleccionarCampos() {
     `;
 }
 
+/*
+Descripcion:
+Agrega una condicion SQL cuando el filtro tiene valor.
+
+Parametros:
+- condiciones: Lista de condiciones SQL.
+- valores: Lista de valores parametrizados.
+- campo: Nombre de la columna.
+- valor: Valor recibido.
+
+Retorna:
+- No retorna valor.
+*/
+
 function agregarFiltro(
     condiciones,
     valores,
     campo,
     valor
 ) {
-    /*
-    Descripcion:
-    Agrega un filtro parametrizado cuando el valor
-    contiene informacion.
-    */
-
-    if (valor === undefined) {
-        return;
-    }
-
-    if (valor === null) {
-        return;
-    }
-
-    if (String(valor).trim().length === 0) {
+    if (
+        valor === undefined ||
+        valor === null ||
+        String(valor).trim().length === 0
+    ) {
         return;
     }
 
@@ -414,16 +442,23 @@ function agregarFiltro(
     );
 }
 
+/*
+Descripcion:
+Busca un registro incluyendo los eliminados logicamente.
+
+Parametros:
+- id: Identificador del registro.
+- grupoDatos: Grupo obtenido desde el JWT.
+
+Retorna:
+- Registro mapeado.
+- null si no existe.
+*/
+
 async function findByIdIncluyendoEliminados(
     id,
     grupoDatos
 ) {
-    /*
-    Descripcion:
-    Busca un registro incluyendo los eliminados logicamente.
-    Se utiliza para devolver el registro luego del DELETE.
-    */
-
     const sql =
         seleccionarCampos() +
         ` WHERE id = ?
@@ -447,12 +482,18 @@ async function findByIdIncluyendoEliminados(
     );
 }
 
-function mapearFilas(rows) {
-    /*
-    Descripcion:
-    Convierte una lista de filas de MySQL.
-    */
+/*
+Descripcion:
+Convierte una lista de filas MySQL a objetos del dominio.
 
+Parametros:
+- rows: Filas devueltas por mysql2.
+
+Retorna:
+- Lista mapeada.
+*/
+
+function mapearFilas(rows) {
     const lista = [];
 
     for (
@@ -461,68 +502,111 @@ function mapearFilas(rows) {
         i++
     ) {
         lista.push(
-            mapearFila(rows[i])
+            mapearFila(
+                rows[i]
+            )
         );
     }
 
     return lista;
 }
 
-function mapearFila(row) {
-    /*
-    Descripcion:
-    Convierte una fila de MySQL al formato camelCase.
-    */
+/*
+Descripcion:
+Mapea una fila MySQL y agrega los nombres visibles de
+enfermedad y severidad.
 
+Parametros:
+- row: Fila devuelta por MySQL.
+
+Retorna:
+- Objeto de enfermedad.
+*/
+
+function mapearFila(row) {
     return {
         id: row.id,
         uuid: row.uuid,
         grupoDatos: row.grupoDatos,
         fincaId: row.fincaId,
         estanqueId: row.estanqueId,
-        colaboradorId: row.colaboradorId,
-        tipoRegistro: row.tipoRegistro,
-        fechaReporte: formatearFecha(
-            row.fechaReporte
-        ),
-        responsable: row.responsable,
-        enfermedad: row.enfermedad,
-        severidad: row.severidad,
-        severidadNombre: obtenerNombreSeveridad(
-            row.severidad
-        ),
-        enfermedadNombre: obtenerNombreEnfermedad(
-            row.enfermedad
-        ),
-        mortalidadRegistrada: row.mortalidadRegistrada,
-        reporte: row.reporte,
+
+        tipoRegistro:
+            row.tipoRegistro,
+
+        fechaReporte:
+            formatearFecha(
+                row.fechaReporte
+            ),
+
+        responsable:
+            row.responsable,
+
+        enfermedad:
+            row.enfermedad,
+
+        enfermedadNombre:
+            obtenerNombreEnfermedad(
+                row.enfermedad
+            ),
+
+        severidad:
+            row.severidad,
+
+        severidadNombre:
+            obtenerNombreSeveridad(
+                row.severidad
+            ),
+
+        reporte:
+            row.reporte,
+
+        creadoPorUsuarioId:
+            row.creadoPorUsuarioId,
+
+        creadoPorColaboradorId:
+            row.creadoPorColaboradorId,
+
         activo:
             row.activo === 1 ||
             row.activo === true,
-        fechaCreacion: formatearFechaHora(
-            row.fechaCreacion
-        ),
-        fechaActualizacion: formatearFechaHora(
-            row.fechaActualizacion
-        ),
-        deletedAt: formatearFechaHora(
-            row.deletedAt
-        ),
-        version: row.version,
+
+        fechaCreacion:
+            formatearFechaHora(
+                row.fechaCreacion
+            ),
+
+        fechaActualizacion:
+            formatearFechaHora(
+                row.fechaActualizacion
+            ),
+
+        deletedAt:
+            formatearFechaHora(
+                row.deletedAt
+            ),
+
+        version:
+            row.version
     };
 }
 
+/*
+Descripcion:
+Convierte una fecha al formato yyyy-mm-dd.
+
+Parametros:
+- valor: Fecha recibida.
+
+Retorna:
+- Fecha formateada o null.
+*/
+
 function formatearFecha(valor) {
-    /*
-    Descripcion:
-    Formatea una fecha en formato YYYY-MM-DD.
-    */
-
-    if (valor === undefined) {
-        return null;
-    }
-
-    if (valor === null) {
+    if (
+        valor === undefined ||
+        valor === null
+    ) {
         return null;
     }
 
@@ -539,17 +623,22 @@ function formatearFecha(valor) {
     );
 }
 
+/*
+Descripcion:
+Convierte una fecha y hora a texto serializable.
+
+Parametros:
+- valor: Fecha y hora recibida.
+
+Retorna:
+- Texto serializable o null.
+*/
+
 function formatearFechaHora(valor) {
-    /*
-    Descripcion:
-    Formatea una fecha y hora recibida desde MySQL.
-    */
-
-    if (valor === undefined) {
-        return null;
-    }
-
-    if (valor === null) {
+    if (
+        valor === undefined ||
+        valor === null
+    ) {
         return null;
     }
 
@@ -557,7 +646,7 @@ function formatearFechaHora(valor) {
         return valor.toISOString();
     }
 
-    return String(valor);
+    return String(
+        valor
+    );
 }
-
-

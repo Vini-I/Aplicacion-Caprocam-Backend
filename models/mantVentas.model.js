@@ -3,12 +3,11 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantVentas.model.js
-Autor: Greivin Arguedas
-Fecha: 04/07/2026
+Autor: Greivin Arguedas, Ricardo Chaves
+Fecha: 03/08/2026
 Modulo: Ventas
 Descripcion:
 Capa de datos del modulo de ventas.
-Por ahora trabaja con datos mock.
 //////////////////////////////////////////////////////////
 */
 
@@ -33,7 +32,7 @@ export async function findAll(grupoDatos) {
     Obtiene todos los registros de ventas.
 
     Parametros:
-    - Ninguno
+    - grupoDatos: Identificador del grupo de datos para filtrar los registros
 
     Retorna:
     - Un arreglo con todos los registros de ventas.
@@ -42,16 +41,17 @@ export async function findAll(grupoDatos) {
     const [rows] = await pool.execute(
         `SELECT
             id,
-            finca_id,
-            estanque_id,
-            colaborador_id,
-            comprador_id,
-            peso_promedio,
-            tamano_promedio,
-            cantidad_vendida,
-            precio_kilo,
+            grupo_datos AS grupoDatos,
+            finca_id AS finca,
+            estanque_id AS estanque,
+            comprador_id AS comprador,
+            peso_promedio AS pesoPromedio,
+            cantidad_vendida AS cantVendida,
+            precio_kilo AS precioKilo,
             total,
-            fecha
+            fecha,
+            creado_por_usuario_id AS creadoPorUsuarioId,
+            creado_por_colaborador_id AS creadoPorColaboradorId
         FROM ventas
         WHERE grupo_datos = ?
         AND deleted_at IS NULL`,
@@ -68,6 +68,7 @@ export async function findById(id, grupoDatos) {
 
     Parametros:
     - id: ID del registro de ventas a buscar
+    - grupoDatos: Identificador del grupo de datos para filtrar los registros
 
     Retorna:
     - El registro de ventas si se encuentra, o null si no existe.
@@ -75,18 +76,19 @@ export async function findById(id, grupoDatos) {
     const [rows] = await pool.execute(
         `SELECT
             id,
-            finca_id,
-            estanque_id,
-            colaborador_id,
-            comprador_id,
-            peso_promedio,
-            tamano_promedio,
-            cantidad_vendida,
-            precio_kilo,
+            grupo_datos AS grupoDatos,
+            finca_id AS finca,
+            estanque_id AS estanque,
+            comprador_id AS comprador,
+            peso_promedio AS pesoPromedio,
+            cantidad_vendida AS cantVendida,
+            precio_kilo AS precioKilo,
             total,
-            fecha
+            fecha,
+            creado_por_usuario_id AS creadoPorUsuarioId,
+            creado_por_colaborador_id AS creadoPorColaboradorId
         FROM ventas
-        WHERE id=? 
+        WHERE id = ? 
         AND grupo_datos = ?
         AND deleted_at IS NULL`,
         [id, grupoDatos]
@@ -113,27 +115,27 @@ export async function create(dto) {
             grupo_datos,
             finca_id,
             estanque_id,
-            colaborador_id,
             comprador_id,
             peso_promedio,
-            tamano_promedio,
             cantidad_vendida,
             precio_kilo,
             total,
-            fecha 
+            fecha,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?)`, 
         [
             dto.grupoDatos,
             dto.finca,
             dto.estanque,
-            dto.colaborador,
             dto.comprador,
             dto.pesoPromedio,
-            dto.tamanoPromedio,
             dto.cantVendida,
             dto.precioKilo,
             dto.total,
-            dto.fecha
+            dto.fecha,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId
         ]
     ); 
 
@@ -147,43 +149,40 @@ export async function update(id, grupoDatos, dto) {
 
     Parametros:
     - id: ID del registro de ventas a actualizar
+    - grupoDatos: Identificador del grupo de datos para filtrar los registros
     - dto: Objeto de tipo mantVentaDTO con los nuevos datos
 
     Retorna:
     - El registro de ventas actualizado si se encuentra, o null si no existe.
     */
-   const [result] = await pool.execute(
+    const [result] = await pool.execute(
         `UPDATE ventas
         SET
-            grupo_datos=?,
-            finca_id=?,
-            estanque_id=?,
-            colaborador_id=?,
-            comprador_id=?,
-            peso_promedio=?,
-            tamano_promedio=?,
-            cantidad_vendida=?,
-            precio_kilo=?,
-            total=?,
-            fecha=?
-        WHERE id=?`,
+            finca_id = ?,
+            estanque_id = ?,
+            comprador_id = ?,
+            peso_promedio = ?,
+            cantidad_vendida = ?,
+            precio_kilo = ?,
+            total = ?,
+            fecha = ?
+        WHERE id = ?
+        AND grupo_datos = ?`,
         [
-            dto.grupoDatos,
             dto.finca,
             dto.estanque,
-            dto.colaborador,
             dto.comprador,
             dto.pesoPromedio,
-            dto.tamanoPromedio,
             dto.cantVendida,
             dto.precioKilo,
             dto.total,
             dto.fecha,
-            id
+            id,
+            grupoDatos
         ]
-   );
-   
-   return await findById(id, grupoDatos);
+    );
+
+    return await findById(id, grupoDatos);
 }
 
 export async function remove(id, grupoDatos) {
@@ -193,15 +192,14 @@ export async function remove(id, grupoDatos) {
 
     Parametros:
     - id: ID del registro de ventas a eliminar
+    - grupoDatos: Identificador del grupo de datos para filtrar los registros
 
     Retorna:
     - El registro de ventas eliminado si se encuentra, o null si no existe.
     */
    const venta = await findById(id, grupoDatos);
 
-   if(!venta){
-    return null;
-   }
+   if(!venta)return null;
 
    await pool.query(
         `UPDATE ventas

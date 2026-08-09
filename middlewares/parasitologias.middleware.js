@@ -4,16 +4,11 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: parasitologias.middleware.js
 Autor: Andres Gutierrez
-Fecha: 18/07/2026
+Fecha: 30/07/2026
 Modulo: Parasitologias
 Descripcion:
-Middlewares de validacion del modulo de parasitologias.
-//////////////////////////////////////////////////////////
-*/
-
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
+Valida el contexto autenticado y el body del modulo de
+parasitologias.
 //////////////////////////////////////////////////////////
 */
 
@@ -21,51 +16,30 @@ import {
     error
 } from "../common/respuestaJson.js";
 
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
 const camposRequeridos = [
     "fincaId",
     "estanqueId",
     "fechaReporte",
     "parasito",
-    "camaronesMuestreados",
-    "camaronesInfectados"
+    "gradoInfeccion"
 ];
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
-*/
 
 export function validarGrupoDatos(
     req,
     res,
     next
 ) {
-    /*
-    Descripcion:
-    Verifica que el JWT contenga un grupo de datos valido.
-    */
+    const grupoDatos =
+        req.colaborador?.grupoDatos ??
+        req.user?.grupoDatos;
 
-    if (!req.user) {
-        return error(
-            res,
-            "No fue posible obtener el usuario autenticado.",
-            null,
-            403
-        );
-    }
+    const grupoNumero =
+        Number(grupoDatos);
 
-    const grupoDatos = Number(
-        req.user.grupoDatos
-    );
-
-    if (Number.isNaN(grupoDatos)) {
+    if (
+        Number.isInteger(grupoNumero) === false ||
+        grupoNumero <= 0
+    ) {
         return error(
             res,
             "El usuario no tiene un grupo de datos valido.",
@@ -74,16 +48,7 @@ export function validarGrupoDatos(
         );
     }
 
-    if (grupoDatos <= 0) {
-        return error(
-            res,
-            "El usuario no tiene un grupo de datos valido.",
-            null,
-            403
-        );
-    }
-
-    next();
+    return next();
 }
 
 export function validarBodyParasitologia(
@@ -91,14 +56,9 @@ export function validarBodyParasitologia(
     res,
     next
 ) {
-    /*
-    Descripcion:
-    Verifica que el body no este vacio y contenga los
-    campos requeridos.
-    */
-
     if (
-        !req.body ||
+        req.body === undefined ||
+        req.body === null ||
         Object.keys(req.body).length === 0
     ) {
         return error(
@@ -116,9 +76,14 @@ export function validarBodyParasitologia(
         i < camposRequeridos.length;
         i++
     ) {
-        const campo = camposRequeridos[i];
+        const campo =
+            camposRequeridos[i];
 
-        if (campoVacio(req.body[campo])) {
+        if (
+            campoVacio(
+                req.body[campo]
+            )
+        ) {
             faltantes.push(
                 campo
             );
@@ -136,28 +101,22 @@ export function validarBodyParasitologia(
         );
     }
 
-    next();
+    return next();
 }
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
-*/
-
 function campoVacio(valor) {
-    if (valor === undefined) {
+    if (
+        valor === undefined ||
+        valor === null
+    ) {
         return true;
     }
 
-    if (valor === null) {
+    if (
+        typeof valor === "string" &&
+        valor.trim().length === 0
+    ) {
         return true;
-    }
-
-    if (typeof valor === "string") {
-        if (valor.trim().length === 0) {
-            return true;
-        }
     }
 
     return false;

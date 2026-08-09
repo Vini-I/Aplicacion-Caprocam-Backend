@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.dto.js
 Autor: Gerald Alfaro
-Fecha: 18/07/2026
+Fecha: 31/07/2026
 Modulo: Estanques
 Descripcion:
 Archivo de transferencia de datos para estanques.
@@ -51,16 +51,10 @@ export class EstanqueDTO {
         ancho,
         profundidad,
         fuenteAgua,
-        especie,
-        fechaSiembra,
-        fechaInicioEngorde,
         fechaMantenimiento,
-        densidadSiembra,
         precria,
-        metodoAlimentacion,
-        proveedorAlimento,
-        numeroAireadores,
-        tieneAlimentadorAutomatico,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
         activo,
         fechaCreacion,
         fechaActualizacion,
@@ -78,6 +72,7 @@ export class EstanqueDTO {
 
         this.id = id;
         this.uuid = uuid;
+
         this.grupoDatos = Number(
             grupoDatos
         );
@@ -95,6 +90,8 @@ export class EstanqueDTO {
                 fincaId
             );
         }
+
+        this.fincaId = this.idFinca;
 
         this.codigo = normalizarTexto(
             codigo
@@ -124,48 +121,29 @@ export class EstanqueDTO {
             fuenteAgua
         );
 
-        this.especie = normalizarTextoOpcional(
-            especie
-        );
-
-        this.fechaSiembra = normalizarTextoOpcional(
-            fechaSiembra
-        );
-
-        this.fechaInicioEngorde = normalizarTextoOpcional(
-            fechaInicioEngorde
-        );
-
-        this.fechaMantenimiento = normalizarTextoOpcional(
-            fechaMantenimiento
-        );
-
-        this.densidadSiembra = normalizarNumeroOpcional(
-            densidadSiembra
-        );
+        this.fechaMantenimiento =
+            normalizarTextoOpcional(
+                fechaMantenimiento
+            );
 
         this.precria = normalizarBooleano(
             precria
         );
 
-        this.metodoAlimentacion = normalizarTextoOpcional(
-            metodoAlimentacion
-        );
-
-        this.proveedorAlimento = normalizarTextoOpcional(
-            proveedorAlimento
-        );
-
-        this.numeroAireadores = normalizarNumeroOpcional(
-            numeroAireadores
-        );
-
-        this.tieneAlimentadorAutomatico =
-            normalizarBooleano(
-                tieneAlimentadorAutomatico
+        this.creadoPorUsuarioId =
+            normalizarNumeroOpcional(
+                creadoPorUsuarioId
             );
 
-        if (activo === undefined || activo === null) {
+        this.creadoPorColaboradorId =
+            normalizarNumeroOpcional(
+                creadoPorColaboradorId
+            );
+
+        if (
+            activo === undefined ||
+            activo === null
+        ) {
             this.activo = true;
         } else {
             this.activo = normalizarBooleano(
@@ -237,7 +215,9 @@ function normalizarNumeroOpcional(valor) {
         return null;
     }
 
-    return Number(valor);
+    return Number(
+        valor
+    );
 }
 
 function normalizarBooleano(valor) {
