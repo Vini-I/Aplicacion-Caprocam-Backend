@@ -595,14 +595,29 @@ Retorna:
 */
 
 function obtenerResponsablePeticion(req) {
-    const nombre =
-        req.colaborador?.nombre ??
-        req.user?.nombre ??
-        null;
+    const identidad =
+        req.colaborador ??
+        req.user;
 
-    return isEmpty(nombre)
+    if (!identidad) {
+        return null;
+    }
+
+    const nombre =
+        identidad.nombre ??
+        "";
+
+    const apellidos =
+        identidad.apellidos ??
+        identidad.apellido ??
+        "";
+
+    const responsable =
+        `${String(nombre).trim()} ${String(apellidos).trim()}`.trim();
+
+    return isEmpty(responsable)
         ? null
-        : String(nombre).trim();
+        : responsable;
 }
 
 /*
