@@ -44,7 +44,6 @@ export function validarMantVentas(req, res, next) {
         finca, 
         estanque, 
         pesoPromedio, 
-        tamanoPromedio, 
         cantVendida, 
         precioKilo, 
         fecha, 
@@ -67,18 +66,6 @@ export function validarMantVentas(req, res, next) {
         return error(
             res, 
             "El peso promedio es obligatorio y debe ser mayor que cero.", 
-            null, 
-            400
-        );
-    }
-    if (
-        tamanoPromedio === undefined || 
-        isNaN(tamanoPromedio) || 
-        Number(tamanoPromedio) <= 0
-    ) {
-        return error(
-            res, 
-            "El tamaño promedio es obligatorio y debe ser mayor que cero.", 
             null, 
             400
         );
@@ -119,15 +106,17 @@ export function validarMantVentas(req, res, next) {
     if (!fecha || String(fecha).trim() === '') {
         return error(res, "La fecha es obligatoria.", null, 400);
     }
-    const parsedDate = new Date(fecha);
-    if (isNaN(parsedDate.getTime())) {
-        return error(res, "Debe proveer una fecha válida.", null, 400);
+    const fechaIngresada = new Date(fecha);
+    if (isNaN(fechaIngresada.getTime())) {
+        return error(res, "La fecha de registro debe ser válida.", null, 400);
     }
-    const ahora = new Date();
-    if (parsedDate.getTime() > ahora.getTime()) {
-        return error(res, "La fecha no puede ser futura.", null, 400);
-    }
+    const ahoraCR = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Costa_Rica" }));
+    
+    const fechaActualCR = new Date(Date.UTC(ahoraCR.getFullYear(), ahoraCR.getMonth(), ahoraCR.getDate()));
 
+    if (fechaIngresada.getTime() > fechaActualCR.getTime()) {
+        return error(res, "La fecha de registro no puede ser futura.", null, 400);
+    }
     
     if (!comprador || String(comprador).trim() === '') {
         return error(res, "El comprador es obligatorio.", null, 400);
