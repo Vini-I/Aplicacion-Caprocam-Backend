@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantCrecimiento.controller.js
 Autor: Greivin Arguedas
-Fecha: 04/07/2026
+Fecha: 03/08/2026
 Modulo: Crecimiento
 Descripcion:
 Recibe las peticiones HTTP, delega al servicio y modelo,
@@ -31,6 +31,7 @@ import * as MantCrecimientoModel from "../models/mantCrecimiento.model.js";
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
+import { obtenerContextoPeticion } from '../common/contextoPeticion.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -53,12 +54,16 @@ function validarCuerpo({ finca, estanque, pesoActual }, res) {
         return error(res, 'Finca y estanque son requeridos.', null, 400);
     }
     if (isEmpty(pesoActual) || !isNumeroMayorIgualCero(pesoActual)) {
-        return error(res, 'El peso actual es requerido y debe ser un numero mayor o igual a cero.', null, 422);
+        return error(res, 
+            'El peso actual es requerido y debe ser un numero mayor o igual a cero.', 
+            null,
+            422
+        );
     }
     return null;
 }
-/*
 
+/*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
@@ -76,9 +81,13 @@ export async function getCrecimientos(req, res) {
     Retorna:
     - 200 con lista de registros de crecimiento
     */
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const data = await MantCrecimientoModel.findAll(grupoDatos);
-    return exito(res, 'Registros de crecimiento obtenidos correctamente.', data);
+    return exito(
+        res, 
+        'Registros de crecimiento obtenidos correctamente.', 
+        data
+    );
 }
 
 export async function getCrecimientoById(req, res) {
@@ -92,12 +101,53 @@ export async function getCrecimientoById(req, res) {
     - 200 con el registro encontrado
     - 404 si no existe
     */
-    const grupoDatos = req.user.grupoDatos;
-    const registro = await MantCrecimientoModel.findById(req.params.id, grupoDatos);
+    const { grupoDatos } = obtenerContextoPeticion(req);
+    const registro = await MantCrecimientoModel.findById(
+        req.params.id, 
+        grupoDatos
+    );
     if (!registro) {
         return error(res, 'Registro no encontrado.', null, 404);
     }
     return exito(res, 'Registro obtenido correctamente.', registro);
+}
+
+export async function createCrecimiento(req, res) {
+    /*
+    Descripcion:
+    Crea un nuevo registro de crecimiento.
+    Parametros:
+    - req: Objeto request de Express (req.body)
+    - res: Objeto response de Express
+    Retorna:
+    - 201 con el registro creado
+    - 400/422 si falla la validacion
+    */
+    const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } = 
+        obtenerContextoPeticion(req);
+
+    const validacionErr = validarCuerpo(req.body, res);
+    if (validacionErr) return validacionErr;
+
+    const { finca, estanque, fechaRegistro, pesoActual } = 
+    req.body;
+    const dto = new MantCrecimientoDto(
+        grupoDatos, 
+        finca, 
+        estanque, 
+        fechaRegistro, 
+        pesoActual,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
+    );
+
+    const nuevoRegistro = await MantCrecimientoModel.create(dto);
+    return exito(
+        res, 
+        "Registro de crecimiento creado correctamente.", 
+        nuevoRegistro, 
+        201
+    );
 }
 
 export async function updateCrecimiento(req, res) {
@@ -116,17 +166,17 @@ export async function updateCrecimiento(req, res) {
     - 404 si no existe
     - 400/422 si falla la validacion
     */
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
 
     const validacionErr = validarCuerpo(req.body, res);
     if (validacionErr) return validacionErr;
 
-    const { finca, estanque, colaborador, fechaRegistro, pesoActual } = req.body;
+    const { finca, estanque, fechaRegistro, pesoActual } = 
+    req.body;
     const dto = new MantCrecimientoDto(
         grupoDatos, 
         finca, 
         estanque, 
-        colaborador, 
         fechaRegistro, 
         pesoActual
     );
@@ -140,37 +190,11 @@ export async function updateCrecimiento(req, res) {
     if (!actualizado) {
         return error(res, "Registro no encontrado", null, 404);
     }
-    return exito(res, "Registro de crecimiento actualizado correctamente.", actualizado);
-}
-
-export async function createCrecimiento(req, res) {
-    /*
-    Descripcion:
-    Crea un nuevo registro de crecimiento.
-    Parametros:
-    - req: Objeto request de Express (req.body)
-    - res: Objeto response de Express
-    Retorna:
-    - 201 con el registro creado
-    - 400/422 si falla la validacion
-    */
-    const grupoDatos = req.user.grupoDatos;
-
-    const validacionErr = validarCuerpo(req.body, res);
-    if (validacionErr) return validacionErr;
-
-    const { finca, estanque, colaborador, fechaRegistro, pesoActual } = req.body;
-    const dto = new MantCrecimientoDto(
-        grupoDatos, 
-        finca, 
-        estanque, 
-        colaborador, 
-        fechaRegistro, 
-        pesoActual
+    return exito(
+        res, 
+        "Registro de crecimiento actualizado correctamente.", 
+        actualizado
     );
-
-    const nuevoRegistro = await MantCrecimientoModel.create(dto);
-    return exito(res, "Registro de crecimiento creado correctamente.", nuevoRegistro, 201);
 }
 
 export async function deleteCrecimiento(req, res) {
@@ -184,7 +208,7 @@ export async function deleteCrecimiento(req, res) {
     - 200 con el registro eliminado
     - 404 si no existe
     */
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const eliminado = await MantCrecimientoModel.remove(
         req.params.id,
         grupoDatos

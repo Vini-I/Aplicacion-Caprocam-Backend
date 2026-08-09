@@ -162,5 +162,15 @@ export function validarTrazabilidad(req, res, next) {
             );
     }
 
+    // colaboradorId es opcional (el "colaborador responsable" en
+    // campo). Si el front lo manda, se valida su formato aqui.
+    if (!estaVacio(req.body.colaboradorId) && !esNumeroMayorCero(req.body.colaboradorId))
+        return error(
+            res,
+            'El campo colaboradorId debe ser numerico y mayor a cero.',
+            null,
+            400
+        );
+
     next();
 }

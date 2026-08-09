@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantVentas.controller.js
 Autor: Greivin Arguedas, Ricardo Chaves
-Fecha: 04/07/2026
+Fecha: 03/08/2026
 Modulo: Ventas
 Descripcion:
 Recibe las peticiones HTTP, delega y devuelve respuesta.
@@ -19,6 +19,7 @@ IMPORTS
 import { mantVentaDTO } from '../dtos/mantVentas.dto.js';
 import * as VentaModel from '../models/mantVentas.model.js';
 import { exito, error } from '../common/respuestaJson.js';
+import { obtenerContextoPeticion } from '../common/contextoPeticion.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -32,12 +33,13 @@ export async function getVentas(req, res) {
     Obtiene todos los registros de ventas.
 
     Parametros:
-    - Ninguno
+    - req: Objeto request de Express
+    - res: Objeto response de Express
 
     Retorna:
     - Una respuesta JSON con todos los registros de ventas.
     */
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const data = await VentaModel.findAll(grupoDatos);
     return exito(res, 'Ventas obtenidas correctamente.', data);
 }
@@ -48,12 +50,13 @@ export async function getVentaById(req, res) {
     Obtiene un registro de ventas por su ID.
 
     Parametros:
-    - id: ID del registro de ventas a obtener
+    - req: Objeto request de Express (req.params.id)
+    - res: Objeto response de Express
 
     Retorna:
     - Una respuesta JSON con el registro de ventas si se encuentra, o un error si no existe.
     */
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const registro = await VentaModel.findById(req.params.id, grupoDatos);
     if (!registro) {
         return error(res, 'Venta no encontrada.', null, 404);
@@ -74,7 +77,8 @@ export async function createVenta(req, res) {
     - Una respuesta JSON con el registro de venta creado.
     */
 
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } = 
+        obtenerContextoPeticion(req);
 
     const { 
         id, 
@@ -86,7 +90,6 @@ export async function createVenta(req, res) {
         precioKilo, 
         fecha, 
         total, 
-        colaborador, 
         comprador 
     } = req.body;
     
@@ -101,8 +104,9 @@ export async function createVenta(req, res) {
         precioKilo, 
         fecha, 
         total, 
-        colaborador, 
-        comprador
+        comprador,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
     );
 
     const nuevoRegistro = await VentaModel.create(dto);
@@ -123,7 +127,7 @@ export async function updateVenta(req, res) {
     - Una respuesta JSON con el registro de venta actualizado si se encuentra, o un error si no existe.
     */
 
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
 
     const { 
         id, 
@@ -135,7 +139,6 @@ export async function updateVenta(req, res) {
         precioKilo, 
         fecha, 
         total, 
-        colaborador, 
         comprador 
     } = req.body;
     
@@ -150,17 +153,24 @@ export async function updateVenta(req, res) {
         precioKilo, 
         fecha, 
         total, 
-        colaborador, 
         comprador
     );
     
-    const actualizado = await VentaModel.update(req.params.id, grupoDatos, dto);
+    const actualizado = await VentaModel.update(
+        req.params.id, 
+        grupoDatos, 
+        dto
+    );
     
     if (!actualizado) {
         return error(res, 'Venta no encontrada.', null, 404);
     }
 
-    return exito(res, 'Venta actualizada correctamente.', actualizado);
+    return exito(
+        res, 
+        'Venta actualizada correctamente.', 
+        actualizado
+    );
 }
 
 export async function deleteVenta(req, res) {
@@ -169,12 +179,13 @@ export async function deleteVenta(req, res) {
     Elimina un registro de venta por su ID.
     
     Parametros:
-    - id: ID del registro de ventas a eliminar
+    - req: Objeto request de Express (req.params.id)
+    - res: Objeto response de Express
     
     Retorna:
     - Una respuesta JSON con el registro de venta eliminado si se encuentra, o un error si no existe.
     */
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const eliminado = await VentaModel.remove(req.params.id, grupoDatos);
 
     if (!eliminado) {

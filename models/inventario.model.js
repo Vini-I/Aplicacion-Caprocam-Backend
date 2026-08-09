@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: inventario.model.js
-Autor: Brayan / Joan
-Fecha: 30/06/2026 — Adaptado a MySQL: 06/07/2026
+Autor: Joan
+Fecha: 4/08/2026
 Modulo: Inventario
 Descripcion:
 Capa de datos SOLO de la tabla inventario. Ya no crea ni
@@ -43,6 +43,8 @@ const SELECT_JOIN = `
         i.stock_minimo,
         i.proveedor_id,
         prov.nombre_empresa      AS nombre_proveedor,
+        i.creado_por_usuario_id,
+        i.creado_por_colaborador_id,
         i.version,
         i.fecha_creacion,
         i.fecha_actualizacion,
@@ -187,13 +189,16 @@ export async function create(dto, grupoDatos) {
     */
     const [result] = await pool.execute(`
         INSERT INTO inventario (
-            grupo_datos, producto_id, proveedor_id, cantidad, stock_minimo
-        ) VALUES (?, ?, ?, 0, ?)
+            grupo_datos, producto_id, proveedor_id, cantidad, stock_minimo,
+            creado_por_usuario_id, creado_por_colaborador_id
+        ) VALUES (?, ?, ?, 0, ?, ?, ?)
     `, [
         grupoDatos,
         dto.producto_id,
         dto.proveedor_id,
         dto.stock_minimo,
+        dto.creado_por_usuario_id,
+        dto.creado_por_colaborador_id,
     ]);
     return findById(result.insertId, grupoDatos);
 }

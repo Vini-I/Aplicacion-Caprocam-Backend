@@ -58,6 +58,7 @@ Common
 */
 
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -71,20 +72,29 @@ principales del controller.
 function obtenerContextoUsuario(req, res) {
     /*
     Descripcion:
-    Arma el contexto de confianza (grupoDatos, usuarioId) a partir
-    del payload del JWT que dejo verificarAuth en req.user. Este
-    contexto es la UNICA fuente valida para grupoDatos y usuarioId
-    en todo el modulo: nunca se leen del body porque un cliente
-    podria falsificarlos.
+    Arma el contexto de confianza (grupoDatos, creadoPorUsuarioId,
+    creadoPorColaboradorId) usando el helper comun
+    obtenerContextoPeticion, que ya distingue si la peticion viene
+    de un Usuario Web o de un Colaborador APK (req.user / req.colaborador).
+
+    Antes este modulo armaba el contexto a mano leyendo solo
+    req.user.id como "usuarioId" generico, sin distinguir si ese id
+    pertenecia a la tabla usuarios o a la tabla colaboradores. Esto
+    causaba que, cuando la peticion venia de un Usuario Web, su id
+    (de la tabla usuarios) se guardara en colaborador_id (FK hacia
+    colaboradores), violando la llave foranea o apuntando a otra
+    persona.
 
     Parametros:
     - req: Objeto request de Express (ya pasado por verificarAuth).
     - res: Objeto response de Express.
 
     Retorna:
-    - { grupoDatos, usuarioId } si req.user trae ambos valores validos.
-    - null si falta req.user o los valores no son validos (ya
-      se envio la respuesta de error correspondiente).
+    - { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } si
+      req trae un grupoDatos valido y al menos uno de los dos
+      identificadores de creador.
+    - null si falta algo (ya se envio la respuesta de error
+      correspondiente).
     */
 
     if (!req.user) {
@@ -92,20 +102,19 @@ function obtenerContextoUsuario(req, res) {
         return null;
     }
 
-    const grupoDatos = req.user.grupoDatos;
-    const usuarioId = req.user.id;
+    const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } = obtenerContextoPeticion(req);
 
     if (isEmpty(grupoDatos) || !isNumeroMayorCero(grupoDatos)) {
         error(res, "El token no contiene un grupo de datos valido.", null, 401);
         return null;
     }
 
-    if (isEmpty(usuarioId) || !isNumeroMayorCero(usuarioId)) {
-        error(res, "El token no contiene un usuario valido.", null, 401);
+    if (creadoPorUsuarioId === null && creadoPorColaboradorId === null) {
+        error(res, "No se pudo determinar quien hizo la peticion (usuario o colaborador autenticado).", null, 401);
         return null;
     }
 
-    return { grupoDatos, usuarioId };
+    return { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId };
 }
 
 function obtenerIdFinca(body) {
@@ -193,6 +202,10 @@ function validarCuerpo(body, res) {
         errores.push("El campo fecha es requerido.");
     } else if (!isFechaValida(body.fecha)) {
         errores.push("El campo fecha no es una fecha valida.");
+    }
+
+    if (!isNumeroOpcionalMayorIgualCero(body.idColaborador)) {
+        errores.push("El campo idColaborador debe ser numerico y mayor o igual que cero.");
     }
 
     if (!isNumeroOpcionalMayorIgualCero(body.cantidadSiembra)) {

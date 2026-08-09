@@ -3,12 +3,14 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: alimentacion.controller.js
-Autor: Felipe Salas
+Autor: Wendy Martinez
 Fecha: 06/07/2026
 Modulo: Alimentacion
 Descripcion:
 Recibe las peticiones HTTP, delega al modelo,
 y devuelve la respuesta al cliente.
+Aplica obtenerContextoPeticion para grupo_datos y creadores
+(soporta tanto Usuarios Web como Colaboradores APK).
 //////////////////////////////////////////////////////////
 */
 
@@ -61,13 +63,8 @@ Common
 
 import { exito, error } from "../common/respuestaJson.js";
 
-/*
-//////////////////////////////////////////////////////////
-CONSTANTES
-//////////////////////////////////////////////////////////
-*/
-
-//const grupoDatos = req.user.grupoDatos;
+// Common
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -181,6 +178,10 @@ function validarCuerpo(body, res) {
         errores.push("Metodo invalido. Opciones: " + Object.values(MetodoAlimentacion).join(", "));
     }
 
+    if (!isNumeroOpcionalMayorIgualCero(body.idColaborador)) {
+        errores.push("El campo idColaborador debe ser numerico y mayor o igual que cero.");
+    }
+
     if (!isNumeroOpcionalMayorIgualCero(body.idProveedor)) {
         errores.push("El campo idProveedor debe ser numerico y mayor o igual que cero.");
     }
@@ -248,7 +249,7 @@ export async function getAlimentaciones(req, res) {
     */
 
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
 
         const filtros = {
             idFinca: req.query.idFinca,
@@ -281,7 +282,7 @@ export async function getAlimentacionById(req, res) {
     */
 
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
 
         const errId = validarIdParametro(req.params.id, res);
 
@@ -318,11 +319,10 @@ export async function createAlimentacion(req, res) {
     - 422 si hay errores de validacion.
     - 500 si ocurre un error en la base de datos.
     */
-    const grupoDatos = req.user.grupoDatos;
-    const idProveedor = req.user.idProveedor;
 
     try {
-        
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
 
         const err = validarCuerpo(req.body, res);
 
@@ -349,9 +349,14 @@ export async function createAlimentacion(req, res) {
             );
         }
 
-        const dto = new AlimentacionDTO(req.body, grupoDatos);
+        const dto = new AlimentacionDTO({
+            ...req.body,
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        });
 
-        const nuevo = await AlimentacionModel.create(dto, idProveedor );
+        const nuevo = await AlimentacionModel.create(dto);
 
         return exito(res, "Registro de alimentacion creado correctamente.", nuevo, 201);
     } catch (err) {
@@ -381,7 +386,7 @@ export async function updateAlimentacion(req, res) {
     */
 
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
 
         const errId = validarIdParametro(req.params.id, res);
 
@@ -420,7 +425,10 @@ export async function updateAlimentacion(req, res) {
             );
         }
 
-        const dto = new AlimentacionDTO(req.body, grupoDatos);
+        // El creador original (creadoPorUsuarioId/creadoPorColaboradorId)
+        // no se reenvia aqui: AlimentacionModel.update() nunca toca esas
+        // columnas, sin importar lo que traiga el dto.
+        const dto = new AlimentacionDTO({ ...req.body, grupoDatos });
 
         const actualizado = await AlimentacionModel.update(req.params.id, dto, grupoDatos);
 
@@ -449,7 +457,7 @@ export async function deleteAlimentacion(req, res) {
     */
 
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
 
         const errId = validarIdParametro(req.params.id, res);
 

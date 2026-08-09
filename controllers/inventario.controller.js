@@ -3,12 +3,11 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: inventario.controller.js
-Autor: Brayan / Joan
-Fecha: 30/06/2026 adaptado a MySQL: 06/07/2026
+Autor: Oscar Mario
+Fecha: 1/08/2026
 Modulo: Inventario
 Descripcion:
-Controlador CRUD (sin cantidad) para inventario. La cantidad
-se maneja desde movimientoInventario.controller.js.  
+Controlador CRUD  para inventario.   
 //////////////////////////////////////////////////////////
 */
 
@@ -31,6 +30,7 @@ import * as InventarioModel from "../models/inventario.model.js";
 
 // Common
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -53,10 +53,10 @@ function validarCuerpo(body, res) {
     - Objeto error de Express si falla, o null si es correcto.
   */
 
-  if (isEmpty(body.producto_id)) {
+  if (isEmpty(body.producto_id) && isEmpty(body.productoId)) {
     return error(res, "El campo producto_id es requerido.", null, 400);
   }
-  const productoIdNum = Number(body.producto_id);
+  const productoIdNum = Number(body.producto_id ?? body.productoId);
   if (
     Number.isNaN(productoIdNum) ||
     !Number.isInteger(productoIdNum) ||
@@ -65,12 +65,14 @@ function validarCuerpo(body, res) {
     return error(res, "El producto_id debe ser un entero positivo.", null, 422);
   }
 
-  if (!isNumeroValido(body.stock_minimo)) {
+  const stockMinimoValor = body.stock_minimo ?? body.stockMinimo;
+  if (!isNumeroValido(stockMinimoValor)) {
     return error(res, "El stock_minimo debe ser mayor o igual a 0.", null, 422);
   }
 
-  if (!isEmpty(body.proveedor_id)) {
-    const idNumero = Number(body.proveedor_id);
+  const proveedorIdValor = body.proveedor_id ?? body.proveedorId;
+  if (!isEmpty(proveedorIdValor)) {
+    const idNumero = Number(proveedorIdValor);
     if (
       Number.isNaN(idNumero) ||
       !Number.isInteger(idNumero) ||
@@ -128,7 +130,7 @@ export async function getInventarios(req, res) {
   */
 
   try {
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const data = await InventarioModel.findAll(grupoDatos);
     return exito(res, "Inventario obtenido correctamente.", data);
   } catch (err) {
@@ -153,7 +155,7 @@ export async function getInventarioById(req, res) {
   if (errId) return errId;
 
   try {
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const item = await InventarioModel.findById(req.params.id, grupoDatos);
     if (!item)
       return error(res, "Registro de inventario no encontrado.", null, 404);
@@ -180,10 +182,15 @@ export async function createInventario(req, res) {
   if (err) return err;
 
   try {
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+      obtenerContextoPeticion(req);
+
+    const productoIdFinal = req.body.productoId ?? req.body.producto_id;
+    const proveedorIdFinal = req.body.proveedorId ?? req.body.proveedor_id;
+    const stockMinimoFinal = req.body.stockMinimo ?? req.body.stock_minimo;
 
     const productoExiste = await InventarioModel.verificarProductoExiste(
-      req.body.producto_id,
+      productoIdFinal,
       grupoDatos
     );
     if (!productoExiste) {
@@ -191,7 +198,7 @@ export async function createInventario(req, res) {
     }
 
     const yaExiste = await InventarioModel.findByProductoId(
-      req.body.producto_id,
+      productoIdFinal,
       grupoDatos
     );
     if (yaExiste) {
@@ -203,9 +210,9 @@ export async function createInventario(req, res) {
       );
     }
 
-    if (!isEmpty(req.body.proveedor_id)) {
+    if (!isEmpty(proveedorIdFinal)) {
       const provExiste = await InventarioModel.verificarProveedorExiste(
-        req.body.proveedor_id,
+        proveedorIdFinal,
         grupoDatos
       );
       if (!provExiste) {
@@ -213,7 +220,14 @@ export async function createInventario(req, res) {
       }
     }
 
-    const dto = new InventarioCreateDTO(req.body);
+    const dto = new InventarioCreateDTO({
+      productoId: productoIdFinal,
+      proveedorId: proveedorIdFinal,
+      stockMinimo: stockMinimoFinal,
+      creadoPorUsuarioId,
+      creadoPorColaboradorId,
+    });
+    
     const nuevo = await InventarioModel.create(dto, grupoDatos);
 
     return exito(
@@ -252,15 +266,18 @@ export async function updateInventario(req, res) {
   const errId = validarIdParametro(req.params.id, res);
   if (errId) return errId;
 
-  if (!isNumeroValido(req.body.stock_minimo)) {
+  const stockMinimoValor = req.body.stockMinimo ?? req.body.stock_minimo;
+  if (!isNumeroValido(stockMinimoValor)) {
     return error(res, "El stock_minimo debe ser mayor o igual a 0.", null, 422);
   }
 
   try {
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     
-    if (!isEmpty(req.body.proveedor_id)) {
-      const idNumero = Number(req.body.proveedor_id);
+    const proveedorIdFinal = req.body.proveedorId ?? req.body.proveedor_id;
+    
+    if (!isEmpty(proveedorIdFinal)) {
+      const idNumero = Number(proveedorIdFinal);
       if (
         Number.isNaN(idNumero) ||
         !Number.isInteger(idNumero) ||
@@ -286,7 +303,10 @@ export async function updateInventario(req, res) {
     if (!actual)
       return error(res, "Registro de inventario no encontrado.", null, 404);
 
-    const dto = new InventarioUpdateDTO(req.body);
+    const dto = new InventarioUpdateDTO({
+        proveedorId: proveedorIdFinal,
+        stockMinimo: stockMinimoValor
+    });
     const actualizado = await InventarioModel.update(req.params.id, dto, grupoDatos);
 
     return exito(
@@ -321,7 +341,7 @@ export async function deleteInventario(req, res) {
   if (errId) return errId;
 
   try {
-    const grupoDatos = req.user.grupoDatos;
+    const { grupoDatos } = obtenerContextoPeticion(req);
     const eliminado = await InventarioModel.remove(req.params.id, grupoDatos);
     if (!eliminado)
       return error(res, "Registro de inventario no encontrado.", null, 404);

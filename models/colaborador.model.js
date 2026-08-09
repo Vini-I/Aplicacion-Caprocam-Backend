@@ -4,50 +4,23 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.model.js
 Autor: Marco Vásquez
-Fecha: 29/07/2026
+Fecha: 08/08/2026
 Modulo: Colaboradores
 Descripcion:
-Capa de datos del modulo de colaboradores.
+Capa de datos del modulo de colaboradores (sin roles).
 Conectado a MySQL via pool. Usa borrado logico y soporte
 para busquedas por cedula para el flujo APK movil.
 //////////////////////////////////////////////////////////
 */
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Config
-*/
-
 import pool from '../config/database.js';
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
-
-Todas las funciones principales dependen de mapearColaborador().
-*/
-
 function mapearColaborador(fila) {
-    /*
-    Descripcion:
-    Convierte una fila MySQL (snake_case) a camelCase.
-
-    Parametros:
-    - fila: Objeto crudo de MySQL.
-
-    Retorna:
-    - Objeto colaborador en camelCase.
-    */
     return {
         id:                 fila.id,
         uuid:               fila.uuid,
         grupoDatos:         fila.grupo_datos,
         fincaId:            fila.finca_id,
-        rolId:              fila.rol_id,
         nombre:             fila.nombre,
         apellidos:          fila.apellidos,
         cedula:             fila.cedula,
@@ -61,23 +34,7 @@ function mapearColaborador(fila) {
     };
 }
 
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES PRINCIPALES
-//////////////////////////////////////////////////////////
-*/
-
 export async function findAll(grupoDatos) {
-    /*
-    Descripcion:
-    Obtiene todos los colaboradores activos del grupo.
-
-    Parametros:
-    - grupoDatos: Grupo de datos del usuario en sesion.
-
-    Retorna:
-    - Lista de colaboradores mapeados a camelCase.
-    */
     const [filas] = await pool.query(
         `SELECT * FROM colaboradores
          WHERE grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
@@ -87,17 +44,6 @@ export async function findAll(grupoDatos) {
 }
 
 export async function findById(id, grupoDatos) {
-    /*
-    Descripcion:
-    Busca un colaborador por ID dentro del grupo.
-
-    Parametros:
-    - id:         ID del colaborador.
-    - grupoDatos: Grupo de datos del usuario en sesion.
-
-    Retorna:
-    - El colaborador encontrado o null.
-    */
     const [filas] = await pool.query(
         `SELECT * FROM colaboradores
          WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
@@ -107,18 +53,6 @@ export async function findById(id, grupoDatos) {
 }
 
 export async function findByCedula(cedula) {
-    /*
-    Descripcion:
-    Busca un colaborador activo por su cedula.
-    Util para el flujo del APK movil donde se consulta
-    la cedula para obtener el grupo_datos del colaborador.
-
-    Parametros:
-    - cedula: Numero de cedula del colaborador.
-
-    Retorna:
-    - El colaborador encontrado o null.
-    */
     const [filas] = await pool.query(
         `SELECT * FROM colaboradores
          WHERE cedula = ? AND activo = TRUE AND deleted_at IS NULL`,
@@ -128,26 +62,14 @@ export async function findByCedula(cedula) {
 }
 
 export async function create(dto, grupoDatos) {
-    /*
-    Descripcion:
-    Inserta un nuevo colaborador en la DB con PIN cifrado y cedula.
-
-    Parametros:
-    - dto:        Objeto ColaboradorDTO con los datos.
-    - grupoDatos: Grupo de datos del usuario en sesion.
-
-    Retorna:
-    - El colaborador recien creado.
-    */
     const [result] = await pool.query(
         `INSERT INTO colaboradores
-         (grupo_datos, finca_id, rol_id, nombre, apellidos, cedula,
+         (grupo_datos, finca_id, nombre, apellidos, cedula,
           telefono, email, nombre_usuario, pin_hash, tipo_colaborador)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             grupoDatos,
             dto.fincaId,
-            dto.rolId,
             dto.nombre,
             dto.apellidos,
             dto.cedula,
@@ -162,25 +84,11 @@ export async function create(dto, grupoDatos) {
 }
 
 export async function update(id, dto, grupoDatos) {
-    /*
-    Descripcion:
-    Actualiza un colaborador existente e incrementa version.
-    Actualiza pin_hash solo si viene especificado en el DTO.
-
-    Parametros:
-    - id:         ID del colaborador.
-    - dto:        Objeto ColaboradorDTO con los nuevos datos.
-    - grupoDatos: Grupo de datos del usuario en sesion.
-
-    Retorna:
-    - El colaborador actualizado o null si no existe.
-    */
     let querySQL = `UPDATE colaboradores
-         SET finca_id = ?, rol_id = ?, nombre = ?, apellidos = ?,
+         SET finca_id = ?, nombre = ?, apellidos = ?,
              cedula = ?, telefono = ?, email = ?, tipo_colaborador = ?`;
     const params = [
         dto.fincaId,
-        dto.rolId,
         dto.nombre,
         dto.apellidos,
         dto.cedula,
@@ -205,17 +113,6 @@ export async function update(id, dto, grupoDatos) {
 }
 
 export async function remove(id, grupoDatos) {
-    /*
-    Descripcion:
-    Borrado logico del colaborador.
-
-    Parametros:
-    - id:         ID del colaborador.
-    - grupoDatos: Grupo de datos del usuario en sesion.
-
-    Retorna:
-    - El colaborador antes de ser desactivado, o null si no existe.
-    */
     const colaborador = await findById(id, grupoDatos);
     if (!colaborador) return null;
 

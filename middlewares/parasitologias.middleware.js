@@ -21,8 +21,7 @@ const camposRequeridos = [
     "estanqueId",
     "fechaReporte",
     "parasito",
-    "camaronesMuestreados",
-    "camaronesInfectados"
+    "gradoInfeccion"
 ];
 
 export function validarGrupoDatos(
@@ -34,7 +33,8 @@ export function validarGrupoDatos(
         req.colaborador?.grupoDatos ??
         req.user?.grupoDatos;
 
-    const grupoNumero = Number(grupoDatos);
+    const grupoNumero =
+        Number(grupoDatos);
 
     if (
         Number.isInteger(grupoNumero) === false ||
@@ -76,10 +76,17 @@ export function validarBodyParasitologia(
         i < camposRequeridos.length;
         i++
     ) {
-        const campo = camposRequeridos[i];
+        const campo =
+            camposRequeridos[i];
 
-        if (campoVacio(req.body[campo])) {
-            faltantes.push(campo);
+        if (
+            campoVacio(
+                req.body[campo]
+            )
+        ) {
+            faltantes.push(
+                campo
+            );
         }
     }
 
