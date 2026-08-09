@@ -27,16 +27,16 @@ export function verificarAuth(req, res, next) {
         const decoded = jwt.verify(token, JWT_SECRET);
 
         if (decoded.esColaborador) {
-            req.user        = decoded;
-            req.colaborador = {
-                id:         decoded.id,
-                grupoDatos: decoded.grupoDatos,
-                nombre:     decoded.nombre,
-            };
-        } else {
-            req.user        = decoded;
-            req.colaborador = null;
+            return error(
+                res, 
+                'Acceso denegado. Los colaboradores no pueden acceder a esta ruta.', 
+                null, 
+                403
+            );
         }
+
+        req.user        = decoded;
+        req.colaborador = null;
 
         const ahora = Math.floor(Date.now() / 1000);
         const tiempoRestante = decoded.exp - ahora;
