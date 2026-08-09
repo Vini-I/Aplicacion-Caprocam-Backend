@@ -43,8 +43,8 @@ export async function findAll(grupoDatos) {
     - Lista con todos los registros de crecimiento.
     */
 
-  const [rows] = await pool.execute(
-    `SELECT 
+    const [rows] = await pool.execute(
+        `SELECT 
             id,
             grupo_datos AS grupoDatos,
             finca_id AS finca,
@@ -56,9 +56,36 @@ export async function findAll(grupoDatos) {
         FROM crecimientos
         WHERE grupo_datos = ?
         AND deleted_at IS NULL`,
-    [grupoDatos],
-  );
-  return rows;
+        [grupoDatos]
+    );
+    if (rows.length === 0) return [];
+
+    const [calculos] = await pool.execute(
+        `SELECT 
+            id,
+            crecimiento_id AS crecimientoId,
+            cantidad_individuos AS cantidad,
+            peso_total AS pesoTotal,
+            peso_promedio_individual AS pesoPromedio
+        FROM calculos_crecimiento
+        WHERE grupo_datos = ?
+        AND deleted_at IS NULL`,
+        [grupoDatos]
+    );
+
+    const calculosMap = {};
+    for (const c of calculos) {
+        if (!calculosMap[c.crecimientoId]) {
+            calculosMap[c.crecimientoId] = [];
+        }
+        const { crecimientoId, ...datosMuestreo } = c;
+        calculosMap[c.crecimientoId].push(datosMuestreo);
+    }
+
+    for (const row of rows) {
+        row.muestreos = calculosMap[row.id] || [];
+    }
+    return rows;
 }
 
 export async function findById(id, grupoDatos) {
@@ -74,8 +101,8 @@ export async function findById(id, grupoDatos) {
     - El registro encontrado o null si no existe.
     */
 
-  const [rows] = await pool.execute(
-    `SELECT 
+    const [rows] = await pool.execute(
+        `SELECT 
             id,
             grupo_datos AS grupoDatos,
             finca_id AS finca,
@@ -88,10 +115,25 @@ export async function findById(id, grupoDatos) {
         WHERE id = ?
         AND grupo_datos = ?
         AND deleted_at IS NULL`,
-    [id, grupoDatos],
-  );
+        [id, grupoDatos]
+    );
+    const crecimiento = rows[0] || null;
+    if (!crecimiento) return null;
 
-  return rows[0] || null;
+    const [calculos] = await pool.execute(
+        `SELECT 
+            id,
+            cantidad_individuos AS cantidad,
+            peso_total AS pesoTotal,
+            peso_promedio_individual AS pesoPromedio
+        FROM calculos_crecimiento
+        WHERE crecimiento_id = ?
+        AND grupo_datos = ?
+        AND deleted_at IS NULL`,
+        [id, grupoDatos]
+    );
+    crecimiento.muestreos = calculos;
+    return crecimiento;
 }
 
 export async function create(dto) {
@@ -120,7 +162,6 @@ export async function create(dto) {
     );
     const crecimientoId = result.insertId;
     
-    // Si existen muestreos, guardarlos en calculos_crecimiento
     if (dto.muestreos && dto.muestreos.length > 0) {
         for (const m of dto.muestreos) {
             await conn.execute(
@@ -147,9 +188,11 @@ export async function create(dto) {
     }
         await conn.commit();
         return await findById(crecimientoId, dto.grupoDatos);
+
   } catch (err) {
         await conn.rollback();
         throw err;
+
   } finally {
         conn.release();
   }
@@ -171,6 +214,7 @@ export async function update(id, grupoDatos, dto) {
 
     const registro = await findById(id, grupoDatos);
     if (!registro) return null;
+
     await pool.execute(
         `UPDATE crecimientos
         SET
@@ -189,6 +233,7 @@ export async function update(id, grupoDatos, dto) {
             grupoDatos
         ]
     );
+
     return await findById(id, grupoDatos);
 }
 
@@ -207,10 +252,11 @@ export async function remove(id, grupoDatos) {
 
     const registro = await findById(id, grupoDatos);
     if (!registro) return null;
+
     const conn = await pool.getConnection();
     try {
         await conn.beginTransaction();
-        // Soft delete del registro principal
+
         await conn.execute(
             `UPDATE crecimientos
             SET deleted_at = NOW()
@@ -218,7 +264,7 @@ export async function remove(id, grupoDatos) {
             AND grupo_datos = ?`,
             [id, grupoDatos]
         );
-        // Soft delete coordinado de los calculos relacionados
+
         await conn.execute(
             `UPDATE calculos_crecimiento
             SET deleted_at = NOW()
@@ -228,9 +274,11 @@ export async function remove(id, grupoDatos) {
         );
         await conn.commit();
         return registro;
+
     } catch (err) {
         await conn.rollback();
         throw err;
+
     } finally {
         conn.release();
     }
