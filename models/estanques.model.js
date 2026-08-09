@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.model.js
 Autor: Gerald Alfaro
-Fecha: 18/07/2026
+Fecha: 31/07/2026
 Modulo: Estanques
 Descripcion:
 Capa de datos del modulo de estanques.
@@ -39,12 +39,6 @@ export async function findAll(filtros) {
     Obtiene los estanques activos que pertenecen al grupo
     de datos del usuario autenticado.
     Permite filtrar opcionalmente por finca.
-
-    Parametros:
-    - filtros: Objeto con grupoDatos e idFinca opcional.
-
-    Retorna:
-    - Lista de estanques encontrados.
     */
 
     let sql = `
@@ -60,16 +54,10 @@ export async function findAll(filtros) {
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -87,6 +75,7 @@ export async function findAll(filtros) {
 
     if (filtros.idFinca) {
         sql = sql + " AND finca_id = ?";
+
         params.push(
             filtros.idFinca
         );
@@ -104,19 +93,14 @@ export async function findAll(filtros) {
     );
 }
 
-export async function findById(id, grupoDatos) {
+export async function findById(
+    id,
+    grupoDatos
+) {
     /*
     Descripcion:
     Busca un estanque activo por su identificador numerico
     y por el grupo de datos del usuario autenticado.
-
-    Parametros:
-    - id: Identificador del estanque.
-    - grupoDatos: Grupo obtenido desde el JWT.
-
-    Retorna:
-    - El estanque encontrado.
-    - null si no existe, fue eliminado o pertenece a otro grupo.
     */
 
     const [rows] = await pool.execute(
@@ -133,16 +117,10 @@ export async function findById(id, grupoDatos) {
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -180,16 +158,6 @@ export async function findByCodigoAndFinca(
     Descripcion:
     Busca un estanque por codigo, finca y grupo de datos.
     Permite ignorar un id durante una actualizacion.
-
-    Parametros:
-    - codigo: Codigo del estanque.
-    - idFinca: Identificador de la finca.
-    - idIgnorado: Identificador que se debe ignorar.
-    - grupoDatos: Grupo obtenido desde el JWT.
-
-    Retorna:
-    - El estanque encontrado.
-    - null si no existe coincidencia.
     */
 
     let sql = `
@@ -205,16 +173,10 @@ export async function findByCodigoAndFinca(
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico,
+            creado_por_usuario_id,
+            creado_por_colaborador_id,
             activo,
             fecha_creacion,
             fecha_actualizacion,
@@ -234,13 +196,15 @@ export async function findByCodigoAndFinca(
         grupoDatos
     ];
 
-    if (idIgnorado !== null) {
-        if (idIgnorado !== undefined) {
-            sql = sql + " AND id <> ?";
-            params.push(
-                idIgnorado
-            );
-        }
+    if (
+        idIgnorado !== null &&
+        idIgnorado !== undefined
+    ) {
+        sql = sql + " AND id <> ?";
+
+        params.push(
+            idIgnorado
+        );
     }
 
     sql = sql + " LIMIT 1";
@@ -267,14 +231,6 @@ export async function fincaPerteneceGrupo(
     Descripcion:
     Verifica que una finca exista, se encuentre activa
     y pertenezca al grupo de datos del usuario.
-
-    Parametros:
-    - idFinca: Identificador de la finca.
-    - grupoDatos: Grupo obtenido desde el JWT.
-
-    Retorna:
-    - true si la finca pertenece al grupo.
-    - false si no existe o pertenece a otro grupo.
     */
 
     const [rows] = await pool.execute(
@@ -304,26 +260,13 @@ export async function create(dto) {
     /*
     Descripcion:
     Inserta un nuevo estanque utilizando el grupo de datos
-    recibido desde el controller.
-
-    Parametros:
-    - dto: Objeto EstanqueDTO con datos normalizados.
-
-    Retorna:
-    - El estanque creado.
+    y la identidad del creador recibidos desde el controller.
     */
 
-    const fechaSiembra = normalizarFechaMysqlOpcional(
-        dto.fechaSiembra
-    );
-
-    const fechaInicioEngorde = normalizarFechaMysqlOpcional(
-        dto.fechaInicioEngorde
-    );
-
-    const fechaMantenimiento = normalizarFechaMysqlOpcional(
-        dto.fechaMantenimiento
-    );
+    const fechaMantenimiento =
+        normalizarFechaMysqlOpcional(
+            dto.fechaMantenimiento
+        );
 
     const [result] = await pool.execute(
         `
@@ -337,18 +280,12 @@ export async function create(dto) {
             ancho,
             profundidad,
             fuente_agua,
-            especie,
-            fecha_siembra,
-            fecha_inicio_engorde,
             fecha_mantenimiento,
-            densidad_siembra,
             precria,
-            metodo_alimentacion,
-            proveedor_alimento,
-            numero_aireadores,
-            tiene_alimentador_automatico
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             dto.grupoDatos,
@@ -360,16 +297,10 @@ export async function create(dto) {
             dto.ancho,
             dto.profundidad,
             dto.fuenteAgua,
-            dto.especie,
-            fechaSiembra,
-            fechaInicioEngorde,
             fechaMantenimiento,
-            dto.densidadSiembra,
             dto.precria,
-            dto.metodoAlimentacion,
-            dto.proveedorAlimento,
-            dto.numeroAireadores,
-            dto.tieneAlimentadorAutomatico
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId
         ]
     );
 
@@ -387,16 +318,8 @@ export async function update(
     /*
     Descripcion:
     Actualiza un estanque que pertenece al grupo del usuario.
-    El campo grupo_datos no se modifica.
-
-    Parametros:
-    - id: Identificador del estanque.
-    - dto: Datos actualizados.
-    - grupoDatos: Grupo obtenido desde el JWT.
-
-    Retorna:
-    - El estanque actualizado.
-    - null si no existe o pertenece a otro grupo.
+    El campo grupo_datos y los campos de auditoria del
+    creador no se modifican.
     */
 
     const actual = await findById(
@@ -408,17 +331,10 @@ export async function update(
         return null;
     }
 
-    const fechaSiembra = normalizarFechaMysqlOpcional(
-        dto.fechaSiembra
-    );
-
-    const fechaInicioEngorde = normalizarFechaMysqlOpcional(
-        dto.fechaInicioEngorde
-    );
-
-    const fechaMantenimiento = normalizarFechaMysqlOpcional(
-        dto.fechaMantenimiento
-    );
+    const fechaMantenimiento =
+        normalizarFechaMysqlOpcional(
+            dto.fechaMantenimiento
+        );
 
     await pool.execute(
         `
@@ -432,16 +348,8 @@ export async function update(
             ancho = ?,
             profundidad = ?,
             fuente_agua = ?,
-            especie = ?,
-            fecha_siembra = ?,
-            fecha_inicio_engorde = ?,
             fecha_mantenimiento = ?,
-            densidad_siembra = ?,
             precria = ?,
-            metodo_alimentacion = ?,
-            proveedor_alimento = ?,
-            numero_aireadores = ?,
-            tiene_alimentador_automatico = ?,
             version = version + 1
         WHERE id = ?
         AND grupo_datos = ?
@@ -457,16 +365,8 @@ export async function update(
             dto.ancho,
             dto.profundidad,
             dto.fuenteAgua,
-            dto.especie,
-            fechaSiembra,
-            fechaInicioEngorde,
             fechaMantenimiento,
-            dto.densidadSiembra,
             dto.precria,
-            dto.metodoAlimentacion,
-            dto.proveedorAlimento,
-            dto.numeroAireadores,
-            dto.tieneAlimentadorAutomatico,
             id,
             grupoDatos
         ]
@@ -478,22 +378,124 @@ export async function update(
     );
 }
 
+export async function actualizarEstanqueOrigen(
+    connection,
+    idEstanque,
+    grupoDatos,
+    estado
+) {
+    /*
+    Descripcion:
+    Actualiza el estado del estanque de origen durante
+    un movimiento realizado desde el modulo Trazabilidad.
+
+    Esta funcion no crea ni confirma una transaccion.
+    Utiliza la connection recibida desde Trazabilidad
+    para formar parte de la misma transaccion.
+
+    Parametros:
+    - connection: Conexion MySQL con transaccion activa.
+    - idEstanque: Identificador del estanque de origen.
+    - grupoDatos: Grupo de datos obtenido desde el JWT.
+    - estado: Nuevo estado definido por la logica del
+      movimiento de Trazabilidad.
+
+    Retorna:
+    - true si el estanque fue actualizado.
+    - false si no se encontro un estanque valido.
+    */
+
+    const [resultado] =
+        await connection.execute(
+            `
+            UPDATE estanques
+            SET
+                estado = ?,
+                version = version + 1
+            WHERE id = ?
+            AND grupo_datos = ?
+            AND deleted_at IS NULL
+            AND activo = TRUE
+            `,
+            [
+                estado,
+                idEstanque,
+                grupoDatos
+            ]
+        );
+
+    return (
+        resultado.affectedRows > 0
+    );
+}
+
+export async function actualizarEstanqueDestino(
+    connection,
+    idEstanque,
+    grupoDatos,
+    estado
+) {
+    /*
+    Descripcion:
+    Actualiza el estado del estanque de destino durante
+    un movimiento realizado desde el modulo Trazabilidad.
+
+    Esta funcion no crea ni confirma una transaccion.
+    Utiliza la connection recibida desde Trazabilidad
+    para formar parte de la misma transaccion.
+
+    Parametros:
+    - connection: Conexion MySQL con transaccion activa.
+    - idEstanque: Identificador del estanque de destino.
+    - grupoDatos: Grupo de datos obtenido desde el JWT.
+    - estado: Nuevo estado definido por la logica del
+      movimiento de Trazabilidad.
+
+    Retorna:
+    - true si el estanque fue actualizado.
+    - false si no se encontro un estanque valido.
+    */
+
+    const [resultado] =
+        await connection.execute(
+            `
+            UPDATE estanques
+            SET
+                estado = ?,
+                version = version + 1
+            WHERE id = ?
+            AND grupo_datos = ?
+            AND deleted_at IS NULL
+            AND activo = TRUE
+            `,
+            [
+                estado,
+                idEstanque,
+                grupoDatos
+            ]
+        );
+
+    return (
+        resultado.affectedRows > 0
+    );
+}
+
 export async function remove(
     id,
     grupoDatos
 ) {
     /*
     Descripcion:
-    Elimina logicamente un estanque que pertenece al grupo
-    de datos del usuario autenticado.
+    Elimina logicamente un estanque y deja sin asignar
+    los equipos que se encontraban relacionados.
 
     Parametros:
     - id: Identificador del estanque.
-    - grupoDatos: Grupo obtenido desde el JWT.
+    - grupoDatos: Grupo de datos obtenido desde el JWT.
 
     Retorna:
-    - El estanque eliminado logicamente.
-    - null si no existe o pertenece a otro grupo.
+    - Estanque eliminado logicamente.
+    - null si el estanque no existe.
     */
 
     const actual = await findById(
@@ -505,34 +507,78 @@ export async function remove(
         return null;
     }
 
-    await pool.execute(
-        `
-        UPDATE estanques
-        SET
-            activo = FALSE,
-            deleted_at = CURRENT_TIMESTAMP,
-            version = version + 1
-        WHERE id = ?
-        AND grupo_datos = ?
-        AND deleted_at IS NULL
-        AND activo = TRUE
-        `,
-        [
-            id,
-            grupoDatos
-        ]
-    );
+    const connection =
+        await pool.getConnection();
 
-    return actual;
+    try {
+        await connection.beginTransaction();
+
+        /*
+        Deja sin asignar los equipos relacionados,
+        pero no elimina ni desactiva los equipos.
+        */
+
+        await connection.execute(
+            `
+            UPDATE equipos
+            SET
+                estanque_id = NULL,
+                version = version + 1
+            WHERE estanque_id = ?
+            AND grupo_datos = ?
+            AND deleted_at IS NULL
+            `,
+            [
+                id,
+                grupoDatos
+            ]
+        );
+
+        /*
+        Realiza la eliminacion logica del estanque.
+        */
+
+        const [resultado] =
+            await connection.execute(
+                `
+                UPDATE estanques
+                SET
+                    activo = FALSE,
+                    deleted_at = CURRENT_TIMESTAMP,
+                    version = version + 1
+                WHERE id = ?
+                AND grupo_datos = ?
+                AND deleted_at IS NULL
+                AND activo = TRUE
+                `,
+                [
+                    id,
+                    grupoDatos
+                ]
+            );
+
+        if (resultado.affectedRows === 0) {
+            await connection.rollback();
+
+            return null;
+        }
+
+        await connection.commit();
+
+        return actual;
+    } catch (err) {
+        await connection.rollback();
+
+        throw err;
+    } finally {
+        connection.release();
+    }
 }
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
-
-Contiene funciones internas usadas por el modelo para
-mapear, normalizar y convertir datos.
 */
 
 function mapearLista(rows) {
@@ -540,19 +586,19 @@ function mapearLista(rows) {
     Descripcion:
     Convierte una lista de filas de MySQL al formato usado
     por el backend y el frontend.
-
-    Parametros:
-    - rows: Lista de filas obtenidas desde MySQL.
-
-    Retorna:
-    - Lista de estanques mapeados.
     */
 
     const resultado = [];
 
-    for (let i = 0; i < rows.length; i++) {
+    for (
+        let i = 0;
+        i < rows.length;
+        i++
+    ) {
         resultado.push(
-            mapearFila(rows[i])
+            mapearFila(
+                rows[i]
+            )
         );
     }
 
@@ -563,12 +609,6 @@ function mapearFila(row) {
     /*
     Descripcion:
     Convierte una fila de MySQL en un objeto camelCase.
-
-    Parametros:
-    - row: Fila obtenida desde MySQL.
-
-    Retorna:
-    - Objeto estanque.
     */
 
     return {
@@ -579,39 +619,52 @@ function mapearFila(row) {
         codigo: row.codigo,
         tipoEstanque: row.tipo_estanque,
         estado: row.estado,
-        largo: Number(row.largo),
-        ancho: Number(row.ancho),
-        profundidad: Number(row.profundidad),
-        fuenteAgua: row.fuente_agua,
-        especie: row.especie,
-        fechaSiembra: formatearFecha(
-            row.fecha_siembra
+
+        largo: Number(
+            row.largo
         ),
-        fechaInicioEngorde: formatearFecha(
-            row.fecha_inicio_engorde
+
+        ancho: Number(
+            row.ancho
         ),
-        fechaMantenimiento: formatearFecha(
-            row.fecha_mantenimiento
+
+        profundidad: Number(
+            row.profundidad
         ),
-        densidadSiembra: convertirNumero(
-            row.densidad_siembra
-        ),
+
+        fuenteAgua:
+            row.fuente_agua,
+
+        fechaMantenimiento:
+            formatearFecha(
+                row.fecha_mantenimiento
+            ),
+
         precria: Boolean(
             row.precria
         ),
-        metodoAlimentacion: row.metodo_alimentacion,
-        proveedorAlimento: row.proveedor_alimento,
-        numeroAireadores: row.numero_aireadores,
-        tieneAlimentadorAutomatico: Boolean(
-            row.tiene_alimentador_automatico
-        ),
+
+        creadoPorUsuarioId:
+            row.creado_por_usuario_id,
+
+        creadoPorColaboradorId:
+            row.creado_por_colaborador_id,
+
         activo: Boolean(
             row.activo
         ),
-        fechaCreacion: row.fecha_creacion,
-        fechaActualizacion: row.fecha_actualizacion,
-        deletedAt: row.deleted_at,
-        version: row.version
+
+        fechaCreacion:
+            row.fecha_creacion,
+
+        fechaActualizacion:
+            row.fecha_actualizacion,
+
+        deletedAt:
+            row.deleted_at,
+
+        version:
+            row.version
     };
 }
 
@@ -619,12 +672,6 @@ function normalizarFechaMysqlOpcional(valor) {
     /*
     Descripcion:
     Normaliza una fecha opcional para guardarla en MySQL.
-
-    Parametros:
-    - valor: Fecha recibida.
-
-    Retorna:
-    - Fecha compatible con MySQL o null.
     */
 
     if (valor === undefined) {
@@ -649,12 +696,6 @@ function normalizarFechaMysql(valor) {
     Descripcion:
     Convierte una fecha al formato YYYY-MM-DD.
     Acepta Date, YYYY-MM-DD o DD/MM/YYYY.
-
-    Parametros:
-    - valor: Fecha recibida.
-
-    Retorna:
-    - Fecha en formato YYYY-MM-DD.
     */
 
     if (valor instanceof Date) {
@@ -664,7 +705,9 @@ function normalizarFechaMysql(valor) {
         );
     }
 
-    const texto = String(valor).trim();
+    const texto = String(
+        valor
+    ).trim();
 
     if (texto.includes("/")) {
         const partes = texto.split("/");
@@ -682,7 +725,13 @@ function normalizarFechaMysql(valor) {
 
             const anio = partes[2];
 
-            return anio + "-" + mes + "-" + dia;
+            return (
+                anio +
+                "-" +
+                mes +
+                "-" +
+                dia
+            );
         }
     }
 
@@ -693,12 +742,6 @@ function formatearFecha(valor) {
     /*
     Descripcion:
     Formatea una fecha recibida desde MySQL.
-
-    Parametros:
-    - valor: Fecha recibida desde MySQL.
-
-    Retorna:
-    - Fecha YYYY-MM-DD o null.
     */
 
     if (valor === undefined) {
@@ -717,27 +760,4 @@ function formatearFecha(valor) {
     }
 
     return String(valor);
-}
-
-function convertirNumero(valor) {
-    /*
-    Descripcion:
-    Convierte un valor recibido desde MySQL a numero.
-
-    Parametros:
-    - valor: Valor recibido.
-
-    Retorna:
-    - Numero convertido o null.
-    */
-
-    if (valor === undefined) {
-        return null;
-    }
-
-    if (valor === null) {
-        return null;
-    }
-
-    return Number(valor);
 }

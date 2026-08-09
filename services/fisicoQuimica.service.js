@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: fisicoQuimica.service.js
 Autor: Samuel Cerdas
-Fecha: 27/07/2026
+Fecha: 31/07/2026
 Modulo: Fisico Quimica
 Descripcion:
 Define las reglas de negocio y validaciones del modulo
@@ -33,7 +33,11 @@ function isMedicionValida(medicion) {
     - true si la medicion es valida.
     - false si la medicion es invalida.
     */
-    if (!medicion || typeof medicion !== 'object') {
+    if (
+        !medicion ||
+        typeof medicion !== 'object' ||
+        Array.isArray(medicion)
+    ) {
         return false;
     }
 
@@ -73,7 +77,10 @@ export function isEmpty(valor) {
         return true;
     }
 
-    if (typeof valor === 'string' && valor.trim().length === 0) {
+    if (
+        typeof valor === 'string' &&
+        valor.trim().length === 0
+    ) {
         return true;
     }
 
@@ -83,7 +90,7 @@ export function isEmpty(valor) {
 export function isNumeroValido(valor) {
     /*
     Descripcion:
-    Valida que un valor sea numerico.
+    Valida que un valor sea numerico y finito.
 
     Parametros:
     - valor: Valor a validar.
@@ -96,7 +103,9 @@ export function isNumeroValido(valor) {
         return false;
     }
 
-    return !Number.isNaN(Number(valor));
+    return Number.isFinite(
+        Number(valor)
+    );
 }
 
 export function isNumeroMayorCero(valor) {
@@ -121,28 +130,35 @@ export function isNumeroMayorCero(valor) {
 export function isArrayValido(arreglo) {
     /*
     Descripcion:
-    Valida que un arreglo exista y contenga mediciones
-    con las propiedades valor y etiqueta.
+    Valida que un arreglo exista y, si contiene elementos,
+    que cada medicion tenga las propiedades valor y etiqueta.
+    Permite arreglos vacios para parametros no registrados.
 
     Parametros:
     - arreglo: Arreglo de mediciones a validar.
 
     Retorna:
-    - true si el arreglo es valido.
-    - false si el arreglo es invalido.
+    - true si el arreglo es valido o esta vacio.
+    - false si no es un arreglo o contiene datos invalidos.
     */
-    if (!Array.isArray(arreglo) || arreglo.length === 0) {
+    if (!Array.isArray(arreglo)) {
         return false;
     }
 
-    return arreglo.every(isMedicionValida);
+    if (arreglo.length === 0) {
+        return true;
+    }
+
+    return arreglo.every(
+        isMedicionValida
+    );
 }
 
 export function isFechaValida(fecha) {
     /*
     Descripcion:
-    Verifica que una fecha exista, sea valida y no sea
-    posterior a la fecha actual.
+    Verifica que una fecha tenga formato YYYY-MM-DD,
+    sea una fecha real y no sea posterior a la fecha actual.
 
     Parametros:
     - fecha: Fecha recibida.
@@ -151,13 +167,30 @@ export function isFechaValida(fecha) {
     - true si la fecha es valida.
     - false si la fecha es invalida.
     */
-    if (isEmpty(fecha)) {
+    if (
+        typeof fecha !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(fecha)
+    ) {
         return false;
     }
 
-    const fechaIngresada = new Date(`${fecha}T00:00:00`);
+    const fechaIngresada = new Date(
+        `${fecha}T00:00:00`
+    );
 
-    if (Number.isNaN(fechaIngresada.getTime())) {
+    if (
+        Number.isNaN(
+            fechaIngresada.getTime()
+        )
+    ) {
+        return false;
+    }
+
+    if (
+        fechaIngresada
+            .toISOString()
+            .slice(0, 10) !== fecha
+    ) {
         return false;
     }
 
@@ -240,5 +273,7 @@ export function isOxigeno(oxigenoDisuelto) {
     - true si es valido.
     - false si no es valido.
     */
-    return isArrayValido(oxigenoDisuelto);
+    return isArrayValido(
+        oxigenoDisuelto
+    );
 }

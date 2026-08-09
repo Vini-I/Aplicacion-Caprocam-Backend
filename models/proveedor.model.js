@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: proveedor.model.js
 Autor: Joan
-Fecha: 29/06/2026
+Fecha: 4/08/2026
 Modulo: Proveedores
 Descripcion:
 Capa de datos del modulo de proveedores.
@@ -143,8 +143,10 @@ export async function create(dto, grupoDatos) {
             telefono,
             correo_electronico,
             direccion,
-            notas
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            notas,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const [result] = await pool.execute(sql, [
         grupoDatos,
@@ -154,6 +156,8 @@ export async function create(dto, grupoDatos) {
         dto.correo_electronico || null,
         dto.direccion          || null,
         dto.notas              || null,
+        dto.creado_por_usuario_id,
+        dto.creado_por_colaborador_id,
     ]);
     return findById(result.insertId, grupoDatos);
 }

@@ -201,6 +201,30 @@ function validarCuerpo(body, res) {
     return null;
 }
 
+function manejarError(res, mensaje, err) {
+    /*
+    Descripcion:
+    Convierte un error interno (por ejemplo, uno lanzado desde
+    AlimentacionModel al ajustar inventario) a una respuesta HTTP.
+    Si el error trae err.status (ver movimientoInventario.model.js:
+    422 sin inventario, 409 sin stock suficiente), se respeta ese
+    codigo en vez de forzar siempre un 500.
+
+    Parametros:
+    - res: Objeto response de Express.
+    - mensaje: Mensaje generico de fallback.
+    - err: Error capturado.
+
+    Retorna:
+    - Respuesta de error con el codigo HTTP apropiado.
+    */
+
+    const codigo = err?.status ?? 500;
+    const mensajeFinal = codigo !== 500 && err?.message ? err.message : mensaje;
+
+    return error(res, mensajeFinal, err, codigo);
+}
+
 function validarIdParametro(id, res) {
     /*
     Descripcion:
@@ -360,7 +384,7 @@ export async function createAlimentacion(req, res) {
 
         return exito(res, "Registro de alimentacion creado correctamente.", nuevo, 201);
     } catch (err) {
-        return error(res, "Error al crear el registro de alimentacion.", err, 500);
+        return manejarError(res, "Error al crear el registro de alimentacion.", err);
     }
 }
 
@@ -386,7 +410,8 @@ export async function updateAlimentacion(req, res) {
     */
 
     try {
-        const { grupoDatos } = obtenerContextoPeticion(req);
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
 
         const errId = validarIdParametro(req.params.id, res);
 
@@ -427,14 +452,22 @@ export async function updateAlimentacion(req, res) {
 
         // El creador original (creadoPorUsuarioId/creadoPorColaboradorId)
         // no se reenvia aqui: AlimentacionModel.update() nunca toca esas
-        // columnas, sin importar lo que traiga el dto.
+        // columnas, sin importar lo que traiga el dto. creadoPorUsuarioId/
+        // creadoPorColaboradorId de la peticion actual solo se usan para
+        // dejar trazabilidad de quien origino el ajuste de inventario.
         const dto = new AlimentacionDTO({ ...req.body, grupoDatos });
 
-        const actualizado = await AlimentacionModel.update(req.params.id, dto, grupoDatos);
+        const actualizado = await AlimentacionModel.update(
+            req.params.id,
+            dto,
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
+        );
 
         return exito(res, "Registro de alimentacion actualizado correctamente.", actualizado);
     } catch (err) {
-        return error(res, "Error al actualizar el registro de alimentacion.", err, 500);
+        return manejarError(res, "Error al actualizar el registro de alimentacion.", err);
     }
 }
 
@@ -457,7 +490,8 @@ export async function deleteAlimentacion(req, res) {
     */
 
     try {
-        const { grupoDatos } = obtenerContextoPeticion(req);
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
 
         const errId = validarIdParametro(req.params.id, res);
 
@@ -465,7 +499,12 @@ export async function deleteAlimentacion(req, res) {
             return errId;
         }
 
-        const eliminado = await AlimentacionModel.remove(req.params.id, grupoDatos);
+        const eliminado = await AlimentacionModel.remove(
+            req.params.id,
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
+        );
 
         if (!eliminado) {
             return error(res, "Registro de alimentacion no encontrado.", null, 404);
@@ -473,6 +512,6 @@ export async function deleteAlimentacion(req, res) {
 
         return exito(res, "Registro de alimentacion eliminado correctamente.", eliminado);
     } catch (err) {
-        return error(res, "Error al eliminar el registro de alimentacion.", err, 500);
+        return manejarError(res, "Error al eliminar el registro de alimentacion.", err);
     }
 }

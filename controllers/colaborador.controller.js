@@ -4,12 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: colaborador.controller.js
 Autor: Marco Vásquez
-Fecha: 29/07/2026
+Fecha: 08/08/2026
 Modulo: Colaboradores
 Descripcion:
 Recibe las peticiones HTTP de colaboradores, valida campos,
 hashea el PIN de 4 digitos con bcrypt y soporta consulta
-por cedula para el flujo del APK movil.
+por cedula para el flujo del APK movil (sin roles).
 //////////////////////////////////////////////////////////
 */
 
@@ -47,13 +47,13 @@ FUNCIONES SECUNDARIAS
 createColaborador() y updateColaborador() dependen de validarCuerpo().
 */
 
-function validarCuerpo({ nombre, apellidos, telefono, email, cedula, rolId }, res) {
+function validarCuerpo({ nombre, apellidos, telefono, email, cedula }, res) {
     /*
     Descripcion:
     Valida los campos del body antes de construir el DTO.
 
     Parametros:
-    - nombre, apellidos, telefono, email, cedula, rolId: Campos
+    - nombre, apellidos, telefono, email, cedula: Campos
     - res: Objeto response de Express
 
     Retorna:
@@ -61,9 +61,6 @@ function validarCuerpo({ nombre, apellidos, telefono, email, cedula, rolId }, re
     */
     if (isEmpty(nombre) || isEmpty(apellidos))
         return error(res, 'Nombre y apellidos son requeridos.', null, 400);
-
-    if (!rolId)
-        return error(res, 'El rol es requerido.', null, 400);
 
     if (email && !isEmail(email))
         return error(res, 'El email no tiene un formato valido.', null, 422);
@@ -183,14 +180,13 @@ export async function createColaborador(req, res) {
     */
     try {
         const grupoDatos = req.user.grupoDatos;
-        const { nombre, apellidos, cedula, telefono, email, rolId,
+        const { nombre, apellidos, cedula, telefono, email,
                 fincaId, tipoColaborador } = req.body;
 
         const nombreUsuario = req.body.nombreUsuario ?? req.body.usuario;
         const pinRaw        = req.body.pin ?? req.body.pinHash ?? req.body.pin_hash;
 
-        const err = validarCuerpo({ nombre, apellidos, telefono, email,
-                                    cedula, rolId }, res);
+        const err = validarCuerpo({ nombre, apellidos, telefono, email, cedula }, res);
         if (err) return err;
 
         if (!nombreUsuario)
@@ -199,7 +195,6 @@ export async function createColaborador(req, res) {
         if (!pinRaw)
             return error(res, 'El PIN es requerido.', null, 400);
 
-        // Si ya viene como un hash bcrypt ($2b$ o $2a$), lo respetamos
         let finalPinHash;
         const strPin = String(pinRaw);
 
@@ -214,7 +209,6 @@ export async function createColaborador(req, res) {
         const dto = new ColaboradorDTO({
             grupoDatos,
             fincaId,
-            rolId,
             nombre,
             apellidos,
             cedula,
@@ -250,13 +244,12 @@ export async function updateColaborador(req, res) {
     */
     try {
         const grupoDatos = req.user.grupoDatos;
-        const { nombre, apellidos, cedula, telefono, email, rolId,
+        const { nombre, apellidos, cedula, telefono, email,
                 fincaId, tipoColaborador } = req.body;
 
         const pinRaw = req.body.pin ?? req.body.pinHash ?? req.body.pin_hash;
 
-        const err = validarCuerpo({ nombre, apellidos, telefono, email,
-                                    cedula, rolId }, res);
+        const err = validarCuerpo({ nombre, apellidos, telefono, email, cedula }, res);
         if (err) return err;
 
         let finalPinHash = null;
@@ -275,7 +268,6 @@ export async function updateColaborador(req, res) {
         const dto = new ColaboradorDTO({
             grupoDatos,
             fincaId,
-            rolId,
             nombre,
             apellidos,
             cedula,

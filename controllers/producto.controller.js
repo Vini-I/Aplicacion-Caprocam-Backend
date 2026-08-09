@@ -8,7 +8,7 @@ Fecha: 26/07/2026
 Modulo: Productos
 Descripcion:
 Recibe las peticiones HTTP de productos, delega al modelo
-y devuelve la respuesta al cliente.
+y devuelve la respuesta al cliente soportando contexto dual.
 //////////////////////////////////////////////////////////
 */
 
@@ -25,6 +25,31 @@ import { ProductoDTO } from '../dtos/producto.dto.js';
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+*/
+
+function obtenerContextoPeticion(req) {
+    /*
+    Descripcion:
+    Extrae grupoDatos e identificadores de auditoria independientemente
+    de si la peticion proviene de un Usuario Web o Colaborador Mobil.
+
+    Parametros:
+    - req: Objeto request de Express.
+
+    Retorna:
+    - Objeto con { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId }
+    */
+    const grupoDatos = req.user?.grupoDatos || req.colaborador?.grupoDatos;
+    const creadoPorUsuarioId = req.user?.id || null;
+    const creadoPorColaboradorId = req.colaborador?.id || null;
+
+    return { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId };
+}
 
 /*
 //////////////////////////////////////////////////////////
@@ -45,8 +70,8 @@ export async function getProductos(req, res) {
     - 200 con lista de productos
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const data       = await ProductoModel.findAll(grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const data = await ProductoModel.findAll(grupoDatos);
         return exito(res, 'Productos obtenidos correctamente.', data);
     } catch (err) {
         return error(res, 'Error al obtener productos.', err);
@@ -67,8 +92,8 @@ export async function getProductoById(req, res) {
     - 404 si no existe
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const producto   = await ProductoModel.findById(req.params.id, grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const producto = await ProductoModel.findById(req.params.id, grupoDatos);
 
         if (!producto)
             return error(res, 'Producto no encontrado.', null, 404);
@@ -82,7 +107,7 @@ export async function getProductoById(req, res) {
 export async function createProducto(req, res) {
     /*
     Descripcion:
-    Crea un nuevo producto.
+    Crea un nuevo producto capturando auditoria de sesion.
 
     Parametros:
     - req: Objeto request de Express (req.body)
@@ -92,9 +117,14 @@ export async function createProducto(req, res) {
     - 201 con el producto creado
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const dto        = new ProductoDTO({ ...req.body, grupoDatos });
-        const nuevo      = await ProductoModel.create(dto, grupoDatos);
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } = obtenerContextoPeticion(req);
+        const dto = new ProductoDTO({
+            ...req.body,
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
+        });
+        const nuevo = await ProductoModel.create(dto, grupoDatos);
 
         return exito(res, 'Producto creado correctamente.', nuevo, 201);
     } catch (err) {
@@ -116,8 +146,8 @@ export async function updateProducto(req, res) {
     - 404 si no existe
     */
     try {
-        const grupoDatos  = req.user.grupoDatos;
-        const dto         = new ProductoDTO({ ...req.body, grupoDatos });
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const dto = new ProductoDTO({ ...req.body, grupoDatos });
         const actualizado = await ProductoModel.update(
             req.params.id, 
             dto, 
@@ -147,8 +177,8 @@ export async function deleteProducto(req, res) {
     - 404 si no existe
     */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const eliminado  = await ProductoModel.remove(req.params.id, grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const eliminado = await ProductoModel.remove(req.params.id, grupoDatos);
 
         if (!eliminado)
             return error(res, 'Producto no encontrado.', null, 404);

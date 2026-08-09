@@ -4,22 +4,23 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: parasitologias.dto.js
 Autor: Andres Gutierrez
-Fecha: 03/07/2026
+Fecha: 30/07/2026
 Modulo: Parasitologias
 Descripcion:
-Archivo de transferencia de datos para parasitologias.
-Transforma y normaliza los datos recibidos antes de enviarlos
-al modelo o devolverlos como respuesta.
+DTO del modulo de parasitologias con auditoria dual para
+usuario web y colaborador movil.
 //////////////////////////////////////////////////////////
 */
 
 /*
 //////////////////////////////////////////////////////////
-ENUM
+ENUMS
 //////////////////////////////////////////////////////////
+*/
 
-Define los valores permitidos para el campo parasito.
-Estos valores deben coincidir con los permitidos en la base de datos.
+/*
+Descripcion:
+Define los parasitos permitidos por el modulo.
 */
 
 export const ParasitoParasitologia = Object.freeze({
@@ -31,12 +32,8 @@ export const ParasitoParasitologia = Object.freeze({
 });
 
 /*
-//////////////////////////////////////////////////////////
-ENUM
-//////////////////////////////////////////////////////////
-
-Define los valores permitidos para el grado de infeccion.
-Estos valores deben coincidir con los permitidos en la base de datos.
+Descripcion:
+Define los grados de infeccion permitidos por el modulo.
 */
 
 export const GradoInfeccion = Object.freeze({
@@ -49,10 +46,29 @@ export const GradoInfeccion = Object.freeze({
 //////////////////////////////////////////////////////////
 DTO
 //////////////////////////////////////////////////////////
+*/
 
-Caparazon de datos para el modulo de parasitologias.
-Normaliza los campos recibidos desde el body antes de que sean
-procesados por el controller y el model.
+/*
+Descripcion:
+Normaliza la estructura de un registro de parasitologia.
+
+Instancia normalizada del DTO.
+
+Parametros:
+
+- La auditoria utiliza creadoPorUsuarioId y
+  creadoPorColaboradorId.
+- No utiliza colaboradorId.
+- El grado de infeccion es obligatorio y se recibe
+  seleccionado por el usuario.
+
+Retorna:
+
+- grupoDatos: Grupo obtenido desde el JWT.
+- fincaId o idFinca: Identificador de la finca.
+- estanqueId o idEstanque: Identificador del estanque.
+- creadoPorUsuarioId: Usuario web creador o null.
+- creadoPorColaboradorId: Colaborador movil creador o null.
 */
 
 export class ParasitologiaDTO {
@@ -64,14 +80,12 @@ export class ParasitologiaDTO {
         idFinca,
         estanqueId,
         idEstanque,
-        colaboradorId,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId,
         tipoRegistro,
         fechaReporte,
         responsable,
         parasito,
-        camaronesMuestreados,
-        camaronesInfectados,
-        porcentajeInfeccion,
         gradoInfeccion,
         observaciones,
         activo,
@@ -80,95 +94,45 @@ export class ParasitologiaDTO {
         deletedAt,
         version
     }) {
-        /*
-        Descripcion:
-        Construye un objeto ParasitologiaDTO con los datos recibidos.
-
-        Parametros:
-        - id: Identificador numerico interno del registro.
-        - uuid: Identificador global usado para futura sincronizacion offline.
-        - grupoDatos: Codigo del grupo de datos al que pertenece el registro.
-        - fincaId: Identificador de la finca.
-        - idFinca: Identificador alternativo de finca, usado si no viene fincaId.
-        - estanqueId: Identificador del estanque.
-        - idEstanque: Identificador alternativo del estanque, usado si no viene estanqueId.
-        - colaboradorId: Identificador del colaborador que registra la informacion.
-        - tipoRegistro: Tipo de registro del modulo.
-        - fechaReporte: Fecha del reporte parasitologico.
-        - responsable: Nombre del responsable del reporte.
-        - parasito: Tipo de parasito encontrado.
-        - camaronesMuestreados: Cantidad de camarones revisados.
-        - camaronesInfectados: Cantidad de camarones infectados.
-        - porcentajeInfeccion: Porcentaje calculado de infeccion.
-        - gradoInfeccion: Nivel de infeccion calculado.
-        - observaciones: Comentarios adicionales.
-        - activo: Estado logico del registro.
-        - fechaCreacion: Fecha de creacion del registro.
-        - fechaActualizacion: Fecha de ultima actualizacion.
-        - deletedAt: Fecha de borrado logico.
-        - version: Version del registro para control de cambios.
-
-        Retorna:
-        - Objeto ParasitologiaDTO con campos normalizados.
-        */
-
         this.id = id;
         this.uuid = uuid;
 
-       /*
-        El grupoDatos es proporcionado por el controller
-        desde la informacion obtenida del JWT.
-        */
+        this.grupoDatos = Number(grupoDatos);
 
-        this.grupoDatos = Number(
-         grupoDatos);
+        this.fincaId =
+            fincaId !== undefined &&
+            fincaId !== null &&
+            String(fincaId).trim() !== ""
+                ? Number(fincaId)
+                : Number(idFinca);
 
-        /*
-        Se permite recibir fincaId o idFinca para mantener compatibilidad
-        con diferentes nombres enviados desde el frontend.
-        */
-        if (fincaId !== undefined && fincaId !== null && String(fincaId).trim() !== "") {
-            this.fincaId = Number(fincaId);
-        } else {
-            this.fincaId = Number(idFinca);
-        }
+        this.estanqueId =
+            estanqueId !== undefined &&
+            estanqueId !== null &&
+            String(estanqueId).trim() !== ""
+                ? Number(estanqueId)
+                : Number(idEstanque);
 
-        /*
-        Se permite recibir estanqueId o idEstanque para mantener compatibilidad
-        con diferentes nombres enviados desde el frontend.
-        */
-        if (estanqueId !== undefined && estanqueId !== null && String(estanqueId).trim() !== "") {
-            this.estanqueId = Number(estanqueId);
-        } else {
-            this.estanqueId = Number(idEstanque);
-        }
+        this.creadoPorUsuarioId = normalizarNumeroOpcional(creadoPorUsuarioId);
+        this.creadoPorColaboradorId = normalizarNumeroOpcional(creadoPorColaboradorId);
 
-        this.colaboradorId = normalizarNumeroOpcional(colaboradorId);
-
-        if (tipoRegistro === undefined || tipoRegistro === null || String(tipoRegistro).trim() === "") {
-            this.tipoRegistro = "parasitologia";
-        } else {
-            this.tipoRegistro = normalizarTexto(tipoRegistro);
-        }
+        this.tipoRegistro =
+            tipoRegistro === undefined ||
+            tipoRegistro === null ||
+            String(tipoRegistro).trim() === ""
+                ? "parasitologia"
+                : normalizarTexto(tipoRegistro);
 
         this.fechaReporte = normalizarTexto(fechaReporte);
         this.responsable = normalizarTextoOpcional(responsable);
         this.parasito = normalizarTexto(parasito);
-        this.camaronesMuestreados = Number(camaronesMuestreados);
-        this.camaronesInfectados = Number(camaronesInfectados);
-        this.porcentajeInfeccion = normalizarNumeroOpcional(porcentajeInfeccion);
-        this.gradoInfeccion = normalizarTextoOpcional(gradoInfeccion);
+        this.gradoInfeccion = normalizarTexto(gradoInfeccion).toLowerCase();
         this.observaciones = normalizarTextoOpcional(observaciones);
 
-        /*
-        Si activo no viene definido, el registro se considera activo
-        por defecto.
-        */
-        if (activo === undefined || activo === null) {
-            this.activo = true;
-        } else {
-            this.activo = normalizarBooleano(activo);
-        }
+        this.activo =
+            activo === undefined || activo === null
+                ? true
+                : normalizarBooleano(activo);
 
         this.fechaCreacion = fechaCreacion;
         this.fechaActualizacion = fechaActualizacion;
@@ -178,119 +142,92 @@ export class ParasitologiaDTO {
 }
 
 /*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
+Descripcion:
+Convierte un valor requerido a texto sin espacios externos.
 
-Contiene funciones internas para normalizar los datos recibidos.
-Estas funciones no consultan base de datos.
+Parametros:
+
+- valor: Valor recibido.
+
+Retorna:
+
+- Texto normalizado.
 */
 
 function normalizarTexto(valor) {
-    /*
-    Descripcion:
-    Convierte un valor obligatorio a texto y elimina espacios
-    al inicio y al final.
-
-    Parametros:
-    - valor: Valor recibido.
-
-    Retorna:
-    - Texto normalizado.
-    */
     return String(valor).trim();
 }
+
+/*
+Descripcion:
+Normaliza un texto opcional.
+
+Parametros:
+
+- valor: Valor recibido.
+
+Retorna:
+
+- Texto normalizado o null.
+*/
 
 function normalizarTextoOpcional(valor) {
-    /*
-    Descripcion:
-    Normaliza campos de texto opcionales.
-    Si el valor viene vacio, undefined o null, retorna null.
-
-    Parametros:
-    - valor: Valor opcional recibido.
-
-    Retorna:
-    - Texto normalizado o null.
-    */
-    if (valor === undefined) {
-        return null;
-    }
-
-    if (valor === null) {
-        return null;
-    }
-
-    if (String(valor).trim() === "") {
+    if (
+        valor === undefined ||
+        valor === null ||
+        String(valor).trim() === ""
+    ) {
         return null;
     }
 
     return String(valor).trim();
 }
 
+/*
+Descripcion:
+Normaliza un numero opcional.
+
+Parametros:
+
+- valor: Valor recibido.
+
+Retorna:
+
+- Numero o null.
+*/
+
 function normalizarNumeroOpcional(valor) {
-    /*
-    Descripcion:
-    Normaliza campos numericos opcionales.
-    Si el valor viene vacio, undefined o null, retorna null.
-
-    Parametros:
-    - valor: Valor numerico opcional recibido.
-
-    Retorna:
-    - Numero normalizado o null.
-    */
-    if (valor === undefined) {
-        return null;
-    }
-
-    if (valor === null) {
-        return null;
-    }
-
-    if (String(valor).trim() === "") {
+    if (
+        valor === undefined ||
+        valor === null ||
+        String(valor).trim() === ""
+    ) {
         return null;
     }
 
     return Number(valor);
 }
 
+/*
+Descripcion:
+Convierte distintas representaciones afirmativas a booleano.
+
+Parametros:
+
+- valor: Valor recibido.
+
+Retorna:
+
+- true o false.
+*/
+
 function normalizarBooleano(valor) {
-    /*
-    Descripcion:
-    Convierte diferentes representaciones de verdadero o falso
-    a un valor booleano.
-
-    Parametros:
-    - valor: Valor recibido.
-
-    Retorna:
-    - true si el valor representa verdadero.
-    - false en cualquier otro caso.
-    */
-    if (valor === true) {
-        return true;
-    }
-
-    if (valor === "true") {
-        return true;
-    }
-
-    if (valor === "Si") {
-        return true;
-    }
-
-    if (valor === "si") {
-        return true;
-    }
-
-    if (valor === 1) {
-        return true;
-    }
-
-    if (valor === "1") {
-        return true;
-    }
-
-    return false;
+    return (
+        valor === true ||
+        valor === "true" ||
+        valor === "Si" ||
+        valor === "si" ||
+        valor === 1 ||
+        valor === "1"
+    );
 }

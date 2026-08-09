@@ -4,12 +4,12 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: estanques.controller.js
 Autor: Gerald Alfaro
-Fecha: 18/07/2026
+Fecha: 01/08/2026
 Modulo: Estanques
 Descripcion:
-Recibe las peticiones HTTP, obtiene el grupo de datos
-desde el JWT, delega las operaciones al modelo y devuelve
-la respuesta al cliente.
+Recibe las peticiones HTTP, obtiene el grupo de datos y
+la identidad del creador desde el JWT, delega las
+operaciones a los modelos y devuelve la respuesta.
 //////////////////////////////////////////////////////////
 */
 
@@ -37,10 +37,11 @@ Servicios
 import {
     isEmpty,
     isNumeroMayorCero,
-    isNumeroMayorIgualCero,
-    isNumeroOpcionalMayorIgualCero,
     isEstadoEstanque,
-    isIdValido
+    isIdValido,
+    isFechaOpcionalValida,
+    isBooleanoOpcionalValido,
+    agruparEquiposPorTipo
 } from "../services/estanques.service.js";
 
 /*
@@ -51,7 +52,11 @@ IMPORTS
 Modelos
 */
 
-import * as EstanqueModel from "../models/estanques.model.js";
+import * as EstanqueModel
+    from "../models/estanques.model.js";
+
+import * as EquipoModel
+    from "../models/equipo.model.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -66,6 +71,10 @@ import {
     error
 } from "../common/respuestaJson.js";
 
+import {
+    obtenerContextoPeticion
+} from "../common/contextoPeticion.js";
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
@@ -75,10 +84,14 @@ Contiene funciones internas utilizadas por las funciones
 principales del controller.
 */
 
-function obtenerGrupoDatosUsuario(req, res) {
+function obtenerGrupoDatosPeticion(
+    req,
+    res
+) {
     /*
     Descripcion:
-    Obtiene y valida el grupo de datos incluido en el JWT.
+    Obtiene y valida el grupo de datos incluido en el JWT
+    de un usuario web o colaborador movil.
 
     Parametros:
     - req: Objeto request de Express.
@@ -89,10 +102,20 @@ function obtenerGrupoDatosUsuario(req, res) {
     - null si el JWT no contiene un grupo valido.
     */
 
-    if (!req.user) {
+    const {
+        grupoDatos
+    } = obtenerContextoPeticion(
+        req
+    );
+
+    if (
+        !isNumeroMayorCero(
+            grupoDatos
+        )
+    ) {
         error(
             res,
-            "No fue posible obtener el usuario autenticado.",
+            "La sesion no contiene un grupo de datos valido.",
             null,
             403
         );
@@ -100,26 +123,20 @@ function obtenerGrupoDatosUsuario(req, res) {
         return null;
     }
 
-    if (!isNumeroMayorCero(req.user.grupoDatos)) {
-        error(
-            res,
-            "El usuario no tiene un grupo de datos valido.",
-            null,
-            403
-        );
-
-        return null;
-    }
-
-    return Number(req.user.grupoDatos);
+    return Number(
+        grupoDatos
+    );
 }
 
-function validarCuerpo(body, res) {
+function validarCuerpo(
+    body,
+    res
+) {
     /*
     Descripcion:
     Valida los campos del body antes de construir el DTO.
-    Revisa campos requeridos, campos numericos, estado
-    permitido y valores opcionales.
+    Revisa campos requeridos, campos numericos, estado,
+    fecha de mantenimiento y precria.
 
     Parametros:
     - body: Campos recibidos en el body de la peticion.
@@ -133,79 +150,127 @@ function validarCuerpo(body, res) {
     const errores = [];
 
     if (isEmpty(body.idFinca)) {
-        errores.push("El campo idFinca es requerido.");
+        errores.push(
+            "El campo idFinca es requerido."
+        );
     }
 
     if (isEmpty(body.codigo)) {
-        errores.push("El campo codigo es requerido.");
+        errores.push(
+            "El campo codigo es requerido."
+        );
     }
 
     if (isEmpty(body.tipoEstanque)) {
-        errores.push("El campo tipoEstanque es requerido.");
+        errores.push(
+            "El campo tipoEstanque es requerido."
+        );
     }
 
     if (isEmpty(body.estado)) {
-        errores.push("El campo estado es requerido.");
+        errores.push(
+            "El campo estado es requerido."
+        );
     }
 
     if (isEmpty(body.largo)) {
-        errores.push("El campo largo es requerido.");
+        errores.push(
+            "El campo largo es requerido."
+        );
     }
 
     if (isEmpty(body.ancho)) {
-        errores.push("El campo ancho es requerido.");
+        errores.push(
+            "El campo ancho es requerido."
+        );
     }
 
     if (isEmpty(body.profundidad)) {
-        errores.push("El campo profundidad es requerido.");
-    }
-
-    if (!isNumeroMayorCero(body.idFinca)) {
         errores.push(
-            "El campo idFinca debe ser numerico y mayor que cero."
+            "El campo profundidad es requerido."
         );
     }
 
-    if (!isNumeroMayorCero(body.largo)) {
+    if (
+        !isEmpty(body.idFinca) &&
+        !isNumeroMayorCero(
+            body.idFinca
+        )
+    ) {
         errores.push(
-            "El campo largo debe ser numerico y mayor que cero."
+            "El campo idFinca debe ser numerico " +
+            "y mayor que cero."
         );
     }
 
-    if (!isNumeroMayorCero(body.ancho)) {
+    if (
+        !isEmpty(body.largo) &&
+        !isNumeroMayorCero(
+            body.largo
+        )
+    ) {
         errores.push(
-            "El campo ancho debe ser numerico y mayor que cero."
+            "El campo largo debe ser numerico " +
+            "y mayor que cero."
         );
     }
 
-    if (!isNumeroMayorCero(body.profundidad)) {
+    if (
+        !isEmpty(body.ancho) &&
+        !isNumeroMayorCero(
+            body.ancho
+        )
+    ) {
         errores.push(
-            "El campo profundidad debe ser numerico y mayor que cero."
+            "El campo ancho debe ser numerico " +
+            "y mayor que cero."
         );
     }
 
-    if (!isEmpty(body.densidadSiembra)) {
-        if (!isNumeroMayorIgualCero(body.densidadSiembra)) {
-            errores.push(
-                "El campo densidadSiembra debe ser numerico " +
-                "y mayor o igual que cero."
-            );
-        }
-    }
-
-    if (!isNumeroOpcionalMayorIgualCero(
-        body.numeroAireadores
-    )) {
+    if (
+        !isEmpty(body.profundidad) &&
+        !isNumeroMayorCero(
+            body.profundidad
+        )
+    ) {
         errores.push(
-            "El campo numeroAireadores debe ser numerico " +
-            "y mayor o igual que cero."
+            "El campo profundidad debe ser numerico " +
+            "y mayor que cero."
         );
     }
 
-    if (!isEstadoEstanque(body.estado)) {
+    if (
+        !isEmpty(body.estado) &&
+        !isEstadoEstanque(
+            body.estado
+        )
+    ) {
         errores.push(
             "Estado invalido. Opciones: " +
-            Object.values(EstadoEstanque).join(", ")
+            Object.values(
+                EstadoEstanque
+            ).join(", ")
+        );
+    }
+
+    if (
+        !isFechaOpcionalValida(
+            body.fechaMantenimiento
+        )
+    ) {
+        errores.push(
+            "El campo fechaMantenimiento debe tener " +
+            "formato DD/MM/YYYY o YYYY-MM-DD."
+        );
+    }
+
+    if (
+        !isBooleanoOpcionalValido(
+            body.precria
+        )
+    ) {
+        errores.push(
+            "El campo precria debe ser booleano."
         );
     }
 
@@ -221,7 +286,10 @@ function validarCuerpo(body, res) {
     return null;
 }
 
-function validarIdParametro(id, res) {
+function validarIdParametro(
+    id,
+    res
+) {
     /*
     Descripcion:
     Valida que el parametro id recibido por la URL sea
@@ -256,7 +324,7 @@ async function validarFincaGrupo(
     /*
     Descripcion:
     Verifica que la finca exista y pertenezca al mismo
-    grupo de datos del usuario autenticado.
+    grupo de datos de la identidad autenticada.
 
     Parametros:
     - idFinca: Identificador de la finca.
@@ -268,8 +336,8 @@ async function validarFincaGrupo(
     - false si la finca no existe o pertenece a otro grupo.
     */
 
-    const fincaValida = await EstanqueModel
-        .fincaPerteneceGrupo(
+    const fincaValida =
+        await EstanqueModel.fincaPerteneceGrupo(
             idFinca,
             grupoDatos
         );
@@ -277,7 +345,8 @@ async function validarFincaGrupo(
     if (!fincaValida) {
         error(
             res,
-            "La finca no existe o no pertenece al usuario.",
+            "La finca no existe o no pertenece " +
+            "al grupo de datos.",
             null,
             404
         );
@@ -286,6 +355,114 @@ async function validarFincaGrupo(
     }
 
     return true;
+}
+
+function manejarError(
+    res,
+    err,
+    mensaje
+) {
+    /*
+    Descripcion:
+    Registra los errores internos del modulo y devuelve
+    una respuesta estandar sin exponer el objeto completo
+    del error al cliente.
+
+    Parametros:
+    - res: Objeto response de Express.
+    - err: Error capturado.
+    - mensaje: Mensaje general de la operacion.
+
+    Retorna:
+    - Respuesta JSON estandar de error.
+    */
+
+    console.error(
+        "[Estanques]",
+        err
+    );
+
+    let status = 500;
+    let detalle = null;
+
+    if (
+        err !== undefined &&
+        err !== null
+    ) {
+        if (
+            err.status !== undefined
+        ) {
+            status =
+                err.status;
+        }
+
+        if (
+            err.message !== undefined
+        ) {
+            detalle =
+                err.message;
+        }
+
+        if (
+            err.code ===
+            "ER_NO_REFERENCED_ROW_2"
+        ) {
+            status = 409;
+
+            detalle =
+                "No existe el grupo, finca o creador indicado.";
+        }
+
+        if (
+            err.code ===
+            "ER_BAD_FIELD_ERROR"
+        ) {
+            status = 500;
+
+            detalle =
+                "La estructura de la tabla estanques " +
+                "no coincide con el modelo actualizado.";
+        }
+
+        if (
+            err.code ===
+            "ER_DUP_ENTRY"
+        ) {
+            status = 409;
+
+            detalle =
+                "Ya existe un registro con uno de los " +
+                "valores unicos indicados.";
+        }
+
+        if (
+            err.code ===
+            "ER_DATA_TOO_LONG"
+        ) {
+            status = 400;
+
+            detalle =
+                "Uno de los campos excede el tamano permitido.";
+        }
+
+        if (
+            err.code ===
+            "WARN_DATA_TRUNCATED"
+        ) {
+            status = 400;
+
+            detalle =
+                "Uno de los valores no coincide con el " +
+                "tipo permitido por la base de datos.";
+        }
+    }
+
+    return error(
+        res,
+        mensaje,
+        detalle,
+        status
+    );
 }
 
 /*
@@ -297,36 +474,39 @@ Contiene las funciones exportables que manejan cada ruta
 del modulo de estanques.
 */
 
-export async function getEstanques(req, res) {
+export async function getEstanques(
+    req,
+    res
+) {
     /*
     Descripcion:
     Obtiene los estanques activos que pertenecen al grupo
-    de datos del usuario autenticado.
+    de datos de la identidad autenticada.
     Permite filtrar por idFinca mediante query params.
-
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
-
-    Retorna:
-    - 200 con lista de estanques.
-    - 400 si el filtro de finca es invalido.
-    - 403 si el JWT no contiene un grupo valido.
-    - 500 si ocurre un error en la base de datos.
+    Esta ruta devuelve el listado basico sin equipos.
     */
 
     try {
-        const grupoDatos = obtenerGrupoDatosUsuario(
-            req,
-            res
-        );
+        const grupoDatos =
+            obtenerGrupoDatosPeticion(
+                req,
+                res
+            );
 
         if (grupoDatos === null) {
             return;
         }
 
-        if (!isEmpty(req.query.idFinca)) {
-            if (!isNumeroMayorCero(req.query.idFinca)) {
+        if (
+            !isEmpty(
+                req.query.idFinca
+            )
+        ) {
+            if (
+                !isNumeroMayorCero(
+                    req.query.idFinca
+                )
+            ) {
                 return error(
                     res,
                     "El filtro idFinca debe ser numerico " +
@@ -338,13 +518,15 @@ export async function getEstanques(req, res) {
         }
 
         const filtros = {
-            idFinca: req.query.idFinca,
+            idFinca:
+                req.query.idFinca,
             grupoDatos
         };
 
-        const data = await EstanqueModel.findAll(
-            filtros
-        );
+        const data =
+            await EstanqueModel.findAll(
+                filtros
+            );
 
         return exito(
             res,
@@ -352,56 +534,51 @@ export async function getEstanques(req, res) {
             data
         );
     } catch (err) {
-        return error(
+        return manejarError(
             res,
-            "Error al obtener los estanques.",
             err,
-            500
+            "Error al obtener los estanques."
         );
     }
 }
 
-export async function getEstanqueById(req, res) {
+export async function getEstanqueById(
+    req,
+    res
+) {
     /*
     Descripcion:
-    Obtiene un estanque por su ID y verifica que pertenezca
-    al grupo de datos del usuario autenticado.
-
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
-
-    Retorna:
-    - 200 con el estanque encontrado.
-    - 400 si el id recibido no es valido.
-    - 403 si el JWT no contiene un grupo valido.
-    - 404 si no existe o pertenece a otro grupo.
-    - 500 si ocurre un error en la base de datos.
+    Obtiene un estanque por su ID y agrega todos los
+    equipos asociados mediante equipos.estanque_id.
+    Los equipos son separados por tipo.
     */
 
     try {
-        const errId = validarIdParametro(
-            req.params.id,
-            res
-        );
+        const errId =
+            validarIdParametro(
+                req.params.id,
+                res
+            );
 
         if (errId) {
             return errId;
         }
 
-        const grupoDatos = obtenerGrupoDatosUsuario(
-            req,
-            res
-        );
+        const grupoDatos =
+            obtenerGrupoDatosPeticion(
+                req,
+                res
+            );
 
         if (grupoDatos === null) {
             return;
         }
 
-        const estanque = await EstanqueModel.findById(
-            req.params.id,
-            grupoDatos
-        );
+        const estanque =
+            await EstanqueModel.findById(
+                req.params.id,
+                grupoDatos
+            );
 
         if (!estanque) {
             return error(
@@ -412,78 +589,101 @@ export async function getEstanqueById(req, res) {
             );
         }
 
+        const equipos =
+            await EquipoModel.findAll({
+                grupoDatos,
+                estanqueId:
+                    req.params.id
+            });
+
+        const equiposAgrupados =
+            agruparEquiposPorTipo(
+                equipos
+            );
+
+        const detalleEstanque = {
+            ...estanque,
+            cantidadEquipos:
+                equipos.length,
+            equipos:
+                equiposAgrupados
+        };
+
         return exito(
             res,
             "Estanque obtenido correctamente.",
-            estanque
+            detalleEstanque
         );
     } catch (err) {
-        return error(
+        return manejarError(
             res,
-            "Error al obtener el estanque.",
             err,
-            500
+            "Error al obtener el estanque."
         );
     }
 }
 
-export async function createEstanque(req, res) {
+export async function createEstanque(
+    req,
+    res
+) {
     /*
     Descripcion:
     Crea un nuevo estanque utilizando el grupo de datos
-    obtenido desde el JWT.
-    Verifica que la finca pertenezca al mismo grupo y que
-    no exista un codigo duplicado dentro de la finca.
-
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
-
-    Retorna:
-    - 201 con el estanque creado.
-    - 403 si el JWT no contiene un grupo valido.
-    - 404 si la finca no pertenece al grupo.
-    - 409 si el codigo ya existe en la finca.
-    - 422 si hay errores de validacion.
-    - 500 si ocurre un error en la base de datos.
+    y la identidad del creador obtenidos desde el JWT.
     */
 
     try {
-        const grupoDatos = obtenerGrupoDatosUsuario(
-            req,
-            res
+        const {
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
+        } = obtenerContextoPeticion(
+            req
         );
 
-        if (grupoDatos === null) {
-            return;
+        if (
+            !isNumeroMayorCero(
+                grupoDatos
+            )
+        ) {
+            return error(
+                res,
+                "La sesion no contiene un grupo de datos valido.",
+                null,
+                403
+            );
         }
 
-        const errValidacion = validarCuerpo(
-            req.body,
-            res
-        );
+        const errValidacion =
+            validarCuerpo(
+                req.body,
+                res
+            );
 
         if (errValidacion) {
             return errValidacion;
         }
 
-        const fincaValida = await validarFincaGrupo(
-            req.body.idFinca,
-            grupoDatos,
-            res
-        );
+        const fincaValida =
+            await validarFincaGrupo(
+                req.body.idFinca,
+                grupoDatos,
+                res
+            );
 
         if (!fincaValida) {
             return;
         }
 
-        const existente = await EstanqueModel
-            .findByCodigoAndFinca(
-                req.body.codigo,
-                req.body.idFinca,
-                null,
-                grupoDatos
-            );
+        const existente =
+            await EstanqueModel
+                .findByCodigoAndFinca(
+                    req.body.codigo,
+                    req.body.idFinca,
+                    null,
+                    grupoDatos
+                );
 
         if (existente) {
             return error(
@@ -497,16 +697,20 @@ export async function createEstanque(req, res) {
 
         const datosEstanque = {
             ...req.body,
-            grupoDatos
+            grupoDatos,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
         };
 
-        const dto = new EstanqueDTO(
-            datosEstanque
-        );
+        const dto =
+            new EstanqueDTO(
+                datosEstanque
+            );
 
-        const nuevo = await EstanqueModel.create(
-            dto
-        );
+        const nuevo =
+            await EstanqueModel.create(
+                dto
+            );
 
         return exito(
             res,
@@ -515,66 +719,57 @@ export async function createEstanque(req, res) {
             201
         );
     } catch (err) {
-        return error(
+        return manejarError(
             res,
-            "Error al crear el estanque.",
             err,
-            500
+            "Error al crear el estanque."
         );
     }
 }
 
-export async function updateEstanque(req, res) {
+export async function updateEstanque(
+    req,
+    res
+) {
     /*
     Descripcion:
     Actualiza un estanque que pertenece al grupo de datos
-    del usuario autenticado.
-    El grupo de datos no puede ser cambiado mediante el body.
-
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
-
-    Retorna:
-    - 200 con el estanque actualizado.
-    - 400 si el id recibido no es valido.
-    - 403 si el JWT no contiene un grupo valido.
-    - 404 si el estanque o la finca no pertenecen al grupo.
-    - 409 si existe un codigo duplicado en la finca.
-    - 422 si hay errores de validacion.
-    - 500 si ocurre un error en la base de datos.
+    autenticado. Conserva la identidad del creador original.
     */
 
     try {
-        const errId = validarIdParametro(
-            req.params.id,
-            res
-        );
+        const errId =
+            validarIdParametro(
+                req.params.id,
+                res
+            );
 
         if (errId) {
             return errId;
         }
 
-        const grupoDatos = obtenerGrupoDatosUsuario(
-            req,
-            res
-        );
+        const grupoDatos =
+            obtenerGrupoDatosPeticion(
+                req,
+                res
+            );
 
         if (grupoDatos === null) {
             return;
         }
 
-        const errValidacion = validarCuerpo(
-            req.body,
-            res
-        );
+        const errValidacion =
+            validarCuerpo(
+                req.body,
+                res
+            );
 
         if (errValidacion) {
             return errValidacion;
         }
 
-        const estanqueActual = await EstanqueModel
-            .findById(
+        const estanqueActual =
+            await EstanqueModel.findById(
                 req.params.id,
                 grupoDatos
             );
@@ -588,23 +783,25 @@ export async function updateEstanque(req, res) {
             );
         }
 
-        const fincaValida = await validarFincaGrupo(
-            req.body.idFinca,
-            grupoDatos,
-            res
-        );
+        const fincaValida =
+            await validarFincaGrupo(
+                req.body.idFinca,
+                grupoDatos,
+                res
+            );
 
         if (!fincaValida) {
             return;
         }
 
-        const existente = await EstanqueModel
-            .findByCodigoAndFinca(
-                req.body.codigo,
-                req.body.idFinca,
-                req.params.id,
-                grupoDatos
-            );
+        const existente =
+            await EstanqueModel
+                .findByCodigoAndFinca(
+                    req.body.codigo,
+                    req.body.idFinca,
+                    req.params.id,
+                    grupoDatos
+                );
 
         if (existente) {
             return error(
@@ -618,18 +815,35 @@ export async function updateEstanque(req, res) {
 
         const datosEstanque = {
             ...req.body,
-            grupoDatos
+            grupoDatos,
+
+            creadoPorUsuarioId:
+                estanqueActual.creadoPorUsuarioId,
+
+            creadoPorColaboradorId:
+                estanqueActual.creadoPorColaboradorId
         };
 
-        const dto = new EstanqueDTO(
-            datosEstanque
-        );
+        const dto =
+            new EstanqueDTO(
+                datosEstanque
+            );
 
-        const actualizado = await EstanqueModel.update(
-            req.params.id,
-            dto,
-            grupoDatos
-        );
+        const actualizado =
+            await EstanqueModel.update(
+                req.params.id,
+                dto,
+                grupoDatos
+            );
+
+        if (!actualizado) {
+            return error(
+                res,
+                "Estanque no encontrado.",
+                null,
+                404
+            );
+        }
 
         return exito(
             res,
@@ -637,56 +851,50 @@ export async function updateEstanque(req, res) {
             actualizado
         );
     } catch (err) {
-        return error(
+        return manejarError(
             res,
-            "Error al actualizar el estanque.",
             err,
-            500
+            "Error al actualizar el estanque."
         );
     }
 }
 
-export async function deleteEstanque(req, res) {
+export async function deleteEstanque(
+    req,
+    res
+) {
     /*
     Descripcion:
     Elimina logicamente un estanque que pertenece al grupo
-    de datos del usuario autenticado.
-
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
-
-    Retorna:
-    - 200 con el estanque eliminado logicamente.
-    - 400 si el id recibido no es valido.
-    - 403 si el JWT no contiene un grupo valido.
-    - 404 si el estanque no existe o pertenece a otro grupo.
-    - 500 si ocurre un error en la base de datos.
+    de datos de la identidad autenticada.
     */
 
     try {
-        const errId = validarIdParametro(
-            req.params.id,
-            res
-        );
+        const errId =
+            validarIdParametro(
+                req.params.id,
+                res
+            );
 
         if (errId) {
             return errId;
         }
 
-        const grupoDatos = obtenerGrupoDatosUsuario(
-            req,
-            res
-        );
+        const grupoDatos =
+            obtenerGrupoDatosPeticion(
+                req,
+                res
+            );
 
         if (grupoDatos === null) {
             return;
         }
 
-        const eliminado = await EstanqueModel.remove(
-            req.params.id,
-            grupoDatos
-        );
+        const eliminado =
+            await EstanqueModel.remove(
+                req.params.id,
+                grupoDatos
+            );
 
         if (!eliminado) {
             return error(
@@ -703,11 +911,10 @@ export async function deleteEstanque(req, res) {
             eliminado
         );
     } catch (err) {
-        return error(
+        return manejarError(
             res,
-            "Error al eliminar el estanque.",
             err,
-            500
+            "Error al eliminar el estanque."
         );
     }
 }

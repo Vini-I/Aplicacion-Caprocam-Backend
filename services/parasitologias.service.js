@@ -7,7 +7,7 @@ Autor: Andres Gutierrez
 Fecha: 03/07/2026
 Modulo: Parasitologias
 Descripcion:
-Define las reglas de negocio, validaciones y calculos
+Define las reglas de negocio, validaciones y resumenes
 del modulo de parasitologias.
 //////////////////////////////////////////////////////////
 */
@@ -20,7 +20,10 @@ IMPORTS
 DTOs
 */
 
-import { ParasitoParasitologia, GradoInfeccion } from "../dtos/parasitologias.dto.js";
+import {
+    ParasitoParasitologia,
+    GradoInfeccion
+} from "../dtos/parasitologias.dto.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -59,7 +62,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
 Contiene las funciones exportables de validacion,
-catalogo y calculo que utiliza el controller.
+catalogo y resumen que utiliza el controller.
 */
 
 export function isEmpty(valor) {
@@ -73,6 +76,7 @@ export function isEmpty(valor) {
     Retorna:
     - true si esta vacio, false si tiene contenido.
     */
+
     if (valor === undefined) {
         return true;
     }
@@ -81,10 +85,11 @@ export function isEmpty(valor) {
         return true;
     }
 
-    if (typeof valor === "string") {
-        if (valor.trim().length === 0) {
-            return true;
-        }
+    if (
+        typeof valor === "string" &&
+        valor.trim().length === 0
+    ) {
+        return true;
     }
 
     return false;
@@ -101,23 +106,26 @@ export function isIdValido(id) {
     Retorna:
     - true si es valido, false si no.
     */
+
     return isNumeroMayorCero(id);
 }
 
 export function isNumeroMayorCero(valor) {
     /*
     Descripcion:
-    Valida que un valor sea numerico y mayor que cero.
+    Valida que un valor sea un numero entero mayor que cero.
 
     Parametros:
     - valor: Valor a validar.
 
     Retorna:
-    - true si es numerico y mayor que cero, false si no.
+    - true si es entero y mayor que cero.
+    - false si no cumple la regla.
     */
+
     const numero = Number(valor);
 
-    if (Number.isNaN(numero)) {
+    if (Number.isInteger(numero) === false) {
         return false;
     }
 
@@ -128,78 +136,61 @@ export function isNumeroMayorCero(valor) {
     return true;
 }
 
-export function isNumeroMayorIgualCero(valor) {
-    /*
-    Descripcion:
-    Valida que un valor sea numerico y mayor o igual que cero.
-
-    Parametros:
-    - valor: Valor a validar.
-
-    Retorna:
-    - true si es numerico y mayor o igual que cero, false si no.
-    */
-    const numero = Number(valor);
-
-    if (Number.isNaN(numero)) {
-        return false;
-    }
-
-    if (numero < 0) {
-        return false;
-    }
-
-    return true;
-}
-
-export function isNumeroOpcionalMayorCero(valor) {
-    /*
-    Descripcion:
-    Valida que un valor opcional sea numerico y mayor que cero.
-    Si viene vacio, se considera valido.
-
-    Parametros:
-    - valor: Valor a validar.
-
-    Retorna:
-    - true si es valido, false si no.
-    */
-    if (isEmpty(valor)) {
-        return true;
-    }
-
-    return isNumeroMayorCero(valor);
-}
-
 export function isFechaValida(fecha) {
     /*
     Descripcion:
-    Valida que una fecha tenga formato permitido.
+    Valida que una fecha tenga un formato permitido y
+    corresponda a una fecha real del calendario.
     Se aceptan formatos yyyy-mm-dd y dd/mm/aaaa.
 
     Parametros:
     - fecha: Fecha a validar.
 
     Retorna:
-    - true si la fecha tiene formato valido, false si no.
+    - true si la fecha es valida.
+    - false si no es valida.
     */
-    if (isEmpty(fecha)) {
+
+    const partes = obtenerPartesFecha(fecha);
+
+    return partes !== null;
+}
+
+export function isFechaFutura(fecha) {
+    /*
+    Descripcion:
+    Determina si una fecha valida es posterior al dia
+    actual segun la fecha configurada en el servidor.
+
+    Parametros:
+    - fecha: Fecha en formato yyyy-mm-dd o dd/mm/aaaa.
+
+    Retorna:
+    - true si la fecha es futura.
+    - false si corresponde a hoy o una fecha anterior.
+    */
+
+    const partes = obtenerPartesFecha(fecha);
+
+    if (partes === null) {
         return false;
     }
 
-    const fechaTexto = String(fecha).trim();
-    const patronIso = /^\d{4}-\d{2}-\d{2}$/;
-    const patronLocal = /^\d{2}\/\d{2}\/\d{4}$/;
+    const fechaReporte = new Date(
+        partes.anio,
+        partes.mes - 1,
+        partes.dia
+    );
 
-    if (patronIso.test(fechaTexto)) {
-        return true;
-    }
+    const ahora = new Date();
 
-    if (patronLocal.test(fechaTexto)) {
-        return true;
-    }
+    const fechaServidor = new Date(
+        ahora.getFullYear(),
+        ahora.getMonth(),
+        ahora.getDate()
+    );
 
-    return false;
+    return fechaReporte > fechaServidor;
 }
 
 export function isParasitoValido(parasito) {
@@ -212,8 +203,10 @@ export function isParasitoValido(parasito) {
     - parasito: Valor del parasito.
 
     Retorna:
-    - true si es valido, false si no.
+    - true si es valido.
+    - false si no es valido.
     */
+
     if (isEmpty(parasito)) {
         return false;
     }
@@ -230,133 +223,34 @@ export function isParasitoValido(parasito) {
     return false;
 }
 
-export function isInfectadosValido(camaronesMuestreados, camaronesInfectados) {
+export function isGradoInfeccionValido(gradoInfeccion) {
     /*
     Descripcion:
-    Valida que los camarones infectados no sean mayores
-    que los camarones muestreados.
+    Valida que el grado de infeccion recibido exista
+    dentro de los valores permitidos por el modulo.
 
     Parametros:
-    - camaronesMuestreados: Total de camarones revisados.
-    - camaronesInfectados: Total de camarones infectados.
+    - gradoInfeccion: Grado seleccionado.
 
     Retorna:
-    - true si la relacion es valida, false si no.
+    - true si el grado es bajo, medio o alto.
+    - false si no corresponde a un valor permitido.
     */
-    const muestreados = Number(camaronesMuestreados);
-    const infectados = Number(camaronesInfectados);
 
-    if (Number.isNaN(muestreados)) {
+    if (isEmpty(gradoInfeccion)) {
         return false;
     }
 
-    if (Number.isNaN(infectados)) {
-        return false;
-    }
+    const grados = Object.values(GradoInfeccion);
+    const gradoTexto = String(gradoInfeccion).trim().toLowerCase();
 
-    if (infectados > muestreados) {
-        return false;
-    }
-
-    return true;
-}
-
-export function calcularPorcentajeInfeccion(camaronesMuestreados, camaronesInfectados) {
-    /*
-    Descripcion:
-    Calcula el porcentaje de infeccion del muestreo.
-
-    Parametros:
-    - camaronesMuestreados: Total de camarones revisados.
-    - camaronesInfectados: Total de camarones infectados.
-
-    Retorna:
-    - Porcentaje de infeccion con dos decimales.
-    */
-    const muestreados = Number(camaronesMuestreados);
-    const infectados = Number(camaronesInfectados);
-
-    if (Number.isNaN(muestreados)) {
-        return 0;
-    }
-
-    if (Number.isNaN(infectados)) {
-        return 0;
-    }
-
-    if (muestreados <= 0) {
-        return 0;
-    }
-
-    const porcentaje = (infectados / muestreados) * 100;
-
-    return Number(porcentaje.toFixed(2));
-}
-
-export function calcularGradoInfeccion(porcentajeInfeccion) {
-    /*
-    Descripcion:
-    Calcula el grado de infeccion segun el porcentaje.
-
-    Parametros:
-    - porcentajeInfeccion: Porcentaje calculado.
-
-    Retorna:
-    - bajo, medio o alto.
-    */
-    const porcentaje = Number(porcentajeInfeccion);
-
-    if (porcentaje >= 60) {
-        return GradoInfeccion.ALTO;
-    }
-
-    if (porcentaje >= 30) {
-        return GradoInfeccion.MEDIO;
-    }
-
-    return GradoInfeccion.BAJO;
-}
-
-export function obtenerNombreGradoInfeccion(gradoInfeccion) {
-    /*
-    Descripcion:
-    Obtiene el nombre visible del grado de infeccion.
-
-    Parametros:
-    - gradoInfeccion: Valor del grado de infeccion.
-
-    Retorna:
-    - Nombre visible del grado.
-    */
-    if (gradoInfeccion === GradoInfeccion.ALTO) {
-        return "Alto";
-    }
-
-    if (gradoInfeccion === GradoInfeccion.MEDIO) {
-        return "Medio";
-    }
-
-    return "Bajo";
-}
-
-export function obtenerNombreParasito(parasito) {
-    /*
-    Descripcion:
-    Obtiene el nombre visible de un parasito.
-
-    Parametros:
-    - parasito: Valor interno del parasito.
-
-    Retorna:
-    - Nombre visible del parasito.
-    */
-    for (let i = 0; i < catalogoParasitos.length; i++) {
-        if (catalogoParasitos[i].value === parasito) {
-            return catalogoParasitos[i].label;
+    for (let i = 0; i < grados.length; i++) {
+        if (gradoTexto === grados[i]) {
+            return true;
         }
     }
 
-    return "Otro";
+    return false;
 }
 
 export function obtenerCatalogoParasitos() {
@@ -370,55 +264,45 @@ export function obtenerCatalogoParasitos() {
     Retorna:
     - Lista de parasitos con label y value.
     */
+
     return catalogoParasitos;
 }
 
 export function construirResumenParasitologias(registros) {
     /*
     Descripcion:
-    Construye un resumen general de los registros de parasitologias.
+    Construye un resumen general de los registros de
+    parasitologias utilizando los grados de infeccion y
+    los parasitos registrados.
 
     Parametros:
     - registros: Lista de registros de parasitologias.
 
     Retorna:
-    - Objeto con totales, promedio y frecuencias.
+    - Objeto con total de registros y frecuencias.
     */
+
     const resumen = {
         totalRegistros: registros.length,
-        totalCamaronesMuestreados: 0,
-        totalCamaronesInfectados: 0,
-        promedioInfeccion: 0,
         gradosFrecuentes: [],
         parasitosFrecuentes: []
     };
 
     const contadorGrados = {};
     const contadorParasitos = {};
-    let sumaPorcentajeInfeccion = 0;
 
     for (let i = 0; i < registros.length; i++) {
         const registro = registros[i];
 
-        resumen.totalCamaronesMuestreados =
-            resumen.totalCamaronesMuestreados +
-            Number(registro.camaronesMuestreados);
+        contarValor(
+            contadorGrados,
+            registro.gradoInfeccion
+        );
 
-        resumen.totalCamaronesInfectados =
-            resumen.totalCamaronesInfectados +
-            Number(registro.camaronesInfectados);
-
-        sumaPorcentajeInfeccion =
-            sumaPorcentajeInfeccion +
-            Number(registro.porcentajeInfeccion);
-
-        contarValor(contadorGrados, registro.gradoInfeccion);
-        contarValor(contadorParasitos, registro.parasito);
-    }
-
-    if (registros.length > 0) {
-        resumen.promedioInfeccion = sumaPorcentajeInfeccion / registros.length;
-        resumen.promedioInfeccion = Number(resumen.promedioInfeccion.toFixed(2));
+        contarValor(
+            contadorParasitos,
+            registro.parasito
+        );
     }
 
     resumen.gradosFrecuentes = construirListaContador(contadorGrados);
@@ -432,8 +316,73 @@ export function construirResumenParasitologias(registros) {
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 
-Funciones auxiliares utilizadas para construir resumenes.
+Funciones auxiliares utilizadas para validar fechas
+y construir resumenes.
 */
+
+/*
+Descripcion:
+Obtiene las partes numericas de una fecha y valida que
+corresponda a una fecha real del calendario.
+
+Parametros:
+- fecha: Fecha en formato yyyy-mm-dd o dd/mm/aaaa.
+
+Retorna:
+- Objeto con anio, mes y dia.
+- null si la fecha no es valida.
+*/
+
+function obtenerPartesFecha(fecha) {
+    if (isEmpty(fecha)) {
+        return null;
+    }
+
+    const fechaTexto = String(fecha).trim();
+
+    const patronIso = /^\d{4}-\d{2}-\d{2}$/;
+    const patronLocal = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    let anio;
+    let mes;
+    let dia;
+
+    if (patronIso.test(fechaTexto)) {
+        const partes = fechaTexto.split("-");
+
+        anio = Number(partes[0]);
+        mes = Number(partes[1]);
+        dia = Number(partes[2]);
+    } else if (patronLocal.test(fechaTexto)) {
+        const partes = fechaTexto.split("/");
+
+        dia = Number(partes[0]);
+        mes = Number(partes[1]);
+        anio = Number(partes[2]);
+    } else {
+        return null;
+    }
+
+    const fechaValidar = new Date(
+        anio,
+        mes - 1,
+        dia
+    );
+
+    if (
+        fechaValidar.getFullYear() !== anio ||
+        fechaValidar.getMonth() !== mes - 1 ||
+        fechaValidar.getDate() !== dia
+    ) {
+        return null;
+    }
+
+    return {
+        anio,
+        mes,
+        dia
+    };
+}
 
 function contarValor(contador, valor) {
     /*
@@ -447,6 +396,7 @@ function contarValor(contador, valor) {
     Retorna:
     No retorna valor.
     */
+
     if (isEmpty(valor)) {
         return;
     }
@@ -469,6 +419,7 @@ function construirListaContador(contador) {
     Retorna:
     - Lista de objetos con valor y cantidad.
     */
+
     const lista = [];
     const claves = Object.keys(contador);
 
