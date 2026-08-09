@@ -44,7 +44,6 @@ export function validarMantVentas(req, res, next) {
         finca, 
         estanque, 
         pesoPromedio, 
-        tamanoPromedio, 
         cantVendida, 
         precioKilo, 
         fecha, 
@@ -67,18 +66,6 @@ export function validarMantVentas(req, res, next) {
         return error(
             res, 
             "El peso promedio es obligatorio y debe ser mayor que cero.", 
-            null, 
-            400
-        );
-    }
-    if (
-        tamanoPromedio === undefined || 
-        isNaN(tamanoPromedio) || 
-        Number(tamanoPromedio) <= 0
-    ) {
-        return error(
-            res, 
-            "El tamaño promedio es obligatorio y debe ser mayor que cero.", 
             null, 
             400
         );
@@ -127,7 +114,6 @@ export function validarMantVentas(req, res, next) {
     if (parsedDate.getTime() > ahora.getTime()) {
         return error(res, "La fecha no puede ser futura.", null, 400);
     }
-
     
     if (!comprador || String(comprador).trim() === '') {
         return error(res, "El comprador es obligatorio.", null, 400);
