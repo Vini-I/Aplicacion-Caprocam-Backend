@@ -103,10 +103,10 @@ export async function registrarRegistro(req, res) {
     creadoPorUsuarioId y deja creadoPorColaboradorId en null;
     si inicio sesion un colaborador por PIN (APK), es al reves.
 
-    colaboradorId (el "colaborador responsable" del movimiento
-    en campo) es un campo aparte, opcional, que el front puede
-    mandar en el body si aplica -- no tiene por que coincidir
-    con quien registro el movimiento en el sistema.
+    NOTA (09/08/2026): se elimino colaboradorId de este modulo.
+    Ya no se usa en ningun modulo del backend -- quien hizo el
+    movimiento se resuelve unicamente con creadoPorUsuarioId /
+    creadoPorColaboradorId (auditoria estandar).
 
     Parametros:
     - req: Objeto request de Express (req.body, req.user,
@@ -122,7 +122,6 @@ export async function registrarRegistro(req, res) {
         fincaId,
         estanqueOrigenId,
         estanqueDestinoId,
-        colaboradorId,
         fecha,
         tamano,
         dias,
@@ -152,7 +151,6 @@ export async function registrarRegistro(req, res) {
             fincaId,
             estanqueOrigenId,
             estanqueDestinoId,
-            colaboradorId: colaboradorId ?? null,
             creadoPorUsuarioId,
             creadoPorColaboradorId,
             fecha,
@@ -163,7 +161,8 @@ export async function registrarRegistro(req, res) {
         const data = await TrazabilidadModel.create(dto);
         return exito(res, 'Registro guardado correctamente.', data, 201);
     } catch (err) {
-        return error(res, 'Error al guardar el registro.', err);
+        const status = err?.status ?? 500;
+        return error(res, 'Error al guardar el registro.', err, status);
     }
 }
 

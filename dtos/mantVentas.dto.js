@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantVentas.dto.js
 Autor: Greivin Arguedas, Ricardo Chaves
-Fecha: 03/08/2026
+Fecha: 08/08/2026
 Modulo: Ventas
 Descripcion:
 Archivo de transferencia de datos para ventas.
@@ -27,7 +27,6 @@ export class mantVentaDTO {
         finca, 
         estanque, 
         pesoPromedio, 
-        tamanoPromedio, 
         cantVendida, 
         precioKilo, 
         fecha, 
@@ -44,7 +43,6 @@ export class mantVentaDTO {
         - finca: Identificador de la finca (requerido)
         - estanque: Identificador del estanque (requerido)
         - pesoPromedio: Peso promedio de los peces vendidos (requerido)
-        - tamanoPromedio: Tamaño promedio de los peces vendidos (requerido)
         - cantVendida: Cantidad de peces vendidos (requerido)
         - precioKilo: Precio por kilo de los peces vendidos (requerido)
         - fecha: Fecha de la venta (requerido)
@@ -58,7 +56,6 @@ export class mantVentaDTO {
         this.finca = finca;
         this.estanque = estanque;
         this.pesoPromedio = pesoPromedio;
-        this.tamanoPromedio = tamanoPromedio;
         this.cantVendida = cantVendida;
         this.precioKilo = precioKilo;
         this.fecha = fecha;

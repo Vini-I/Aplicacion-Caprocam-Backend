@@ -31,7 +31,6 @@ export class TrazabilidadDTO {
         fincaId,
         estanqueOrigenId,
         estanqueDestinoId,
-        colaboradorId,
         creadoPorUsuarioId,
         creadoPorColaboradorId,
         fecha,
@@ -52,9 +51,6 @@ export class TrazabilidadDTO {
         - fincaId: Identificador de la finca.
         - estanqueOrigenId: Estanque origen.
         - estanqueDestinoId: Estanque destino.
-        - colaboradorId: Colaborador responsable del
-          movimiento en campo (opcional, lo manda el
-          front si aplica).
         - creadoPorUsuarioId: Usuario web que registro el
           movimiento (resuelto por obtenerContextoPeticion).
         - creadoPorColaboradorId: Colaborador movil (APK)
@@ -72,7 +68,6 @@ export class TrazabilidadDTO {
         this.fincaId = fincaId;
         this.estanqueOrigenId = estanqueOrigenId;
         this.estanqueDestinoId = estanqueDestinoId;
-        this.colaboradorId = colaboradorId;
         this.creadoPorUsuarioId = creadoPorUsuarioId;
         this.creadoPorColaboradorId = creadoPorColaboradorId;
         this.fecha = fecha;
