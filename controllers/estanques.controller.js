@@ -191,35 +191,60 @@ function validarCuerpo(
         );
     }
 
-    if (!isNumeroMayorCero(body.idFinca)) {
+    if (
+        !isEmpty(body.idFinca) &&
+        !isNumeroMayorCero(
+            body.idFinca
+        )
+    ) {
         errores.push(
             "El campo idFinca debe ser numerico " +
             "y mayor que cero."
         );
     }
 
-    if (!isNumeroMayorCero(body.largo)) {
+    if (
+        !isEmpty(body.largo) &&
+        !isNumeroMayorCero(
+            body.largo
+        )
+    ) {
         errores.push(
             "El campo largo debe ser numerico " +
             "y mayor que cero."
         );
     }
 
-    if (!isNumeroMayorCero(body.ancho)) {
+    if (
+        !isEmpty(body.ancho) &&
+        !isNumeroMayorCero(
+            body.ancho
+        )
+    ) {
         errores.push(
             "El campo ancho debe ser numerico " +
             "y mayor que cero."
         );
     }
 
-    if (!isNumeroMayorCero(body.profundidad)) {
+    if (
+        !isEmpty(body.profundidad) &&
+        !isNumeroMayorCero(
+            body.profundidad
+        )
+    ) {
         errores.push(
             "El campo profundidad debe ser numerico " +
             "y mayor que cero."
         );
     }
 
-    if (!isEstadoEstanque(body.estado)) {
+    if (
+        !isEmpty(body.estado) &&
+        !isEstadoEstanque(
+            body.estado
+        )
+    ) {
         errores.push(
             "Estado invalido. Opciones: " +
             Object.values(
@@ -320,7 +345,8 @@ async function validarFincaGrupo(
     if (!fincaValida) {
         error(
             res,
-            "La finca no existe o no pertenece al usuario.",
+            "La finca no existe o no pertenece " +
+            "al grupo de datos.",
             null,
             404
         );
@@ -329,6 +355,114 @@ async function validarFincaGrupo(
     }
 
     return true;
+}
+
+function manejarError(
+    res,
+    err,
+    mensaje
+) {
+    /*
+    Descripcion:
+    Registra los errores internos del modulo y devuelve
+    una respuesta estandar sin exponer el objeto completo
+    del error al cliente.
+
+    Parametros:
+    - res: Objeto response de Express.
+    - err: Error capturado.
+    - mensaje: Mensaje general de la operacion.
+
+    Retorna:
+    - Respuesta JSON estandar de error.
+    */
+
+    console.error(
+        "[Estanques]",
+        err
+    );
+
+    let status = 500;
+    let detalle = null;
+
+    if (
+        err !== undefined &&
+        err !== null
+    ) {
+        if (
+            err.status !== undefined
+        ) {
+            status =
+                err.status;
+        }
+
+        if (
+            err.message !== undefined
+        ) {
+            detalle =
+                err.message;
+        }
+
+        if (
+            err.code ===
+            "ER_NO_REFERENCED_ROW_2"
+        ) {
+            status = 409;
+
+            detalle =
+                "No existe el grupo, finca o creador indicado.";
+        }
+
+        if (
+            err.code ===
+            "ER_BAD_FIELD_ERROR"
+        ) {
+            status = 500;
+
+            detalle =
+                "La estructura de la tabla estanques " +
+                "no coincide con el modelo actualizado.";
+        }
+
+        if (
+            err.code ===
+            "ER_DUP_ENTRY"
+        ) {
+            status = 409;
+
+            detalle =
+                "Ya existe un registro con uno de los " +
+                "valores unicos indicados.";
+        }
+
+        if (
+            err.code ===
+            "ER_DATA_TOO_LONG"
+        ) {
+            status = 400;
+
+            detalle =
+                "Uno de los campos excede el tamano permitido.";
+        }
+
+        if (
+            err.code ===
+            "WARN_DATA_TRUNCATED"
+        ) {
+            status = 400;
+
+            detalle =
+                "Uno de los valores no coincide con el " +
+                "tipo permitido por la base de datos.";
+        }
+    }
+
+    return error(
+        res,
+        mensaje,
+        detalle,
+        status
+    );
 }
 
 /*
@@ -363,7 +497,11 @@ export async function getEstanques(
             return;
         }
 
-        if (!isEmpty(req.query.idFinca)) {
+        if (
+            !isEmpty(
+                req.query.idFinca
+            )
+        ) {
             if (
                 !isNumeroMayorCero(
                     req.query.idFinca
@@ -380,7 +518,8 @@ export async function getEstanques(
         }
 
         const filtros = {
-            idFinca: req.query.idFinca,
+            idFinca:
+                req.query.idFinca,
             grupoDatos
         };
 
@@ -395,11 +534,10 @@ export async function getEstanques(
             data
         );
     } catch (err) {
-        return error(
+        return manejarError(
             res,
-            "Error al obtener los estanques.",
             err,
-            500
+            "Error al obtener los estanques."
         );
     }
 }
@@ -416,10 +554,11 @@ export async function getEstanqueById(
     */
 
     try {
-        const errId = validarIdParametro(
-            req.params.id,
-            res
-        );
+        const errId =
+            validarIdParametro(
+                req.params.id,
+                res
+            );
 
         if (errId) {
             return errId;
@@ -453,7 +592,8 @@ export async function getEstanqueById(
         const equipos =
             await EquipoModel.findAll({
                 grupoDatos,
-                estanqueId: req.params.id
+                estanqueId:
+                    req.params.id
             });
 
         const equiposAgrupados =
@@ -463,8 +603,10 @@ export async function getEstanqueById(
 
         const detalleEstanque = {
             ...estanque,
-            cantidadEquipos: equipos.length,
-            equipos: equiposAgrupados
+            cantidadEquipos:
+                equipos.length,
+            equipos:
+                equiposAgrupados
         };
 
         return exito(
@@ -473,11 +615,10 @@ export async function getEstanqueById(
             detalleEstanque
         );
     } catch (err) {
-        return error(
+        return manejarError(
             res,
-            "Error al obtener el estanque.",
             err,
-            500
+            "Error al obtener el estanque."
         );
     }
 }
@@ -514,10 +655,11 @@ export async function createEstanque(
             );
         }
 
-        const errValidacion = validarCuerpo(
-            req.body,
-            res
-        );
+        const errValidacion =
+            validarCuerpo(
+                req.body,
+                res
+            );
 
         if (errValidacion) {
             return errValidacion;
@@ -560,9 +702,10 @@ export async function createEstanque(
             creadoPorColaboradorId
         };
 
-        const dto = new EstanqueDTO(
-            datosEstanque
-        );
+        const dto =
+            new EstanqueDTO(
+                datosEstanque
+            );
 
         const nuevo =
             await EstanqueModel.create(
@@ -576,11 +719,10 @@ export async function createEstanque(
             201
         );
     } catch (err) {
-        return error(
+        return manejarError(
             res,
-            "Error al crear el estanque.",
             err,
-            500
+            "Error al crear el estanque."
         );
     }
 }
@@ -596,10 +738,11 @@ export async function updateEstanque(
     */
 
     try {
-        const errId = validarIdParametro(
-            req.params.id,
-            res
-        );
+        const errId =
+            validarIdParametro(
+                req.params.id,
+                res
+            );
 
         if (errId) {
             return errId;
@@ -615,10 +758,11 @@ export async function updateEstanque(
             return;
         }
 
-        const errValidacion = validarCuerpo(
-            req.body,
-            res
-        );
+        const errValidacion =
+            validarCuerpo(
+                req.body,
+                res
+            );
 
         if (errValidacion) {
             return errValidacion;
@@ -672,15 +816,18 @@ export async function updateEstanque(
         const datosEstanque = {
             ...req.body,
             grupoDatos,
+
             creadoPorUsuarioId:
                 estanqueActual.creadoPorUsuarioId,
+
             creadoPorColaboradorId:
                 estanqueActual.creadoPorColaboradorId
         };
 
-        const dto = new EstanqueDTO(
-            datosEstanque
-        );
+        const dto =
+            new EstanqueDTO(
+                datosEstanque
+            );
 
         const actualizado =
             await EstanqueModel.update(
@@ -704,11 +851,10 @@ export async function updateEstanque(
             actualizado
         );
     } catch (err) {
-        return error(
+        return manejarError(
             res,
-            "Error al actualizar el estanque.",
             err,
-            500
+            "Error al actualizar el estanque."
         );
     }
 }
@@ -724,10 +870,11 @@ export async function deleteEstanque(
     */
 
     try {
-        const errId = validarIdParametro(
-            req.params.id,
-            res
-        );
+        const errId =
+            validarIdParametro(
+                req.params.id,
+                res
+            );
 
         if (errId) {
             return errId;
@@ -764,11 +911,10 @@ export async function deleteEstanque(
             eliminado
         );
     } catch (err) {
-        return error(
+        return manejarError(
             res,
-            "Error al eliminar el estanque.",
             err,
-            500
+            "Error al eliminar el estanque."
         );
     }
 }

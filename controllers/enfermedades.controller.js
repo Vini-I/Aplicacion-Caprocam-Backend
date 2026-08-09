@@ -213,7 +213,9 @@ export async function crearEnfermedad(
         const datosEntrada = {
             ...req.body,
             responsable:
-                obtenerResponsablePeticion(req),
+                obtenerResponsablePeticion(
+                    req
+                ),
         };
 
         const datos = normalizarDatosEnfermedad(
@@ -279,7 +281,7 @@ Registro actualizado o error 404.
 
 Parametros:
 - El creador original se conserva y los campos de auditoria
-- no forman parte del UPDATE del model.
+  no forman parte del UPDATE del model.
 
 Retorna:
 - req: Peticion HTTP con id y nuevos datos.
@@ -466,7 +468,7 @@ Parametros:
 - res: Respuesta HTTP de Express.
 
 Retorna:
-- Objeto con totales, mortalidad y frecuencias.
+- Objeto con total de registros y frecuencias.
 */
 
 export async function obtenerResumenEnfermedades(
@@ -670,7 +672,9 @@ function validarIdParametro(
 
 /*
 Descripcion:
-Centraliza el formato de errores inesperados del controller.
+Centraliza el formato de errores inesperados del controller
+y registra el error en el servidor para facilitar su
+diagnostico.
 
 Parametros:
 - res: Respuesta HTTP.
@@ -686,6 +690,11 @@ function manejarError(
     err,
     mensaje
 ) {
+    console.error(
+        '[Enfermedades]',
+        err
+    );
+
     let status = 500;
     let detalle = null;
 
@@ -701,27 +710,39 @@ function manejarError(
             err.message ??
             detalle;
 
-        if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+        if (
+            err.code ===
+            'ER_NO_REFERENCED_ROW_2'
+        ) {
             status = 409;
             detalle =
                 'No existe el grupo, finca, estanque ' +
                 'o creador indicado.';
         }
 
-        if (err.code === 'ER_BAD_FIELD_ERROR') {
+        if (
+            err.code ===
+            'ER_BAD_FIELD_ERROR'
+        ) {
             status = 500;
             detalle =
                 'La estructura de la tabla enfermedades ' +
                 'no coincide con el modelo actualizado.';
         }
 
-        if (err.code === 'ER_DATA_TOO_LONG') {
+        if (
+            err.code ===
+            'ER_DATA_TOO_LONG'
+        ) {
             status = 400;
             detalle =
                 'Uno de los campos excede el tamano permitido.';
         }
 
-        if (err.code === 'WARN_DATA_TRUNCATED') {
+        if (
+            err.code ===
+            'WARN_DATA_TRUNCATED'
+        ) {
             status = 400;
             detalle =
                 'Uno de los valores no coincide con el ' +
