@@ -30,7 +30,8 @@ import {
     isIdValido,
     validarRetiroBiomasa,
     validarBiomasaRestante,
-    validarPorcentajeRaleo
+    validarPorcentajeRaleo,
+    validarFechaNoFutura
 } from "../services/raleo.service.js";
 
 // Modelos
@@ -85,6 +86,7 @@ function validarCuerpo(body, res) {
     if (!isNumeroMayorCero(body.biomasaEstimada)) {errores.push("El campo biomasaEstimada debe ser numerico y mayor que cero.");}
 
     //Validaciones de lógica de negocio
+    if (!validarFechaNoFutura(body.fecha)) {errores.push("La fecha del raleo no puede ser futura y debe ser válida.");}
     if (!validarRetiroBiomasa(body.biomasaEstimada, body.kgRetirados)) {errores.push("Los kg retirados no pueden superar la biomasa estimada.");}
     if (!validarBiomasaRestante(body.biomasaEstimada, body.kgRetirados, body.biomasaRestante)) {errores.push("Calculo recibido de BiomasaRestante incorrecto / o no debe ser negativo");}
     if (!validarPorcentajeRaleo(body.biomasaEstimada, body.kgRetirados, body.porcentaje)) {errores.push("Calculo recibido de Porcentaje incorrecto")}

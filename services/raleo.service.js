@@ -146,3 +146,37 @@ export function validarPorcentajeRaleo(biomasaEstimada,kgRetirados,porcentajeRec
     }
     return true;       
 }
+
+export function validarFechaNoFutura(fecha) {
+    /*
+    Descripcion:
+    Valida que la fecha recibida sea valida y no sea posterior
+    a la fecha actual.
+
+    Parametros:
+    - fecha: Fecha recibida en formato YYYY-MM-DD
+
+    Retorna:
+    - true si la fecha es valida
+    - false si es futura o invalida
+    */
+    if (!fecha) {
+        return false;
+    }
+
+    const fechaIngresada = new Date(fecha);
+    // Validar fecha incorrecta
+    if (Number.isNaN(fechaIngresada.getTime())) {
+        return false;
+    }
+    const hoy = new Date();
+
+    // Eliminamos horas para comparar solamente fechas
+    hoy.setHours(0, 0, 0, 0);
+    fechaIngresada.setHours(0, 0, 0, 0);
+    if (fechaIngresada > hoy) {
+        return false;
+    }
+
+    return true;
+}
