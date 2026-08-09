@@ -33,7 +33,7 @@ export const ParasitoParasitologia = Object.freeze({
 
 /*
 Descripcion:
-Define los grados de infeccion calculados.
+Define los grados de infeccion permitidos por el modulo.
 */
 
 export const GradoInfeccion = Object.freeze({
@@ -55,11 +55,15 @@ Normaliza la estructura de un registro de parasitologia.
 Instancia normalizada del DTO.
 
 Parametros:
+
 - La auditoria utiliza creadoPorUsuarioId y
-- creadoPorColaboradorId.
+  creadoPorColaboradorId.
 - No utiliza colaboradorId.
+- Los campos de muestreo pueden ser opcionales.
+- El grado de infeccion es obligatorio.
 
 Retorna:
+
 - grupoDatos: Grupo obtenido desde el JWT.
 - fincaId o idFinca: Identificador de la finca.
 - estanqueId o idEstanque: Identificador del estanque.
@@ -95,16 +99,23 @@ export class ParasitologiaDTO {
     }) {
         this.id = id;
         this.uuid = uuid;
-        this.grupoDatos = Number(grupoDatos);
+
+        this.grupoDatos = Number(
+            grupoDatos
+        );
 
         if (
             fincaId !== undefined &&
             fincaId !== null &&
             String(fincaId).trim() !== ""
         ) {
-            this.fincaId = Number(fincaId);
+            this.fincaId = Number(
+                fincaId
+            );
         } else {
-            this.fincaId = Number(idFinca);
+            this.fincaId = Number(
+                idFinca
+            );
         }
 
         if (
@@ -112,14 +123,19 @@ export class ParasitologiaDTO {
             estanqueId !== null &&
             String(estanqueId).trim() !== ""
         ) {
-            this.estanqueId = Number(estanqueId);
+            this.estanqueId = Number(
+                estanqueId
+            );
         } else {
-            this.estanqueId = Number(idEstanque);
+            this.estanqueId = Number(
+                idEstanque
+            );
         }
 
-        this.creadoPorUsuarioId = normalizarNumeroOpcional(
-            creadoPorUsuarioId
-        );
+        this.creadoPorUsuarioId =
+            normalizarNumeroOpcional(
+                creadoPorUsuarioId
+            );
 
         this.creadoPorColaboradorId =
             normalizarNumeroOpcional(
@@ -131,34 +147,54 @@ export class ParasitologiaDTO {
             tipoRegistro === null ||
             String(tipoRegistro).trim() === ""
         ) {
-            this.tipoRegistro = "parasitologia";
+            this.tipoRegistro =
+                "parasitologia";
         } else {
-            this.tipoRegistro = normalizarTexto(
-                tipoRegistro
-            );
+            this.tipoRegistro =
+                normalizarTexto(
+                    tipoRegistro
+                );
         }
 
-        this.fechaReporte = normalizarTexto(fechaReporte);
-        this.responsable = normalizarTextoOpcional(
-            responsable
-        );
-        this.parasito = normalizarTexto(parasito);
-        this.camaronesMuestreados = Number(
-            camaronesMuestreados
-        );
-        this.camaronesInfectados = Number(
-            camaronesInfectados
-        );
+        this.fechaReporte =
+            normalizarTexto(
+                fechaReporte
+            );
+
+        this.responsable =
+            normalizarTextoOpcional(
+                responsable
+            );
+
+        this.parasito =
+            normalizarTexto(
+                parasito
+            );
+
+        this.camaronesMuestreados =
+            normalizarNumeroOpcional(
+                camaronesMuestreados
+            );
+
+        this.camaronesInfectados =
+            normalizarNumeroOpcional(
+                camaronesInfectados
+            );
+
         this.porcentajeInfeccion =
             normalizarNumeroOpcional(
                 porcentajeInfeccion
             );
-        this.gradoInfeccion = normalizarTextoOpcional(
-            gradoInfeccion
-        );
-        this.observaciones = normalizarTextoOpcional(
-            observaciones
-        );
+
+        this.gradoInfeccion =
+            normalizarTexto(
+                gradoInfeccion
+            ).toLowerCase();
+
+        this.observaciones =
+            normalizarTextoOpcional(
+                observaciones
+            );
 
         if (
             activo === undefined ||
@@ -166,13 +202,23 @@ export class ParasitologiaDTO {
         ) {
             this.activo = true;
         } else {
-            this.activo = normalizarBooleano(activo);
+            this.activo =
+                normalizarBooleano(
+                    activo
+                );
         }
 
-        this.fechaCreacion = fechaCreacion;
-        this.fechaActualizacion = fechaActualizacion;
-        this.deletedAt = deletedAt;
-        this.version = version;
+        this.fechaCreacion =
+            fechaCreacion;
+
+        this.fechaActualizacion =
+            fechaActualizacion;
+
+        this.deletedAt =
+            deletedAt;
+
+        this.version =
+            version;
     }
 }
 
@@ -181,14 +227,18 @@ Descripcion:
 Convierte un valor requerido a texto sin espacios externos.
 
 Parametros:
+
 - valor: Valor recibido.
 
 Retorna:
+
 - Texto normalizado.
 */
 
 function normalizarTexto(valor) {
-    return String(valor).trim();
+    return String(
+        valor
+    ).trim();
 }
 
 /*
@@ -196,9 +246,11 @@ Descripcion:
 Normaliza un texto opcional.
 
 Parametros:
+
 - valor: Valor recibido.
 
 Retorna:
+
 - Texto normalizado o null.
 */
 
@@ -211,7 +263,9 @@ function normalizarTextoOpcional(valor) {
         return null;
     }
 
-    return String(valor).trim();
+    return String(
+        valor
+    ).trim();
 }
 
 /*
@@ -219,9 +273,11 @@ Descripcion:
 Normaliza un numero opcional.
 
 Parametros:
+
 - valor: Valor recibido.
 
 Retorna:
+
 - Numero o null.
 */
 
@@ -234,7 +290,9 @@ function normalizarNumeroOpcional(valor) {
         return null;
     }
 
-    return Number(valor);
+    return Number(
+        valor
+    );
 }
 
 /*
@@ -242,9 +300,11 @@ Descripcion:
 Convierte distintas representaciones afirmativas a booleano.
 
 Parametros:
+
 - valor: Valor recibido.
 
 Retorna:
+
 - true o false.
 */
 
