@@ -615,10 +615,7 @@ function mapearFila(row) {
         id: row.id,
         uuid: row.uuid,
         grupoDatos: row.grupo_datos,
-
         idFinca: row.finca_id,
-        fincaId: row.finca_id,
-
         codigo: row.codigo,
         tipoEstanque: row.tipo_estanque,
         estado: row.estado,
