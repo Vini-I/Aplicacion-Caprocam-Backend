@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantCrecimiento.controller.js
 Autor: Greivin Arguedas
-Fecha: 01/08/2026
+Fecha: 03/08/2026
 Modulo: Crecimiento
 Descripcion:
 Recibe las peticiones HTTP, delega al servicio y modelo,
@@ -129,13 +129,12 @@ export async function createCrecimiento(req, res) {
     const validacionErr = validarCuerpo(req.body, res);
     if (validacionErr) return validacionErr;
 
-    const { finca, estanque, colaborador, fechaRegistro, pesoActual } = 
+    const { finca, estanque, fechaRegistro, pesoActual } = 
     req.body;
     const dto = new MantCrecimientoDto(
         grupoDatos, 
         finca, 
         estanque, 
-        colaborador, 
         fechaRegistro, 
         pesoActual,
         creadoPorUsuarioId,
@@ -172,13 +171,12 @@ export async function updateCrecimiento(req, res) {
     const validacionErr = validarCuerpo(req.body, res);
     if (validacionErr) return validacionErr;
 
-    const { finca, estanque, colaborador, fechaRegistro, pesoActual } = 
+    const { finca, estanque, fechaRegistro, pesoActual } = 
     req.body;
     const dto = new MantCrecimientoDto(
         grupoDatos, 
         finca, 
         estanque, 
-        colaborador, 
         fechaRegistro, 
         pesoActual
     );

@@ -3,12 +3,11 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantVentas.model.js
-Autor: Greivin Arguedas
-Fecha: 01/08/2026
+Autor: Greivin Arguedas, Ricardo Chaves
+Fecha: 03/08/2026
 Modulo: Ventas
 Descripcion:
 Capa de datos del modulo de ventas.
-Por ahora trabaja con datos mock.
 //////////////////////////////////////////////////////////
 */
 
@@ -45,7 +44,6 @@ export async function findAll(grupoDatos) {
             grupo_datos AS grupoDatos,
             finca_id AS finca,
             estanque_id AS estanque,
-            colaborador_id AS colaborador,
             comprador_id AS comprador,
             peso_promedio AS pesoPromedio,
             tamano_promedio AS tamanoPromedio,
@@ -82,7 +80,6 @@ export async function findById(id, grupoDatos) {
             grupo_datos AS grupoDatos,
             finca_id AS finca,
             estanque_id AS estanque,
-            colaborador_id AS colaborador,
             comprador_id AS comprador,
             peso_promedio AS pesoPromedio,
             tamano_promedio AS tamanoPromedio,
@@ -120,7 +117,6 @@ export async function create(dto) {
             grupo_datos,
             finca_id,
             estanque_id,
-            colaborador_id,
             comprador_id,
             peso_promedio,
             tamano_promedio,
@@ -130,12 +126,11 @@ export async function create(dto) {
             fecha,
             creado_por_usuario_id,
             creado_por_colaborador_id
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, 
         [
             dto.grupoDatos,
             dto.finca,
             dto.estanque,
-            dto.colaborador,
             dto.comprador,
             dto.pesoPromedio,
             dto.tamanoPromedio,
@@ -169,7 +164,6 @@ export async function update(id, grupoDatos, dto) {
         SET
             finca_id = ?,
             estanque_id = ?,
-            colaborador_id = ?,
             comprador_id = ?,
             peso_promedio = ?,
             tamano_promedio = ?,
@@ -182,7 +176,6 @@ export async function update(id, grupoDatos, dto) {
         [
             dto.finca,
             dto.estanque,
-            dto.colaborador,
             dto.comprador,
             dto.pesoPromedio,
             dto.tamanoPromedio,

@@ -36,7 +36,6 @@ import * as RaleoModel from "../models/raleo.model.js";
 
 // Common
 import { exito, error } from "../common/respuestaJson.js";
-import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -172,8 +171,11 @@ export async function getRaleo(req, res) {
     Retorna:
     - 200 con lista de raleos
     */
+   const grupoDatos = req.user.grupoDatos;
    try {
-    const { grupoDatos } = obtenerContextoPeticion(req);
+    const filtros = {
+        idFinca: req.query.idFinca
+    };
 
     const data = await RaleoModel.findAll(grupoDatos);
 
@@ -196,8 +198,8 @@ export async function getRaleoById(req, res) {
     - 200 con el raleo encontrado
     - 404 si no existe
     */
+   const grupoDatos = req.user.grupoDatos;
    try {
-    const { grupoDatos } = obtenerContextoPeticion(req);
     const errId = validarIdParametro(req.params.id, res);
 
     if (errId) {
@@ -221,6 +223,17 @@ export async function createRaleo(req, res) {
     Descripcion:
     Crea un nuevo raleo en la base de datos.
 
+    IMPORTANTE: idColaborador se toma de dto.idColaborador (viene
+    del body, ya validado en validarCuerpo si esta presente), NO de
+    req.user. idColaborador representa al colaborador que realizo
+    fisicamente el raleo (elegido en un Select por quien llena el
+    formulario), no a quien esta autenticado en la app. Usar
+    req.user.idColaborador aqui era un bug: para un Usuario Web
+    autenticado ese campo no existe en el JWT, asi que colaborador_id
+    se intentaba insertar como undefined en vez del colaborador
+    realmente elegido (o del valor null si no se elige ninguno,
+    ya que el campo es opcional).
+
     Parametros:
     - req: Objeto request de Express
     - res: Objeto response de Express
@@ -234,19 +247,17 @@ export async function createRaleo(req, res) {
         grupoDatos,
         creadoPorUsuarioId,
         creadoPorColaboradorId
-    } = obtenerContextoPeticion(req);
+    } = req.user;
 
     const err = validarCuerpo(req.body, res);
 
     if (err) {
         return err;
     }
-
     const dto = new RaleoDTO({
-        ...req.body,
-        grupoDatos,
-        creadoPorUsuarioId,
-        creadoPorColaboradorId
+    ...req.body,
+    creadoPorUsuarioId,
+    creadoPorColaboradorId
     });
 
     const existente = await RaleoModel.findByEstanqueYFecha(
@@ -268,11 +279,70 @@ export async function createRaleo(req, res) {
 
     return exito(res, "Raleo creado correctamente.", nuevo, 201);
     } catch (err) {
-    console.error("=== ERROR CREATE RALEO ===");
+        console.error("=== ERROR CREATE RALEO ===");
     console.error(err);
     console.error("==========================");
 
     return error(res, "Error al crear el raleo.", err, 500);
+    }
+}
+
+export async function updateRaleo(req, res) {
+    /*
+    Descripcion:
+    Actualiza un raleo existente.
+
+    Parametros:
+    - req: Objeto request de Express (req.params.id, req.body)
+    - res: Objeto response de Express
+
+    Retorna:
+    - 200 con el raleo actualizado
+    - 400/422 si hay errores de validacion
+    - 404 si no existe
+    */
+    try {
+        const {
+        grupoDatos,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
+        } = req.user;
+
+        const errId = validarIdParametro(req.params.id, res);
+
+        if (errId) {
+            return errId;
+        }
+
+        const err = validarCuerpo(req.body, res);
+
+        if (err) {
+            return err;
+        }
+
+        const dto = new RaleoDTO({
+        ...req.body,
+        creadoPorUsuarioId,
+        creadoPorColaboradorId
+        });
+
+        const actualizado = await RaleoModel.update(
+            req.params.id,
+            dto,
+            grupoDatos,
+        );
+
+        if (!actualizado) {
+            return error(res, "Raleo no encontrado.", null, 404);
+        }
+
+        return exito(res, "Raleo actualizado correctamente.", actualizado);
+    } catch (err) {
+        console.error("=== ERROR UPDATE RALEO ===");
+        console.error(err);
+        console.error("==========================");
+
+        return error(res, "Error al actualizar el raleo.", err, 500);
     }
 }
 
@@ -291,8 +361,8 @@ export async function deleteRaleo(req, res) {
     - 200 con el raleo eliminado
     - 404 si no existe
     */
+   const grupoDatos = req.user.grupoDatos;
    try {
-    const { grupoDatos } = obtenerContextoPeticion(req);
     const errId = validarIdParametro(req.params.id, res);
 
     if (errId) {

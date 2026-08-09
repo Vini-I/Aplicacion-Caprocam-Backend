@@ -3,8 +3,8 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantVentas.middleware.js
-Autor: Greivin Arguedas
-Fecha: 01/08/2026
+Autor: Greivin Arguedas, Ricardo Chaves
+Fecha: 03/08/2026
 Modulo: Ventas
 Descripcion:
 Archivo de middleware para el modulo de ventas.
@@ -48,8 +48,7 @@ export function validarMantVentas(req, res, next) {
         cantVendida, 
         precioKilo, 
         fecha, 
-        total, 
-        colaborador, 
+        total,  
         comprador 
     } = req.body;
 
@@ -124,10 +123,12 @@ export function validarMantVentas(req, res, next) {
     if (isNaN(parsedDate.getTime())) {
         return error(res, "Debe proveer una fecha válida.", null, 400);
     }
-    // Validación de colaborador y comprador
-    if (!colaborador || String(colaborador).trim() === '') {
-        return error(res, "El colaborador es obligatorio.", null, 400);
+    const ahora = new Date();
+    if (parsedDate.getTime() > ahora.getTime()) {
+        return error(res, "La fecha no puede ser futura.", null, 400);
     }
+
+    
     if (!comprador || String(comprador).trim() === '') {
         return error(res, "El comprador es obligatorio.", null, 400);
     }
