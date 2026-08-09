@@ -20,15 +20,17 @@ IMPORTS
 DTOs
 */
 
-import { RaleoDTO, MetodoRaleo } from "../dtos/raleo.dto.js";
+import { RaleoDTO } from "../dtos/raleo.dto.js";
 
 // Servicios
 import {
     isEmpty,
     isNumeroMayorCero,
     isNumeroMayorIgualCero,
-    isMetodoRaleo,
-    isIdValido
+    isIdValido,
+    validarRetiroBiomasa,
+    validarBiomasaRestante,
+    validarPorcentajeRaleo
 } from "../services/raleo.service.js";
 
 // Modelos
@@ -66,68 +68,30 @@ function validarCuerpo(body, res) {
     */
     const errores = [];
 
-    if (isEmpty(body.idFinca)) {
-        errores.push("El campo idFinca es requerido.");
-    }
+    if (isEmpty(body.idFinca)) {errores.push("El campo idFinca es requerido.");}
+    if (isEmpty(body.idEstanque)) { errores.push("El campo idEstanque es requerido.");}
+    if (isEmpty(body.idSiembra)) {errores.push("El campo idSiembra es requerido.");}
+    if (isEmpty(body.fecha)) {errores.push("El campo fecha es requerido.");}
+    if (isEmpty(body.porcentaje)) {errores.push("El campo porcentaje es requerido.");}
+    if (isEmpty(body.kgRetirados)) {errores.push("El campo kgRetirados es requerido.");}
+    if (isEmpty(body.biomasaRestante)) {errores.push("El campo biomasaRestante es requerido.");}    
+    if (isEmpty(body.biomasaEstimada)) {errores.push("El campo biomasaEstimada es requerido.");}
 
-    if (isEmpty(body.idEstanque)) {
-        errores.push("El campo idEstanque es requerido.");
-    }
+    if (!isNumeroMayorCero(body.idFinca)) {errores.push("El campo idFinca debe ser numerico y mayor que cero.");}
+    if (!isNumeroMayorCero(body.idEstanque)) {errores.push("El campo idEstanque debe ser numerico y mayor que cero.");}
+    if (!isNumeroMayorCero(body.idSiembra)) {errores.push("El campo idSiembra debe ser numerico y mayor que cero.");}    
+    if (!isNumeroMayorCero(body.porcentaje)) {errores.push("El campo porcentaje debe ser numerico y mayor que cero.");}
+    if (!isNumeroMayorCero(body.kgRetirados)) {errores.push("El campo kgRetirados debe ser numerico y mayor que cero.");}
+    if (!isNumeroMayorCero(body.biomasaEstimada)) {errores.push("El campo biomasaEstimada debe ser numerico y mayor que cero.");}
 
-    if (isEmpty(body.fecha)) {
-        errores.push("El campo fecha es requerido.");
-    }
-
-    if (isEmpty(body.porcentaje)) {
-        errores.push("El campo porcentaje es requerido.");
-    }
-
-    if (isEmpty(body.pesoEstimado)) {
-        errores.push("El campo pesoEstimado es requerido.");
-    }
-
-    if (isEmpty(body.biomasaEstimado)) {
-        errores.push("El campo biomasaEstimado es requerido.");
-    }
-
-    if (isEmpty(body.objetivo)) {
-        errores.push("El campo objetivo es requerido.");
-    }
-
-    if (isEmpty(body.metodo)) {
-        errores.push("El campo metodo es requerido.");
-    }
-
-    if (!isNumeroMayorCero(body.idFinca)) {
-        errores.push("El campo idFinca debe ser numerico y mayor que cero.");
-    }
-
-    if (!isNumeroMayorCero(body.idEstanque)) {
-        errores.push("El campo idEstanque debe ser numerico y mayor que cero.");
-    }
-
-    if (!isNumeroMayorCero(body.porcentaje)) {
-        errores.push("El campo porcentaje debe ser numerico y mayor que cero.");
-    }
-
-    if (!isNumeroMayorCero(body.pesoEstimado)) {
-        errores.push("El campo pesoEstimado debe ser numerico y mayor que cero.");
-    }
-
-    if (!isNumeroMayorCero(body.biomasaEstimado)) {
-        errores.push("El campo biomasaEstimado debe ser numerico y mayor que cero.");
-    }
-
-    if (!isMetodoRaleo(body.metodo)) {
-        errores.push(
-            "Metodo invalido. Opciones: " + Object.values(MetodoRaleo).join(", ")
-        );
-    }
+    //Validaciones de lógica de negocio
+    if (!validarRetiroBiomasa(body.biomasaEstimada, body.kgRetirados)) {errores.push("Los kg retirados no pueden superar la biomasa estimada.");}
+    if (!validarBiomasaRestante(body.biomasaEstimada, body.kgRetirados, body.biomasaRestante)) {errores.push("Calculo recibido de BiomasaRestante incorrecto / o no debe ser negativo");}
+    if (!validarPorcentajeRaleo(body.biomasaEstimada, body.kgRetirados, body.porcentaje)) {errores.push("Calculo recibido de Porcentaje incorrecto")}
 
     if (errores.length > 0) {
-        return error(res, "Datos invalidos para el raleo.", errores, 422);
+    return error(res, "Datos invalidos para el raleo.", errores, 422);
     }
-
     return null;
 }
 
