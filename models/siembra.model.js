@@ -436,7 +436,7 @@ export async function finalizarConEstanque(id, grupoDatos, datosFinalizacion) {
         }
 
         const [raleoRows] = await connection.execute(`
-            SELECT SUM(kg_retirado) AS total_kg 
+            SELECT SUM(kg_retirados) AS total_kg 
             FROM raleos 
             WHERE siembra_id = ?
         `, [Number(id)]);
