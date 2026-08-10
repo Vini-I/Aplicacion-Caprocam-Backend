@@ -69,6 +69,7 @@ export async function findAll(grupoDatos) {
             peso_promedio_individual AS pesoPromedio
         FROM calculos_crecimiento
         WHERE grupo_datos = ?
+        AND activo = TRUE
         AND deleted_at IS NULL`,
         [grupoDatos]
     );
@@ -129,6 +130,7 @@ export async function findById(id, grupoDatos) {
         FROM calculos_crecimiento
         WHERE crecimiento_id = ?
         AND grupo_datos = ?
+        AND activo = TRUE
         AND deleted_at IS NULL`,
         [id, grupoDatos]
     );
@@ -240,17 +242,54 @@ export async function update(id, grupoDatos, dto) {
 
         if (dto.muestreos !== undefined && Array.isArray(dto.muestreos)) {
             
-            await conn.execute(
-                `UPDATE calculos_crecimiento
-                SET deleted_at = NOW()
+            const [muestreosActivos] = await conn.execute(
+                `SELECT id FROM calculos_crecimiento
                 WHERE crecimiento_id = ?
                 AND grupo_datos = ?
+                AND activo = TRUE
                 AND deleted_at IS NULL`,
                 [id, grupoDatos]
             );
+            const idsEnDB = muestreosActivos.map(r => r.id);
 
-            if (dto.muestreos.length > 0) {
-                for (const m of dto.muestreos) {
+            const idsEnviados = dto.muestreos
+                .filter(m => m.id != null)
+                .map(m => Number(m.id));
+
+            const idsAEliminar = idsEnDB.filter(idDB => !idsEnviados.includes(idDB));
+            for (const idEliminar of idsAEliminar) {
+                await conn.execute(
+                    `UPDATE calculos_crecimiento
+                    SET
+                        activo = FALSE,
+                        deleted_at = NOW()
+                    WHERE id = ?
+                    AND grupo_datos = ?`,
+                    [idEliminar, grupoDatos]
+                );
+            }
+            // Procesar cada muestreo del DTO
+            for (const m of dto.muestreos) {
+                if (m.id != null) {
+                    await conn.execute(
+                        `UPDATE calculos_crecimiento
+                        SET
+                            cantidad_individuos = ?,
+                            peso_total = ?,
+                            peso_promedio_individual = ?
+                        WHERE id = ?
+                        AND crecimiento_id = ?
+                        AND grupo_datos = ?`,
+                        [
+                            m.cantidad, 
+                            m.pesoTotal, 
+                            m.pesoPromedio, 
+                            m.id, 
+                            id, 
+                            grupoDatos
+                        ]
+                    );
+                } else {
                     await conn.execute(
                         `INSERT INTO calculos_crecimiento (
                             grupo_datos,
@@ -262,26 +301,24 @@ export async function update(id, grupoDatos, dto) {
                             creado_por_colaborador_id
                         ) VALUES (?,?,?,?,?,?,?)`,
                         [
-                            dto.grupoDatos || grupoDatos,
-                            id,
-                            m.cantidad,
-                            m.pesoTotal,
+                            grupoDatos, 
+                            id, 
+                            m.cantidad, 
+                            m.pesoTotal, 
                             m.pesoPromedio,
-                            dto.creadoPorUsuarioId || registro.creadoPorUsuarioId,
-                            dto.creadoPorColaboradorId || registro.creadoPorColaboradorId
+                            registro.creadoPorUsuarioId, 
+                            registro.creadoPorColaboradorId
                         ]
                     );
                 }
             }
         }
-
         await conn.commit();
         return await findById(id, grupoDatos);
-
+        
     } catch (err) {
         await conn.rollback();
         throw err;
-
     } finally {
         conn.release();
     }
