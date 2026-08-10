@@ -28,20 +28,15 @@ import {
     isEmpty,
     isIdValido,
     isNumeroMayorCero,
-    isNumeroMayorIgualCero,
     isFechaValida,
     isFechaFutura,
     isParasitoValido,
     isGradoInfeccionValido,
-    isInfectadosValido,
-    calcularPorcentajeInfeccion,
-    obtenerCatalogoParasitos as
-        obtenerCatalogoParasitosService,
+    obtenerCatalogoParasitos as obtenerCatalogoParasitosService,
     construirResumenParasitologias
 } from "../services/parasitologias.service.js";
 
-import * as ParasitologiaModel
-    from "../models/parasitologias.model.js";
+import * as ParasitologiaModel from "../models/parasitologias.model.js";
 
 import {
     exito,
@@ -62,8 +57,6 @@ Respuesta HTTP 422 si existen errores.
 Parametros:
 - Los campos de auditoria no se leen desde el body.
 - El grupo y el creador se resuelven desde el JWT.
-- Los campos camaronesMuestreados y camaronesInfectados
-  son opcionales.
 - El gradoInfeccion es obligatorio y debe ser seleccionado
   por el usuario.
 
@@ -72,170 +65,63 @@ Retorna:
 - res: Respuesta HTTP.
 */
 
-function validarCuerpo(
-    body,
-    res
-) {
+function validarCuerpo(body, res) {
     const errores = [];
 
     if (isEmpty(body.fincaId)) {
-        errores.push(
-            "El campo fincaId es requerido."
-        );
+        errores.push("El campo fincaId es requerido.");
     }
 
     if (isEmpty(body.estanqueId)) {
-        errores.push(
-            "El campo estanqueId es requerido."
-        );
+        errores.push("El campo estanqueId es requerido.");
     }
 
     if (isEmpty(body.fechaReporte)) {
-        errores.push(
-            "El campo fechaReporte es requerido."
-        );
+        errores.push("El campo fechaReporte es requerido.");
     }
 
     if (isEmpty(body.parasito)) {
-        errores.push(
-            "El campo parasito es requerido."
-        );
+        errores.push("El campo parasito es requerido.");
     }
 
     if (isEmpty(body.gradoInfeccion)) {
-        errores.push(
-            "El campo gradoInfeccion es requerido."
-        );
+        errores.push("El campo gradoInfeccion es requerido.");
     }
 
-    if (
-        !isEmpty(body.fincaId) &&
-        !isNumeroMayorCero(
-            body.fincaId
-        )
-    ) {
-        errores.push(
-            "El campo fincaId debe ser numerico " +
-            "y mayor que cero."
-        );
+    if (!isEmpty(body.fincaId) && !isNumeroMayorCero(body.fincaId)) {
+        errores.push("El campo fincaId debe ser numerico y mayor que cero.");
     }
 
-    if (
-        !isEmpty(body.estanqueId) &&
-        !isNumeroMayorCero(
-            body.estanqueId
-        )
-    ) {
-        errores.push(
-            "El campo estanqueId debe ser numerico " +
-            "y mayor que cero."
-        );
+    if (!isEmpty(body.estanqueId) && !isNumeroMayorCero(body.estanqueId)) {
+        errores.push("El campo estanqueId debe ser numerico y mayor que cero.");
+    }
+
+    if (!isEmpty(body.fechaReporte) && !isFechaValida(body.fechaReporte)) {
+        errores.push("El campo fechaReporte debe tener formato yyyy-mm-dd o dd/mm/aaaa.");
     }
 
     if (
         !isEmpty(body.fechaReporte) &&
-        !isFechaValida(
-            body.fechaReporte
-        )
+        isFechaValida(body.fechaReporte) &&
+        isFechaFutura(body.fechaReporte)
     ) {
-        errores.push(
-            "El campo fechaReporte debe tener formato " +
-            "yyyy-mm-dd o dd/mm/aaaa."
-        );
+        errores.push("El campo fechaReporte no puede ser una fecha futura.");
     }
 
-    if (
-        !isEmpty(body.fechaReporte) &&
-        isFechaValida(
-            body.fechaReporte
-        ) &&
-        isFechaFutura(
-            body.fechaReporte
-        )
-    ) {
-        errores.push(
-            "El campo fechaReporte no puede ser " +
-            "una fecha futura."
-        );
-    }
-
-    if (
-        !isEmpty(body.parasito) &&
-        !isParasitoValido(
-            body.parasito
-        )
-    ) {
+    if (!isEmpty(body.parasito) && !isParasitoValido(body.parasito)) {
         errores.push(
             "Parasito invalido. Opciones: " +
-            Object.values(
-                ParasitoParasitologia
-            ).join(", ")
+            Object.values(ParasitoParasitologia).join(", ")
         );
     }
 
     if (
         !isEmpty(body.gradoInfeccion) &&
-        !isGradoInfeccionValido(
-            body.gradoInfeccion
-        )
+        !isGradoInfeccionValido(body.gradoInfeccion)
     ) {
         errores.push(
             "Grado de infeccion invalido. Opciones: " +
-            Object.values(
-                GradoInfeccion
-            ).join(", ")
-        );
-    }
-
-    if (
-        !isEmpty(
-            body.camaronesMuestreados
-        ) &&
-        !isNumeroMayorCero(
-            body.camaronesMuestreados
-        )
-    ) {
-        errores.push(
-            "El campo camaronesMuestreados debe ser " +
-            "numerico y mayor que cero."
-        );
-    }
-
-    if (
-        !isEmpty(
-            body.camaronesInfectados
-        ) &&
-        !isNumeroMayorIgualCero(
-            body.camaronesInfectados
-        )
-    ) {
-        errores.push(
-            "El campo camaronesInfectados debe ser " +
-            "numerico y mayor o igual que cero."
-        );
-    }
-
-    if (
-        !isEmpty(
-            body.camaronesMuestreados
-        ) &&
-        !isEmpty(
-            body.camaronesInfectados
-        ) &&
-        isNumeroMayorCero(
-            body.camaronesMuestreados
-        ) &&
-        isNumeroMayorIgualCero(
-            body.camaronesInfectados
-        ) &&
-        !isInfectadosValido(
-            body.camaronesMuestreados,
-            body.camaronesInfectados
-        )
-    ) {
-        errores.push(
-            "Los camarones infectados no pueden ser " +
-            "mayores que los muestreados."
+            Object.values(GradoInfeccion).join(", ")
         );
     }
 
@@ -263,10 +149,7 @@ Retorna:
 - null si es valido o error 400.
 */
 
-function validarIdParametro(
-    id,
-    res
-) {
+function validarIdParametro(id, res) {
     if (!isIdValido(id)) {
         return error(
             res,
@@ -281,108 +164,63 @@ function validarIdParametro(
 
 /*
 Descripcion:
-Obtiene el nombre visible de la identidad autenticada.
-
-Nombre del responsable o null.
+Obtiene el nombre completo visible de la identidad
+autenticada.
 
 Parametros:
-- El valor proviene del JWT y nunca del body.
+- El valor proviene de la identidad autenticada y nunca
+  del body.
+- Soporta usuario web y colaborador movil.
 
 Retorna:
-- req: Peticion HTTP autenticada.
+- Nombre completo del responsable o null.
 */
 
 function obtenerResponsablePeticion(req) {
-    const nombre =
-        req.colaborador?.nombre ??
-        req.user?.nombre ??
-        null;
+    const identidad = req.colaborador ?? req.user;
 
-    if (isEmpty(nombre)) {
+    if (!identidad) {
         return null;
     }
 
-    return String(
-        nombre
-    ).trim();
+    const nombre = String(identidad.nombre ?? "").trim();
+    const apellidos = String(identidad.apellidos ?? "").trim();
+    const responsable = `${nombre} ${apellidos}`.trim();
+
+    return isEmpty(responsable) ? null : responsable;
 }
 
 /*
 Descripcion:
-Construye el DTO con datos funcionales, porcentaje
-calculado, grado seleccionado y auditoria dual.
-
-Instancia normalizada de ParasitologiaDTO.
+Construye el DTO con datos funcionales, grado seleccionado
+y auditoria dual.
 
 Parametros:
 - No utiliza colaboradorId.
 - La identidad se guarda solo en creadoPorUsuarioId o
   creadoPorColaboradorId.
-- El porcentaje queda null cuando no existen datos
-  suficientes para calcularlo.
 - El gradoInfeccion se recibe desde el frontend y se
-  guarda siempre normalizado en minuscula.
+  guarda normalizado en minuscula.
+
+Retorna:
+- Instancia normalizada de ParasitologiaDTO.
 */
 
-function construirDTO(
-    body,
-    datosSistema
-) {
-    const porcentajeInfeccion =
-        calcularPorcentajeInfeccion(
-            body.camaronesMuestreados,
-            body.camaronesInfectados
-        );
-
-    const gradoInfeccion =
-        String(
-            body.gradoInfeccion
-        )
-            .trim()
-            .toLowerCase();
+function construirDTO(body, datosSistema) {
+    const gradoInfeccion = String(body.gradoInfeccion).trim().toLowerCase();
 
     return new ParasitologiaDTO({
-        grupoDatos:
-            datosSistema.grupoDatos,
-
-        fincaId:
-            body.fincaId,
-
-        estanqueId:
-            body.estanqueId,
-
-        creadoPorUsuarioId:
-            datosSistema.creadoPorUsuarioId,
-
-        creadoPorColaboradorId:
-            datosSistema.creadoPorColaboradorId,
-
-        tipoRegistro:
-            "parasitologia",
-
-        fechaReporte:
-            body.fechaReporte,
-
-        responsable:
-            datosSistema.responsable,
-
-        parasito:
-            body.parasito,
-
-        camaronesMuestreados:
-            body.camaronesMuestreados,
-
-        camaronesInfectados:
-            body.camaronesInfectados,
-
-        porcentajeInfeccion:
-            porcentajeInfeccion,
-
-        gradoInfeccion:
-            gradoInfeccion,
-
-        observaciones:
-            body.observaciones
+        grupoDatos: datosSistema.grupoDatos,
+        fincaId: body.fincaId,
+        estanqueId: body.estanqueId,
+        creadoPorUsuarioId: datosSistema.creadoPorUsuarioId,
+        creadoPorColaboradorId: datosSistema.creadoPorColaboradorId,
+        tipoRegistro: "parasitologia",
+        fechaReporte: body.fechaReporte,
+        responsable: datosSistema.responsable,
+        parasito: body.parasito,
+        gradoInfeccion,
+        observaciones: body.observaciones
     });
 }
 
@@ -395,19 +233,13 @@ Retorna:
 - null si la relacion es valida o respuesta de error.
 */
 
-async function validarFincaEstanqueGrupo(
-    fincaId,
-    estanqueId,
-    grupoDatos,
-    res
-) {
+async function validarFincaEstanqueGrupo(fincaId, estanqueId, grupoDatos, res) {
     const relacionesValidas =
-        await ParasitologiaModel
-            .fincaEstanquePertenecenGrupo(
-                fincaId,
-                estanqueId,
-                grupoDatos
-            );
+        await ParasitologiaModel.fincaEstanquePertenecenGrupo(
+            fincaId,
+            estanqueId,
+            grupoDatos
+        );
 
     if (!relacionesValidas) {
         return error(
@@ -434,24 +266,13 @@ Retorna:
 - Objeto de filtros para el model.
 */
 
-function construirFiltros(
-    req,
-    grupoDatos
-) {
+function construirFiltros(req, grupoDatos) {
     return {
         grupoDatos,
-
-        fincaId:
-            req.query.fincaId,
-
-        estanqueId:
-            req.query.estanqueId,
-
-        parasito:
-            req.query.parasito,
-
-        fechaReporte:
-            req.query.fechaReporte
+        fincaId: req.query.fincaId,
+        estanqueId: req.query.estanqueId,
+        parasito: req.query.parasito,
+        fechaReporte: req.query.fechaReporte
     };
 }
 
@@ -465,87 +286,47 @@ Retorna:
 - Respuesta HTTP de error.
 */
 
-function manejarError(
-    res,
-    err,
-    mensaje
-) {
-    console.error(
-        "[Parasitologias]",
-        err
-    );
+function manejarError(res, err, mensaje) {
+    console.error("[Parasitologias]", err);
 
     let status = 500;
     let detalle = null;
 
-    if (
-        err !== undefined &&
-        err !== null
-    ) {
-        if (
-            err.status !== undefined
-        ) {
-            status =
-                err.status;
+    if (err !== undefined && err !== null) {
+        if (err.status !== undefined) {
+            status = err.status;
         }
 
-        if (
-            err.message !== undefined
-        ) {
-            detalle =
-                err.message;
+        if (err.message !== undefined) {
+            detalle = err.message;
         }
 
-        if (
-            err.code ===
-            "ER_NO_REFERENCED_ROW_2"
-        ) {
+        if (err.code === "ER_NO_REFERENCED_ROW_2") {
             status = 409;
-
-            detalle =
-                "No existe el grupo, finca, estanque " +
-                "o creador indicado.";
+            detalle = "No existe el grupo, finca, estanque o creador indicado.";
         }
 
-        if (
-            err.code ===
-            "ER_BAD_FIELD_ERROR"
-        ) {
+        if (err.code === "ER_BAD_FIELD_ERROR") {
             status = 500;
-
             detalle =
                 "La estructura de la tabla parasitologias " +
                 "no coincide con el modelo actualizado.";
         }
 
-        if (
-            err.code ===
-            "ER_DATA_TOO_LONG"
-        ) {
+        if (err.code === "ER_DATA_TOO_LONG") {
             status = 400;
-
-            detalle =
-                "Uno de los campos excede el tamano permitido.";
+            detalle = "Uno de los campos excede el tamano permitido.";
         }
 
-        if (
-            err.code ===
-            "WARN_DATA_TRUNCATED"
-        ) {
+        if (err.code === "WARN_DATA_TRUNCATED") {
             status = 400;
-
             detalle =
                 "Uno de los valores no coincide con el " +
                 "tipo permitido por la base de datos.";
         }
     }
 
-    return error(
-        res,
-        mensaje,
-        detalle,
-        status
-    );
+    return error(res, mensaje, detalle, status);
 }
 
 /*
@@ -556,24 +337,13 @@ Retorna:
 - Lista de registros.
 */
 
-export async function obtenerParasitologias(
-    req,
-    res
-) {
+export async function obtenerParasitologias(req, res) {
     try {
-        const {
-            grupoDatos
-        } = obtenerContextoPeticion(
-            req
-        );
+        const { grupoDatos } = obtenerContextoPeticion(req);
 
-        const data =
-            await ParasitologiaModel.findAll(
-                construirFiltros(
-                    req,
-                    grupoDatos
-                )
-            );
+        const data = await ParasitologiaModel.findAll(
+            construirFiltros(req, grupoDatos)
+        );
 
         return exito(
             res,
@@ -597,32 +367,20 @@ Retorna:
 - Registro encontrado o error 404.
 */
 
-export async function obtenerParasitologiaPorId(
-    req,
-    res
-) {
+export async function obtenerParasitologiaPorId(req, res) {
     try {
-        const errId =
-            validarIdParametro(
-                req.params.id,
-                res
-            );
+        const errId = validarIdParametro(req.params.id, res);
 
         if (errId) {
             return errId;
         }
 
-        const {
-            grupoDatos
-        } = obtenerContextoPeticion(
-            req
-        );
+        const { grupoDatos } = obtenerContextoPeticion(req);
 
-        const parasitologia =
-            await ParasitologiaModel.findById(
-                req.params.id,
-                grupoDatos
-            );
+        const parasitologia = await ParasitologiaModel.findById(
+            req.params.id,
+            grupoDatos
+        );
 
         if (!parasitologia) {
             return error(
@@ -651,25 +409,19 @@ export async function obtenerParasitologiaPorId(
 Descripcion:
 Crea una parasitologia con auditoria obtenida desde el JWT.
 
-Registro creado con codigo HTTP 201.
-
 Parametros:
 - Usuario web: creadoPorUsuarioId contiene el id.
 - Colaborador movil: creadoPorColaboradorId contiene el id.
 - No se utiliza colaboradorId.
 - El grado de infeccion se recibe desde el frontend.
+
+Retorna:
+- Registro creado con codigo HTTP 201.
 */
 
-export async function crearParasitologia(
-    req,
-    res
-) {
+export async function crearParasitologia(req, res) {
     try {
-        const errValidacion =
-            validarCuerpo(
-                req.body,
-                res
-            );
+        const errValidacion = validarCuerpo(req.body, res);
 
         if (errValidacion) {
             return errValidacion;
@@ -679,43 +431,27 @@ export async function crearParasitologia(
             grupoDatos,
             creadoPorUsuarioId,
             creadoPorColaboradorId
-        } = obtenerContextoPeticion(
-            req
-        );
+        } = obtenerContextoPeticion(req);
 
-        const errRelacion =
-            await validarFincaEstanqueGrupo(
-                req.body.fincaId,
-                req.body.estanqueId,
-                grupoDatos,
-                res
-            );
+        const errRelacion = await validarFincaEstanqueGrupo(
+            req.body.fincaId,
+            req.body.estanqueId,
+            grupoDatos,
+            res
+        );
 
         if (errRelacion) {
             return errRelacion;
         }
 
-        const dto =
-            construirDTO(
-                req.body,
-                {
-                    grupoDatos,
+        const dto = construirDTO(req.body, {
+            grupoDatos,
+            responsable: obtenerResponsablePeticion(req),
+            creadoPorUsuarioId,
+            creadoPorColaboradorId
+        });
 
-                    responsable:
-                        obtenerResponsablePeticion(
-                            req
-                        ),
-
-                    creadoPorUsuarioId,
-
-                    creadoPorColaboradorId
-                }
-            );
-
-        const nuevo =
-            await ParasitologiaModel.create(
-                dto
-            );
+        const nuevo = await ParasitologiaModel.create(dto);
 
         return exito(
             res,
@@ -736,50 +472,35 @@ export async function crearParasitologia(
 Descripcion:
 Actualiza los datos funcionales de una parasitologia.
 
-Registro actualizado o error 404.
-
 Parametros:
 - La identidad del creador original permanece inmutable.
 - El grado de infeccion puede ser actualizado mediante
   el valor seleccionado en el frontend.
+
+Retorna:
+- Registro actualizado o error 404.
 */
 
-export async function actualizarParasitologia(
-    req,
-    res
-) {
+export async function actualizarParasitologia(req, res) {
     try {
-        const errId =
-            validarIdParametro(
-                req.params.id,
-                res
-            );
+        const errId = validarIdParametro(req.params.id, res);
 
         if (errId) {
             return errId;
         }
 
-        const errValidacion =
-            validarCuerpo(
-                req.body,
-                res
-            );
+        const errValidacion = validarCuerpo(req.body, res);
 
         if (errValidacion) {
             return errValidacion;
         }
 
-        const {
-            grupoDatos
-        } = obtenerContextoPeticion(
-            req
-        );
+        const { grupoDatos } = obtenerContextoPeticion(req);
 
-        const actual =
-            await ParasitologiaModel.findById(
-                req.params.id,
-                grupoDatos
-            );
+        const actual = await ParasitologiaModel.findById(
+            req.params.id,
+            grupoDatos
+        );
 
         if (!actual) {
             return error(
@@ -790,41 +511,29 @@ export async function actualizarParasitologia(
             );
         }
 
-        const errRelacion =
-            await validarFincaEstanqueGrupo(
-                req.body.fincaId,
-                req.body.estanqueId,
-                grupoDatos,
-                res
-            );
+        const errRelacion = await validarFincaEstanqueGrupo(
+            req.body.fincaId,
+            req.body.estanqueId,
+            grupoDatos,
+            res
+        );
 
         if (errRelacion) {
             return errRelacion;
         }
 
-        const dto =
-            construirDTO(
-                req.body,
-                {
-                    grupoDatos,
+        const dto = construirDTO(req.body, {
+            grupoDatos,
+            responsable: actual.responsable,
+            creadoPorUsuarioId: actual.creadoPorUsuarioId,
+            creadoPorColaboradorId: actual.creadoPorColaboradorId
+        });
 
-                    responsable:
-                        actual.responsable,
-
-                    creadoPorUsuarioId:
-                        actual.creadoPorUsuarioId,
-
-                    creadoPorColaboradorId:
-                        actual.creadoPorColaboradorId
-                }
-            );
-
-        const actualizado =
-            await ParasitologiaModel.update(
-                req.params.id,
-                dto,
-                grupoDatos
-            );
+        const actualizado = await ParasitologiaModel.update(
+            req.params.id,
+            dto,
+            grupoDatos
+        );
 
         if (!actualizado) {
             return error(
@@ -853,38 +562,27 @@ export async function actualizarParasitologia(
 Descripcion:
 Realiza la eliminacion logica del registro.
 
-Registro eliminado logicamente o error 404.
-
 Parametros:
 - La operacion se protege por id y grupo de datos.
+
+Retorna:
+- Registro eliminado logicamente o error 404.
 */
 
-export async function eliminarParasitologia(
-    req,
-    res
-) {
+export async function eliminarParasitologia(req, res) {
     try {
-        const errId =
-            validarIdParametro(
-                req.params.id,
-                res
-            );
+        const errId = validarIdParametro(req.params.id, res);
 
         if (errId) {
             return errId;
         }
 
-        const {
-            grupoDatos
-        } = obtenerContextoPeticion(
-            req
-        );
+        const { grupoDatos } = obtenerContextoPeticion(req);
 
-        const eliminado =
-            await ParasitologiaModel.remove(
-                req.params.id,
-                grupoDatos
-            );
+        const eliminado = await ParasitologiaModel.remove(
+            req.params.id,
+            grupoDatos
+        );
 
         if (!eliminado) {
             return error(
@@ -914,32 +612,18 @@ Descripcion:
 Construye el resumen de parasitologias del grupo autenticado.
 
 Retorna:
-- Objeto con totales, porcentajes y frecuencias.
+- Objeto con totales y frecuencias.
 */
 
-export async function obtenerResumenParasitologias(
-    req,
-    res
-) {
+export async function obtenerResumenParasitologias(req, res) {
     try {
-        const {
-            grupoDatos
-        } = obtenerContextoPeticion(
-            req
+        const { grupoDatos } = obtenerContextoPeticion(req);
+
+        const registros = await ParasitologiaModel.findAll(
+            construirFiltros(req, grupoDatos)
         );
 
-        const registros =
-            await ParasitologiaModel.findAll(
-                construirFiltros(
-                    req,
-                    grupoDatos
-                )
-            );
-
-        const resumen =
-            construirResumenParasitologias(
-                registros
-            );
+        const resumen = construirResumenParasitologias(registros);
 
         return exito(
             res,
@@ -963,12 +647,8 @@ Retorna:
 - Lista de opciones para el frontend.
 */
 
-export function obtenerCatalogoParasitos(
-    req,
-    res
-) {
-    const data =
-        obtenerCatalogoParasitosService();
+export function obtenerCatalogoParasitos(req, res) {
+    const data = obtenerCatalogoParasitosService();
 
     return exito(
         res,

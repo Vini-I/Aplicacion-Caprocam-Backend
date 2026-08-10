@@ -59,8 +59,8 @@ Parametros:
 - La auditoria utiliza creadoPorUsuarioId y
   creadoPorColaboradorId.
 - No utiliza colaboradorId.
-- Los campos de muestreo pueden ser opcionales.
-- El grado de infeccion es obligatorio.
+- El grado de infeccion es obligatorio y se recibe
+  seleccionado por el usuario.
 
 Retorna:
 
@@ -86,9 +86,6 @@ export class ParasitologiaDTO {
         fechaReporte,
         responsable,
         parasito,
-        camaronesMuestreados,
-        camaronesInfectados,
-        porcentajeInfeccion,
         gradoInfeccion,
         observaciones,
         activo,
@@ -100,125 +97,47 @@ export class ParasitologiaDTO {
         this.id = id;
         this.uuid = uuid;
 
-        this.grupoDatos = Number(
-            grupoDatos
-        );
+        this.grupoDatos = Number(grupoDatos);
 
-        if (
+        this.fincaId =
             fincaId !== undefined &&
             fincaId !== null &&
             String(fincaId).trim() !== ""
-        ) {
-            this.fincaId = Number(
-                fincaId
-            );
-        } else {
-            this.fincaId = Number(
-                idFinca
-            );
-        }
+                ? Number(fincaId)
+                : Number(idFinca);
 
-        if (
+        this.estanqueId =
             estanqueId !== undefined &&
             estanqueId !== null &&
             String(estanqueId).trim() !== ""
-        ) {
-            this.estanqueId = Number(
-                estanqueId
-            );
-        } else {
-            this.estanqueId = Number(
-                idEstanque
-            );
-        }
+                ? Number(estanqueId)
+                : Number(idEstanque);
 
-        this.creadoPorUsuarioId =
-            normalizarNumeroOpcional(
-                creadoPorUsuarioId
-            );
+        this.creadoPorUsuarioId = normalizarNumeroOpcional(creadoPorUsuarioId);
+        this.creadoPorColaboradorId = normalizarNumeroOpcional(creadoPorColaboradorId);
 
-        this.creadoPorColaboradorId =
-            normalizarNumeroOpcional(
-                creadoPorColaboradorId
-            );
-
-        if (
+        this.tipoRegistro =
             tipoRegistro === undefined ||
             tipoRegistro === null ||
             String(tipoRegistro).trim() === ""
-        ) {
-            this.tipoRegistro =
-                "parasitologia";
-        } else {
-            this.tipoRegistro =
-                normalizarTexto(
-                    tipoRegistro
-                );
-        }
+                ? "parasitologia"
+                : normalizarTexto(tipoRegistro);
 
-        this.fechaReporte =
-            normalizarTexto(
-                fechaReporte
-            );
+        this.fechaReporte = normalizarTexto(fechaReporte);
+        this.responsable = normalizarTextoOpcional(responsable);
+        this.parasito = normalizarTexto(parasito);
+        this.gradoInfeccion = normalizarTexto(gradoInfeccion).toLowerCase();
+        this.observaciones = normalizarTextoOpcional(observaciones);
 
-        this.responsable =
-            normalizarTextoOpcional(
-                responsable
-            );
+        this.activo =
+            activo === undefined || activo === null
+                ? true
+                : normalizarBooleano(activo);
 
-        this.parasito =
-            normalizarTexto(
-                parasito
-            );
-
-        this.camaronesMuestreados =
-            normalizarNumeroOpcional(
-                camaronesMuestreados
-            );
-
-        this.camaronesInfectados =
-            normalizarNumeroOpcional(
-                camaronesInfectados
-            );
-
-        this.porcentajeInfeccion =
-            normalizarNumeroOpcional(
-                porcentajeInfeccion
-            );
-
-        this.gradoInfeccion =
-            normalizarTexto(
-                gradoInfeccion
-            ).toLowerCase();
-
-        this.observaciones =
-            normalizarTextoOpcional(
-                observaciones
-            );
-
-        if (
-            activo === undefined ||
-            activo === null
-        ) {
-            this.activo = true;
-        } else {
-            this.activo =
-                normalizarBooleano(
-                    activo
-                );
-        }
-
-        this.fechaCreacion =
-            fechaCreacion;
-
-        this.fechaActualizacion =
-            fechaActualizacion;
-
-        this.deletedAt =
-            deletedAt;
-
-        this.version =
-            version;
+        this.fechaCreacion = fechaCreacion;
+        this.fechaActualizacion = fechaActualizacion;
+        this.deletedAt = deletedAt;
+        this.version = version;
     }
 }
 
@@ -236,9 +155,7 @@ Retorna:
 */
 
 function normalizarTexto(valor) {
-    return String(
-        valor
-    ).trim();
+    return String(valor).trim();
 }
 
 /*
@@ -263,9 +180,7 @@ function normalizarTextoOpcional(valor) {
         return null;
     }
 
-    return String(
-        valor
-    ).trim();
+    return String(valor).trim();
 }
 
 /*
@@ -290,9 +205,7 @@ function normalizarNumeroOpcional(valor) {
         return null;
     }
 
-    return Number(
-        valor
-    );
+    return Number(valor);
 }
 
 /*
@@ -309,16 +222,12 @@ Retorna:
 */
 
 function normalizarBooleano(valor) {
-    if (
+    return (
         valor === true ||
         valor === "true" ||
         valor === "Si" ||
         valor === "si" ||
         valor === 1 ||
         valor === "1"
-    ) {
-        return true;
-    }
-
-    return false;
+    );
 }

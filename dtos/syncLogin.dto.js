@@ -31,7 +31,7 @@ export class ColaboradorLoginDTO {
 
         Retorna:
         { id, uuid, nombre, apellidos, cedula,
-          tipoColaborador, rolId, grupoDatos, fincaId }
+          tipoColaborador, rolId, grupoDatos, fincaId, nombreUsuario }
         */
         this.id              = colaborador.id;
         this.uuid            = colaborador.uuid;
@@ -42,5 +42,6 @@ export class ColaboradorLoginDTO {
         this.rolId           = colaborador.rolId;
         this.grupoDatos      = colaborador.grupoDatos;
         this.fincaId         = colaborador.fincaId;
+        this.nombreUsuario   = colaborador.nombreUsuario;
     }
 }
