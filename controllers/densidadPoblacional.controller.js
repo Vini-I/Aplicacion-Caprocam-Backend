@@ -32,11 +32,11 @@ Servicios
 import {
     isEmpty,
     isNumeroMayorCero,
-    isNumeroOpcionalMayorIgualCero,
-    isPercentageOpcional,
     isFechaValida,
     isIdValido,
-    maxLength
+    maxLength,
+    normalizarTiros,
+    validarTiros
 } from "../services/densidadPoblacional.service.js";
 
 /*
@@ -170,7 +170,19 @@ function validarCuerpo(body, res) {
     Descripcion:
     Valida los campos del body antes de construir el DTO.
     Se encarga de revisar campos requeridos, campos numericos,
-    fecha valida y valores opcionales.
+    fecha valida, el detalle de tiros y valores opcionales.
+
+    CAMBIO (documento de requerimientos): ya no se validan
+    numeroCamarones, tirosAtarraya, promedioPorTiro, densidad ni
+    sobrevivencia, porque el cliente dejo de enviarlos. Son valores
+    derivados que calcula el DTO a partir del detalle de tiros (ver
+    calcularResultados en services/densidadPoblacional.service.js).
+    Si llegaran en el body, se ignoran.
+
+    areaAtarraya y areaEstanque pasaron de opcionales a obligatorias:
+    sin ellas no se puede calcular ni la densidad por m2 ni la
+    poblacion estimada, y el registro quedaria guardado con esos
+    resultados en NULL sin que nadie se entere.
 
     Parametros:
     - body: Campos recibidos en el body de la peticion.
@@ -204,40 +216,34 @@ function validarCuerpo(body, res) {
         errores.push("El campo fecha no es una fecha valida.");
     }
 
-    if (!isNumeroOpcionalMayorIgualCero(body.idColaborador)) {
-        errores.push("El campo idColaborador debe ser numerico y mayor o igual que cero.");
+    if (isEmpty(body.cantidadSiembra)) {
+        errores.push("El campo cantidadSiembra es requerido.");
+    } else if (!isNumeroMayorCero(body.cantidadSiembra)) {
+        errores.push("El campo cantidadSiembra debe ser numerico y mayor que cero.");
     }
 
-    if (!isNumeroOpcionalMayorIgualCero(body.cantidadSiembra)) {
-        errores.push("El campo cantidadSiembra debe ser numerico y mayor o igual que cero.");
+    if (isEmpty(body.areaEstanque)) {
+        errores.push("El campo areaEstanque es requerido (en hectareas).");
+    } else if (!isNumeroMayorCero(body.areaEstanque)) {
+        errores.push("El campo areaEstanque debe ser numerico y mayor que cero.");
     }
 
-    if (!isNumeroOpcionalMayorIgualCero(body.areaEstanque)) {
-        errores.push("El campo areaEstanque debe ser numerico y mayor o igual que cero.");
+    if (isEmpty(body.areaAtarraya)) {
+        errores.push("El campo areaAtarraya es requerido (en metros cuadrados).");
+    } else if (!isNumeroMayorCero(body.areaAtarraya)) {
+        errores.push("El campo areaAtarraya debe ser numerico y mayor que cero.");
     }
 
-    if (!isNumeroOpcionalMayorIgualCero(body.numeroCamarones)) {
-        errores.push("El campo numeroCamarones debe ser numerico y mayor o igual que cero.");
-    }
+    /*
+    El detalle tiro por tiro es ahora el dato de entrada del conteo.
+    validarTiros revisa que venga, que tenga al menos un tiro, que no
+    pase del maximo por registro y que cada tiro traiga una cantidad
+    entera valida.
+    */
+    const erroresTiros = validarTiros(normalizarTiros(body));
 
-    if (!isNumeroOpcionalMayorIgualCero(body.tirosAtarraya)) {
-        errores.push("El campo tirosAtarraya debe ser numerico y mayor o igual que cero.");
-    }
-
-    if (!isNumeroOpcionalMayorIgualCero(body.areaAtarraya)) {
-        errores.push("El campo areaAtarraya debe ser numerico y mayor o igual que cero.");
-    }
-
-    if (!isNumeroOpcionalMayorIgualCero(body.promedioPorTiro)) {
-        errores.push("El campo promedioPorTiro debe ser numerico y mayor o igual que cero.");
-    }
-
-    if (!isPercentageOpcional(body.sobrevivencia)) {
-        errores.push("El campo sobrevivencia debe ser un porcentaje entre 0 y 100.");
-    }
-
-    if (!isNumeroOpcionalMayorIgualCero(body.densidad)) {
-        errores.push("El campo densidad debe ser numerico y mayor o igual que cero.");
+    for (let i = 0; i < erroresTiros.length; i++) {
+        errores.push(erroresTiros[i]);
     }
 
     if (!maxLength(body.notasConteo, 255)) {
@@ -367,6 +373,100 @@ export async function getDensidadById(req, res) {
     }
 }
 
+export async function getDatosBaseEstanque(req, res) {
+    /*
+    Descripcion:
+    Devuelve los datos base de un estanque para precargar el
+    formulario de densidad poblacional en cuanto el usuario lo
+    elige: el area del estanque en hectareas y la cantidad de
+    siembra por metro cuadrado.
+
+    Estos dos campos antes se digitaban a mano en cada conteo, aun
+    cuando son propiedades del estanque que el sistema ya conoce:
+    el area sale de largo x ancho de la tabla estanques, y la
+    siembra por m2 sale de la siembra activa del estanque. Digitarlos
+    a mano abria la puerta a que dos conteos del mismo estanque
+    tuvieran areas distintas y por lo tanto poblaciones estimadas
+    que no se pueden comparar entre si.
+
+    Se devuelve tambien tirosRecomendados (10 tiros por hectarea,
+    segun el documento) y areaAtarrayaSugerida, para que la pantalla
+    pueda proponerlos sin que el usuario tenga que calcularlos.
+
+    El usuario puede sobrescribir cualquiera de estos valores en el
+    formulario: son una precarga, no un candado.
+
+    Parametros:
+    - req: Objeto request de Express.
+    - res: Objeto response de Express.
+
+    Retorna:
+    - 200 con los datos base del estanque.
+    - 400 si el id de estanque recibido no es valido.
+    - 401 si el token no trae un grupoDatos valido.
+    - 404 si el estanque no existe dentro del grupo de datos.
+    - 500 si ocurre un error en la base de datos.
+    */
+
+    try {
+        const contexto = obtenerContextoUsuario(req, res);
+
+        if (!contexto) {
+            return;
+        }
+
+        const idEstanque = req.params.idEstanque;
+
+        if (!isIdValido(idEstanque)) {
+            return error(res, "El id del estanque debe ser numerico y mayor que cero.", null, 400);
+        }
+
+        const datosBase = await DensidadPoblacionalModel.findDatosBaseEstanque(
+            idEstanque,
+            contexto.grupoDatos
+        );
+
+        if (!datosBase) {
+            return error(res, "Estanque no encontrado.", null, 404);
+        }
+
+        return exito(res, "Datos base del estanque obtenidos correctamente.", datosBase);
+    } catch (err) {
+        return error(res, "Error al obtener los datos base del estanque.", err, 500);
+    }
+}
+
+async function validarSiembraRealEstanque(idEstanque, grupoDatos, res) {
+    const datosBase = await DensidadPoblacionalModel.findDatosBaseEstanque(
+        idEstanque,
+        grupoDatos
+    );
+
+    if (!datosBase) {
+        error(res, "Estanque no encontrado.", null, 404);
+        return null;
+    }
+
+    const cantidadSiembra = Number(datosBase.cantidadSiembra);
+
+    if (
+        datosBase.origenCantidadSiembra === "sin_siembra" ||
+        !Number.isFinite(cantidadSiembra) ||
+        cantidadSiembra <= 0
+    ) {
+        error(
+            res,
+            "El estanque seleccionado no tiene una siembra real registrada. " +
+            "Debe registrar una siembra antes de guardar la densidad poblacional.",
+            null,
+            422
+        );
+        return null;
+    }
+
+    return datosBase;
+}
+
 export async function createDensidad(req, res) {
     /*
     Descripcion:
@@ -405,6 +505,16 @@ export async function createDensidad(req, res) {
 
         const idEstanque = obtenerIdEstanque(req.body);
 
+        const datosBase = await validarSiembraRealEstanque(
+            idEstanque,
+            contexto.grupoDatos,
+            res
+        );
+
+        if (!datosBase) {
+            return;
+        }
+
         const existente = await DensidadPoblacionalModel.findByFechaAndEstanque(
             req.body.fecha,
             idEstanque,
@@ -421,7 +531,13 @@ export async function createDensidad(req, res) {
             );
         }
 
-        const dto = new DensidadPoblacionalDTO(req.body, contexto);
+        const bodySeguro = {
+            ...req.body,
+            cantidadSiembra: datosBase.cantidadSiembra,
+            areaEstanque: datosBase.areaEstanque
+        };
+
+        const dto = new DensidadPoblacionalDTO(bodySeguro, contexto);
 
         const nuevo = await DensidadPoblacionalModel.create(dto);
 
@@ -486,6 +602,16 @@ export async function updateDensidad(req, res) {
 
         const idEstanque = obtenerIdEstanque(req.body);
 
+        const datosBase = await validarSiembraRealEstanque(
+            idEstanque,
+            contexto.grupoDatos,
+            res
+        );
+
+        if (!datosBase) {
+            return;
+        }
+
         const existente = await DensidadPoblacionalModel.findByFechaAndEstanque(
             req.body.fecha,
             idEstanque,
@@ -502,9 +628,19 @@ export async function updateDensidad(req, res) {
             );
         }
 
-        const dto = new DensidadPoblacionalDTO(req.body, contexto);
+        const bodySeguro = {
+            ...req.body,
+            cantidadSiembra: datosBase.cantidadSiembra,
+            areaEstanque: datosBase.areaEstanque
+        };
 
-        const actualizado = await DensidadPoblacionalModel.update(req.params.id, dto, contexto.grupoDatos);
+        const dto = new DensidadPoblacionalDTO(bodySeguro, contexto);
+
+        const actualizado = await DensidadPoblacionalModel.update(
+            req.params.id,
+            dto,
+            contexto.grupoDatos
+        );
 
         return exito(res, "Registro de densidad poblacional actualizado correctamente.", actualizado);
     } catch (err) {

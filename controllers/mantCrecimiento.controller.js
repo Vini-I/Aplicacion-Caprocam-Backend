@@ -171,14 +171,17 @@ export async function updateCrecimiento(req, res) {
     const validacionErr = validarCuerpo(req.body, res);
     if (validacionErr) return validacionErr;
 
-    const { finca, estanque, fechaRegistro, pesoActual } = 
+    const { finca, estanque, fechaRegistro, pesoActual, muestreos } = 
     req.body;
     const dto = new MantCrecimientoDto(
         grupoDatos, 
         finca, 
         estanque, 
         fechaRegistro, 
-        pesoActual
+        pesoActual,
+        undefined,
+        undefined,
+        muestreos 
     );
 
     const actualizado = await MantCrecimientoModel.update(
