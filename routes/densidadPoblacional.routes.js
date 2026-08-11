@@ -30,6 +30,7 @@ import { validarBodyDensidadPoblacional } from
 import {
     getDensidades,
     getDensidadById,
+    getDatosBaseEstanque,
     createDensidad,
     updateDensidad,
     deleteDensidad,
@@ -54,6 +55,21 @@ router.get(
     '/',
     verificarAuth,
     getDensidades
+);
+
+/*
+Datos base del estanque (area en hectareas y siembra por m2) para
+precargar el formulario.
+
+IMPORTANTE: esta ruta va declarada ANTES de '/:id'. Express evalua
+las rutas en orden, y '/:id' hace match con cualquier segmento:
+si estuviera primero, una peticion a '/estanque/5/datos-base'
+entraria a getDensidadById con id = "estanque" y respondería 400.
+*/
+router.get(
+    '/estanque/:idEstanque/datos-base',
+    verificarAuth,
+    getDatosBaseEstanque
 );
 
 // Obtener por ID
