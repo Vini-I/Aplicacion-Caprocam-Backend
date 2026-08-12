@@ -14,9 +14,8 @@ Define las reglas de negocio de raleo.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
-
-DTOs
 */
+import * as SiembraModel from "../models/siembra.model.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -179,4 +178,16 @@ export function validarFechaNoFutura(fecha) {
     }
 
     return true;
+}
+
+//Validacion de estanque activo o no activo para el raleo
+export async function validarEstanque(idEstanque, grupoDatos) {
+
+    const siembra = await SiembraModel.findActivaByEstanque(idEstanque, grupoDatos);
+
+    if (!siembra) {
+        return null;
+    }
+
+    return siembra.id;
 }
