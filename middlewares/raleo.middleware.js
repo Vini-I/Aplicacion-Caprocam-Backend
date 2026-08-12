@@ -26,7 +26,6 @@ Campos minimos requeridos en el body para raleo.
 const camposRequeridos = [
     "idFinca",
     "idEstanque",
-    "idSiembra",
     "fecha",
     "porcentaje",
     "kgRetirados",
