@@ -31,7 +31,8 @@ import {
     validarRetiroBiomasa,
     validarBiomasaRestante,
     validarPorcentajeRaleo,
-    validarFechaNoFutura
+    validarFechaNoFutura,
+    validarEstanque,
 } from "../services/raleo.service.js";
 
 // Modelos
@@ -55,7 +56,7 @@ FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 */
 
-function validarCuerpo(body, res) {
+async function validarCuerpo(body, res, grupoDatos) {
     /*
     Descripcion:
     Valida los campos del body antes de construir el DTO.
@@ -71,7 +72,7 @@ function validarCuerpo(body, res) {
 
     if (isEmpty(body.idFinca)) {errores.push("El campo idFinca es requerido.");}
     if (isEmpty(body.idEstanque)) { errores.push("El campo idEstanque es requerido.");}
-    if (isEmpty(body.idSiembra)) {errores.push("El campo idSiembra es requerido.");}
+
     if (isEmpty(body.fecha)) {errores.push("El campo fecha es requerido.");}
     if (isEmpty(body.porcentaje)) {errores.push("El campo porcentaje es requerido.");}
     if (isEmpty(body.kgRetirados)) {errores.push("El campo kgRetirados es requerido.");}
@@ -80,10 +81,15 @@ function validarCuerpo(body, res) {
 
     if (!isNumeroMayorCero(body.idFinca)) {errores.push("El campo idFinca debe ser numerico y mayor que cero.");}
     if (!isNumeroMayorCero(body.idEstanque)) {errores.push("El campo idEstanque debe ser numerico y mayor que cero.");}
-    if (!isNumeroMayorCero(body.idSiembra)) {errores.push("El campo idSiembra debe ser numerico y mayor que cero.");}    
+
     if (!isNumeroMayorCero(body.porcentaje)) {errores.push("El campo porcentaje debe ser numerico y mayor que cero.");}
     if (!isNumeroMayorCero(body.kgRetirados)) {errores.push("El campo kgRetirados debe ser numerico y mayor que cero.");}
     if (!isNumeroMayorCero(body.biomasaEstimada)) {errores.push("El campo biomasaEstimada debe ser numerico y mayor que cero.");}
+
+    const idSiembra = await validarEstanque(body.idEstanque, grupoDatos);
+        if (!idSiembra) { errores.push("El estanque indicado no tiene una siembra activa.");
+        } else { body.idSiembra = idSiembra;
+        }
 
     //Validaciones de lógica de negocio
     if (!validarFechaNoFutura(body.fecha)) {errores.push("La fecha del raleo no puede ser futura y debe ser válida.");}
@@ -205,7 +211,7 @@ export async function createRaleo(req, res) {
         creadoPorColaboradorId
     } = obtenerContextoPeticion(req);
 
-    const err = validarCuerpo(req.body, res);
+    const err = await validarCuerpo(req.body, res, grupoDatos);
 
     if (err) {
         return err;
@@ -215,21 +221,6 @@ export async function createRaleo(req, res) {
     creadoPorUsuarioId,
     creadoPorColaboradorId
     });
-
-    const existente = await RaleoModel.findByEstanqueYFecha(
-        grupoDatos,
-        dto.idEstanque,
-        dto.fecha
-    );
-
-    if (existente) {
-        return error(
-            res,
-            "Ya existe un raleo de ese estanque con esa fecha.",
-            null,
-            409
-        );
-    }
     
     const nuevo = await RaleoModel.create(dto, grupoDatos);
 
@@ -270,7 +261,7 @@ export async function updateRaleo(req, res) {
             return errId;
         }
 
-        const err = validarCuerpo(req.body, res);
+        const err = await validarCuerpo(req.body, res, grupoDatos);
 
         if (err) {
             return err;
