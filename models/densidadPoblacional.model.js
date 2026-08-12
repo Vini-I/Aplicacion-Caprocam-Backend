@@ -128,6 +128,13 @@ export async function findAll(filtros) {
     El detalle de tiros se trae en UNA sola consulta adicional para
     todos los registros de la pagina, no una por registro: con 50
     registros en pantalla, la version ingenua haria 51 consultas.
+    Si no hay registros, se corta antes: no tiene sentido llamar a
+    findTirosDeVariosRegistros con un arreglo de ids vacio.
+
+    numeroCamarones se recalcula aqui explicitamente (Number(...) con
+    0 por defecto) por encima del alias que ya pone mapearFila: para
+    la lista, un registro sin muestra debe verse como 0 camarones,
+    no como null.
 
     Parametros:
     - filtros: Objeto con filtros opcionales.
@@ -172,12 +179,19 @@ export async function findAll(filtros) {
 
     const registros = mapearLista(rows);
 
-    const tirosPorRegistro = await findTirosDeVariosRegistros(
-        registros.map((registro) => registro.id)
-    );
+    if (registros.length === 0) {
+        return [];
+    }
+
+    const idsRegistros = registros.map((registro) => registro.id);
+
+    const tirosPorRegistro = await findTirosDeVariosRegistros(idsRegistros);
 
     for (let i = 0; i < registros.length; i++) {
-        registros[i].tiros = tirosPorRegistro[registros[i].id] || [];
+        const registro = registros[i];
+
+        registro.tiros = tirosPorRegistro[registro.id] || [];
+        registro.numeroCamarones = Number(registro.totalCamaronesMuestra || 0);
     }
 
     return registros;
@@ -383,20 +397,42 @@ export async function create(dto) {
 export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
-    Actualiza un registro de densidad poblacional existente y
-    reemplaza por completo su detalle de tiros, dentro de una misma
-    transaccion. Tambien incrementa la version del registro para
-    control de cambios.
+    Actualiza un registro de densidad poblacional y reconcilia su
+    detalle de tiros contra lo que ya existe en la base, en vez de
+    borrar todo el detalle y volver a insertarlo. Mismo patron que
+    update() en models/mantCrecimiento.model.js: se compara lo que
+    ya estaba activo contra lo que llego en el body, y solo se
+    tocan las filas que en verdad cambiaron.
 
-    El detalle se reemplaza (borrar + insertar) en vez de
-    actualizarse fila por fila: al editar, el usuario puede agregar
-    o quitar tiros, asi que la cantidad de filas cambia. Reemplazar
-    evita tener que reconciliar cuales sobreviven y garantiza que
-    la cabecera y el detalle siempre queden coherentes.
+    Por que numeroTiro y no id: a diferencia de los muestreos de
+    crecimiento (que si viajan con su id cuando el usuario los
+    edita), el detalle de tiros nunca vuelve al cliente con su id
+    para reenviarlo: normalizarTiros() en el service siempre
+    reasigna numeroTiro por posicion (1, 2, 3...). numeroTiro es
+    entonces el unico identificador estable disponible para saber
+    "este es el mismo tiro" entre lo que ya habia y lo que se
+    acaba de enviar.
+
+    Reconciliacion (ver reconciliarTiros mas abajo):
+    - numeroTiro que ya no viene en el body -> se marca inactivo
+      (activo = FALSE, deleted_at = NOW()), igual que el borrado
+      logico de la cabecera. No se borra fisicamente: sigue siendo
+      el dato crudo de un muestreo real que se hizo en campo.
+    - numeroTiro que ya existia y sigue viniendo -> se actualiza
+      solo cantidad_camarones sobre la misma fila (conserva su id,
+      fecha_creacion y autoria original).
+    - numeroTiro nuevo (el usuario agrego mas tiros de los que
+      habia) -> se inserta una fila nueva, con la autoria del
+      registro original (actual.creadoPorUsuarioId /
+      actual.creadoPorColaboradorId).
 
     IMPORTANTE: creado_por_usuario_id / creado_por_colaborador_id
-    (quien hizo el registro originalmente) son campos de auditoria
-    y NUNCA se modifican aqui, sin importar quien este editando.
+    de la CABECERA (quien hizo el registro originalmente) son
+    campos de auditoria y NUNCA se modifican aqui, sin importar
+    quien este editando. Por la misma razon, los tiros nuevos que
+    se inserten durante una edicion se atribuyen al creador
+    ORIGINAL del registro (actual.creadoPor...), no a quien esta
+    editando ahora.
 
     Parametros:
     - id: Identificador del registro que se desea actualizar.
@@ -465,15 +501,10 @@ export async function update(id, dto, grupoDatos) {
             ]
         );
 
-        await conexion.execute(
-            "DELETE FROM densidad_detalle_tiros WHERE densidad_id = ?",
-            [id]
-        );
-
-        await insertarTiros(conexion, id, dto.tiros, {
+        await reconciliarTiros(conexion, id, dto.tiros, {
             grupoDatos,
-            creadoPorUsuarioId: dto.creadoPorUsuarioId,
-            creadoPorColaboradorId: dto.creadoPorColaboradorId
+            creadoPorUsuarioId: actual.creadoPorUsuarioId,
+            creadoPorColaboradorId: actual.creadoPorColaboradorId
         });
 
         await conexion.commit();
@@ -724,6 +755,118 @@ async function insertarTiros(conexion, idDensidad, tiros, autoria) {
     );
 }
 
+async function reconciliarTiros(conexion, idDensidad, tirosNuevos, autoria) {
+    /*
+    Descripcion:
+    Reconcilia el detalle de tiros de un registro contra lo que ya
+    esta activo en la base, en vez de borrar todo y volver a
+    insertar. La usa unicamente update() (ver su docstring para el
+    por que de usar numeroTiro como llave en vez de id).
+
+    Se ejecuta siempre dentro de la transaccion que abrio update(),
+    por eso recibe la conexion y no usa el pool directamente.
+
+    Parametros:
+    - conexion: Conexion activa de la transaccion en curso.
+    - idDensidad: Id del registro de densidad al que pertenecen.
+    - tirosNuevos: Arreglo [{ numeroTiro, cantidadCamarones }] ya
+      normalizado (numeroTiro siempre 1, 2, 3... por posicion).
+    - autoria: Objeto { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId }
+      que se usa unicamente para las filas nuevas que haya que
+      insertar (los tiros que se actualizan conservan su autoria
+      original, no se tocan esas columnas).
+
+    Retorna:
+    - undefined. Lanza si alguna operacion falla (la transaccion revierte).
+    */
+
+    const tiros = Array.isArray(tirosNuevos) ? tirosNuevos : [];
+
+    const [activos] = await conexion.execute(
+        `
+        SELECT id, numero_tiro
+        FROM densidad_detalle_tiros
+        WHERE densidad_id = ?
+        AND activo = TRUE
+        AND deleted_at IS NULL
+        `,
+        [idDensidad]
+    );
+
+    const idExistentePorNumero = new Map();
+
+    for (const fila of activos) {
+        idExistentePorNumero.set(fila.numero_tiro, fila.id);
+    }
+
+    const numerosEnviados = new Set(tiros.map((tiro) => tiro.numeroTiro));
+
+    /*
+    1) Los que ya no vienen en el body -> borrado logico. No se
+    borran fisicamente: siguen siendo el dato crudo de un muestreo
+    que en verdad se hizo en campo.
+    */
+    for (const fila of activos) {
+        if (!numerosEnviados.has(fila.numero_tiro)) {
+            await conexion.execute(
+                `
+                UPDATE densidad_detalle_tiros
+                SET activo = FALSE, deleted_at = NOW()
+                WHERE id = ?
+                `,
+                [fila.id]
+            );
+        }
+    }
+
+    const grupoDatos = obtenerNumeroValido(autoria?.grupoDatos);
+    const creadoPorUsuarioId = obtenerNumeroValido(autoria?.creadoPorUsuarioId);
+    const creadoPorColaboradorId = obtenerNumeroValido(autoria?.creadoPorColaboradorId);
+
+    /*
+    2) Los que ya existian y siguen viniendo -> se actualiza solo
+    la cantidad, sobre la misma fila (conserva id, fecha_creacion
+    y autoria).
+    3) Los que no existian -> se insertan como fila nueva.
+    */
+    for (const tiro of tiros) {
+        const idExistente = idExistentePorNumero.get(tiro.numeroTiro);
+
+        if (idExistente !== undefined) {
+            await conexion.execute(
+                `
+                UPDATE densidad_detalle_tiros
+                SET cantidad_camarones = ?
+                WHERE id = ?
+                `,
+                [Number(tiro.cantidadCamarones), idExistente]
+            );
+        } else {
+            await conexion.execute(
+                `
+                INSERT INTO densidad_detalle_tiros (
+                    densidad_id,
+                    numero_tiro,
+                    cantidad_camarones,
+                    grupo_datos,
+                    creado_por_usuario_id,
+                    creado_por_colaborador_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                `,
+                [
+                    idDensidad,
+                    tiro.numeroTiro,
+                    Number(tiro.cantidadCamarones),
+                    grupoDatos,
+                    creadoPorUsuarioId,
+                    creadoPorColaboradorId
+                ]
+            );
+        }
+    }
+}
+
 async function findTirosPorDensidad(idDensidad) {
     /*
     Descripcion:
@@ -765,68 +908,71 @@ async function findTirosPorDensidad(idDensidad) {
     return rows.map(mapearTiro);
 }
 
-async function findTirosDeVariosRegistros(idsDensidad) {
+async function findTirosDeVariosRegistros(idsRegistros) {
     /*
     Descripcion:
     Obtiene el detalle de tiros de varios registros de densidad en
     una sola consulta, y lo devuelve agrupado por registro. Evita el
     problema N+1 en findAll.
 
+    Se usa para el LISTADO, no para el detalle de un registro
+    puntual (eso lo sigue resolviendo findTirosPorDensidad, que si
+    trae todas las columnas de auditoria via mapearTiro). Aqui solo
+    se traen id, numeroTiro y cantidadCamarones: es lo unico que el
+    listado necesita para no hacer una consulta por fila.
+
     Los placeholders se arman a mano (?, ?, ?...) porque
     connection.execute() con sentencias preparadas no expande un
     arreglo dentro de un IN (?).
 
     Parametros:
-    - idsDensidad: Arreglo de ids de registros de densidad.
+    - idsRegistros: Arreglo de ids de registros de densidad.
 
     Retorna:
-    - Objeto { [idDensidad]: [{ numeroTiro, cantidadCamarones }] }.
+    - Objeto { [idDensidad]: [{ id, numeroTiro, cantidadCamarones }] }.
     */
 
-    if (!Array.isArray(idsDensidad) || idsDensidad.length === 0) {
+    if (!idsRegistros || idsRegistros.length === 0) {
         return {};
     }
 
-    const placeholders = idsDensidad.map(() => "?").join(", ");
+    const placeholders = idsRegistros.map(() => "?").join(", ");
 
-    const [rows] = await pool.execute(
+    const [tiros] = await pool.execute(
         `
         SELECT
             id,
-            uuid,
-            grupo_datos,
-            densidad_id,
-            numero_tiro,
-            cantidad_camarones,
-            creado_por_usuario_id,
-            creado_por_colaborador_id,
-            activo,
-            fecha_creacion,
-            fecha_actualizacion,
-            deleted_at,
-            version
+            densidad_id AS densidadId,
+            numero_tiro AS numeroTiro,
+            cantidad_camarones AS cantidadCamarones
         FROM densidad_detalle_tiros
         WHERE densidad_id IN (${placeholders})
-        AND deleted_at IS NULL
         AND activo = TRUE
+        AND deleted_at IS NULL
         ORDER BY densidad_id ASC, numero_tiro ASC
         `,
-        idsDensidad
+        idsRegistros
     );
 
-    const agrupados = {};
+    const tirosPorRegistro = {};
 
-    for (let i = 0; i < rows.length; i++) {
-        const idDensidad = rows[i].densidad_id;
+    for (const tiro of tiros) {
+        const densidadId = tiro.densidadId;
 
-        if (!agrupados[idDensidad]) {
-            agrupados[idDensidad] = [];
+        if (!tirosPorRegistro[densidadId]) {
+            tirosPorRegistro[densidadId] = [];
         }
 
-        agrupados[idDensidad].push(mapearTiro(rows[i]));
+        const datosTiro = {
+            id: tiro.id,
+            numeroTiro: tiro.numeroTiro,
+            cantidadCamarones: tiro.cantidadCamarones
+        };
+
+        tirosPorRegistro[densidadId].push(datosTiro);
     }
 
-    return agrupados;
+    return tirosPorRegistro;
 }
 
 function mapearTiro(row) {
