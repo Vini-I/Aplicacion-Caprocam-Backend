@@ -810,10 +810,7 @@ CREATE TABLE IF NOT EXISTS parasitologias (
     fecha_reporte DATE NOT NULL,
     responsable VARCHAR(100) NULL,
     parasito ENUM('gregarina', 'nematodo', 'epicomensal', 'protozoario', 'otro') NOT NULL,
-    camarones_muestreados INT NULL,
-    camarones_infectados INT NULL,
-    porcentaje_infeccion DECIMAL(5,2) NULL,
-    grado_infeccion ENUM('bajo', 'medio', 'alto') NULL,
+    grado_infeccion ENUM('bajo', 'medio', 'alto') NOT NULL,
     observaciones VARCHAR(400) NULL,
     creado_por_usuario_id INT NULL,
     creado_por_colaborador_id INT NULL,
@@ -966,16 +963,24 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
 CREATE TABLE IF NOT EXISTS densidad_detalle_tiros (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    grupo_datos INT NOT NULL,
     densidad_id INT NOT NULL,
     numero_tiro INT NOT NULL,
     cantidad_camarones INT NOT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_densidad_detalle_tiros_densidad
-    FOREIGN KEY (densidad_id) REFERENCES densidad_poblacional(id),
-
-    CONSTRAINT uq_densidad_detalle_tiro
-    UNIQUE (densidad_id, numero_tiro)
+    CONSTRAINT fk_densidad_detalle_grupos FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
+    CONSTRAINT fk_densidad_detalle_maestro FOREIGN KEY (densidad_id) REFERENCES densidad_poblacional(id) ON DELETE CASCADE,
+    CONSTRAINT fk_densidad_detalle_usuario FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_densidad_detalle_colab FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id),
+        
+    CONSTRAINT uq_densidad_detalle_tiro UNIQUE (densidad_id, numero_tiro) 
 );
 
 CREATE TABLE IF NOT EXISTS raleos (
@@ -1238,3 +1243,7 @@ CREATE INDEX idx_calculos_crecimiento_grupo ON calculos_crecimiento(grupo_datos)
 CREATE INDEX idx_calculos_crecimiento_crecimiento_id ON calculos_crecimiento(crecimiento_id);
 CREATE INDEX idx_calculos_crecimiento_creado_usuario ON calculos_crecimiento(creado_por_usuario_id);
 CREATE INDEX idx_calculos_crecimiento_creado_colaborador ON calculos_crecimiento(creado_por_colaborador_id);
+
+CREATE INDEX idx_densidad_fecha ON densidad_poblacional (estanque_id, fecha);
+CREATE INDEX idx_detalle_tiros_maestro ON densidad_detalle_tiros (densidad_id);
+CREATE INDEX idx_detalle_tiros_sync ON densidad_detalle_tiros (uuid, version);

@@ -72,6 +72,7 @@ app.use(cors({
     origin: 'http://localhost:8081', // direccion del frontend en desarrollo
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['X-Renewed-Token'],
 }));
 app.use(express.json());
 

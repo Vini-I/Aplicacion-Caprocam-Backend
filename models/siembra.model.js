@@ -189,13 +189,11 @@ export async function create(dto, grupoDatos) {
         await connection.execute(`
             UPDATE estanques
             SET    estado = ?,
-                   fecha_siembra = ?,
-                   fecha_inicio_engorde = ?,
                    version = version + 1
             WHERE  id = ?
             AND    grupo_datos = ?
-        `, [EstadoEstanque.ENGORDE, dto.fecha_siembra, dto.fecha_siembra, dto.estanque_id, grupoDatos]);
- 
+        `, [EstadoEstanque.ENGORDE, dto.estanque_id, grupoDatos]);
+
         await connection.commit();
         insertId = result.insertId;
     } catch (err) {
@@ -332,15 +330,10 @@ export async function createConLote(dtoLote, dtoSiembra, grupoDatos) {
         await connection.execute(`
             UPDATE estanques
             SET    estado = ?,
-                   fecha_siembra = ?,
-                   fecha_inicio_engorde = ?,
                    version = version + 1
             WHERE  id = ?
             AND    grupo_datos = ?
-        `, [
-            EstadoEstanque.ENGORDE, dtoSiembra.fecha_siembra, dtoSiembra.fecha_siembra,
-            dtoSiembra.estanque_id, grupoDatos,
-        ]);
+        `, [EstadoEstanque.ENGORDE, dtoSiembra.estanque_id, grupoDatos]);
  
         await connection.commit();
  
@@ -421,8 +414,9 @@ export async function obtenerEstanquePorId(estanqueId, fincaId, grupoDatos) {
 export async function finalizarConEstanque(id, grupoDatos, datosFinalizacion) {
     /*
     Descripcion:
-    Finaliza una siembra (manual o automaticamente) y transiciona el
-    estanque asociado a 'Cosechado', en una sola transaccion.
+    Finaliza una siembra y transiciona el estanque asociado a 
+    'Cosechado' en una sola transaccion. Integra la suma total de 
+    la produccion (kg_retirado) desde la tabla de raleos.
     */
     const connection = await pool.getConnection();
     let debeLeerRegistro = false;
@@ -434,17 +428,25 @@ export async function finalizarConEstanque(id, grupoDatos, datosFinalizacion) {
             WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
             FOR UPDATE
         `, [Number(id), grupoDatos]);
+        
         const siembra = siembraRows[0];
         if (!siembra) {
             await connection.rollback();
             return null;
         }
 
+        const [raleoRows] = await connection.execute(`
+            SELECT SUM(kg_retirados) AS total_kg 
+            FROM raleos 
+            WHERE siembra_id = ?
+        `, [Number(id)]);
+        const totalKg = raleoRows[0]?.total_kg || 0;
+
         await connection.execute(`
             UPDATE siembras
-            SET    estado = ?, version = version + 1
+            SET    estado = ?, produccion_kg = ?, version = version + 1
             WHERE  id = ? AND grupo_datos = ?
-        `, [datosFinalizacion.estado, Number(id), grupoDatos]);
+        `, [datosFinalizacion.estado, totalKg, Number(id), grupoDatos]);
 
         await connection.execute(`
             UPDATE estanques
@@ -461,39 +463,10 @@ export async function finalizarConEstanque(id, grupoDatos, datosFinalizacion) {
         connection.release();
     }
 
-    // Fuera de la transaccion, misma razon que en create(): el commit()
-    // ya se ejecuto, asi que un fallo en esta lectura no debe reportarse
-    // como un fallo de la finalizacion.
     return debeLeerRegistro ? findById(id, grupoDatos) : null;
 }
 
-export async function finalizarActivasVencidas() {
-    /*
-    Descripcion:
-    Cierre automatico: busca (en TODOS los grupos de datos) las siembras
-    Activas cuyo duracion_ciclo ya se cumplio y las finaliza, transicionando
-    tambien el estanque asociado a 'Cosechado'. Pensado para ser invocado
-    periodicamente por un job/scheduler.
-    Retorna:
-    - Array de IDs de siembras finalizadas automaticamente.
-    */
-    const [vencidas] = await pool.execute(`
-        SELECT id, grupo_datos
-        FROM   siembras
-        WHERE  LOWER(TRIM(estado)) = 'activa'
-        AND    activo = TRUE
-        AND    deleted_at IS NULL
-        AND    duracion_ciclo IS NOT NULL
-        AND    DATEDIFF(CURDATE(), fecha_siembra) >= duracion_ciclo
-    `);
 
-    const idsFinalizados = [];
-    for (const fila of vencidas) {
-        await finalizarConEstanque(fila.id, fila.grupo_datos, { estado: 'Finalizada' });
-        idsFinalizados.push(fila.id);
-    }
-    return idsFinalizados;
-}
  
 export async function update(id, grupoDatos, datos) {
     /*

@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantCrecimiento.dto.js
 Autor: Greivin Arguedas
-Fecha: 03/08/2026
+Fecha: 08/08/2026
 Modulo: Crecimiento
 Descripcion:
 Archivo de transferencia de datos para crecimiento.
@@ -26,7 +26,8 @@ export class MantCrecimientoDto {
         fechaRegistro,
         pesoActual,
         creadoPorUsuarioId,
-        creadoPorColaboradorId
+        creadoPorColaboradorId,
+        muestreos = undefined
     ) {
         /*
         Descripcion:
@@ -40,6 +41,10 @@ export class MantCrecimientoDto {
         - pesoActual: Peso actual registrado.
         - creadoPorUsuarioId: Identificador del usuario que creó el registro.
         - creadoPorColaboradorId: Identificador del colaborador que creó el registro.
+        - muestreos: Arreglo de muestreos asociados al registro (opcional).
+
+        Retorna:
+        - Un objeto MantCrecimientoDto con los datos proporcionados.
         */
 
         this.grupoDatos = grupoDatos;
@@ -49,5 +54,8 @@ export class MantCrecimientoDto {
         this.pesoActual = pesoActual;
         this.creadoPorUsuarioId     = creadoPorUsuarioId ?? null;
         this.creadoPorColaboradorId = creadoPorColaboradorId ?? null;
+        this.muestreos = muestreos !== undefined
+            ? (Array.isArray(muestreos) ? muestreos : [])
+            : undefined;
     }
 }

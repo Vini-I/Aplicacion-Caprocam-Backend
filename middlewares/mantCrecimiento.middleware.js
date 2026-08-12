@@ -51,14 +51,19 @@ export async function validarMantCrecimiento(req, res, next) {
     if (!fechaRegistro) {
         return error(res, "La fecha de registro es obligatoria.", null, 400);
     }
+
     const fechaIngresada = new Date(fechaRegistro);
     if (isNaN(fechaIngresada.getTime())) {
         return error(res, "La fecha de registro debe ser válida.", null, 400);
     }
-    const ahora = new Date();
-    if (fechaIngresada.getTime() > ahora.getTime()) {
+    const ahoraCR = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Costa_Rica" }));
+    
+    const fechaActualCR = new Date(Date.UTC(ahoraCR.getFullYear(), ahoraCR.getMonth(), ahoraCR.getDate()));
+
+    if (fechaIngresada.getTime() > fechaActualCR.getTime()) {
         return error(res, "La fecha de registro no puede ser futura.", null, 400);
     }
+    
     if (pesoActual === undefined || pesoActual === null || pesoActual === "") {
         return error(res, "El peso actual es obligatorio.", null, 400);
     }

@@ -7,7 +7,7 @@ Autor: Andres Gutierrez
 Fecha: 03/07/2026
 Modulo: Parasitologias
 Descripcion:
-Define las reglas de negocio, validaciones y calculos
+Define las reglas de negocio, validaciones y resumenes
 del modulo de parasitologias.
 //////////////////////////////////////////////////////////
 */
@@ -62,7 +62,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 
 Contiene las funciones exportables de validacion,
-catalogo y calculo que utiliza el controller.
+catalogo y resumen que utiliza el controller.
 */
 
 export function isEmpty(valor) {
@@ -107,9 +107,7 @@ export function isIdValido(id) {
     - true si es valido, false si no.
     */
 
-    return isNumeroMayorCero(
-        id
-    );
+    return isNumeroMayorCero(id);
 }
 
 export function isNumeroMayorCero(valor) {
@@ -125,46 +123,13 @@ export function isNumeroMayorCero(valor) {
     - false si no cumple la regla.
     */
 
-    const numero =
-        Number(valor);
+    const numero = Number(valor);
 
-    if (
-        Number.isInteger(numero) === false
-    ) {
+    if (Number.isInteger(numero) === false) {
         return false;
     }
 
     if (numero <= 0) {
-        return false;
-    }
-
-    return true;
-}
-
-export function isNumeroMayorIgualCero(valor) {
-    /*
-    Descripcion:
-    Valida que un valor sea un numero entero mayor o igual
-    que cero.
-
-    Parametros:
-    - valor: Valor a validar.
-
-    Retorna:
-    - true si es entero y mayor o igual que cero.
-    - false si no cumple la regla.
-    */
-
-    const numero =
-        Number(valor);
-
-    if (
-        Number.isInteger(numero) === false
-    ) {
-        return false;
-    }
-
-    if (numero < 0) {
         return false;
     }
 
@@ -186,10 +151,7 @@ export function isFechaValida(fecha) {
     - false si no es valida.
     */
 
-    const partes =
-        obtenerPartesFecha(
-            fecha
-        );
+    const partes = obtenerPartesFecha(fecha);
 
     return partes !== null;
 }
@@ -208,36 +170,27 @@ export function isFechaFutura(fecha) {
     - false si corresponde a hoy o una fecha anterior.
     */
 
-    const partes =
-        obtenerPartesFecha(
-            fecha
-        );
+    const partes = obtenerPartesFecha(fecha);
 
     if (partes === null) {
         return false;
     }
 
-    const fechaReporte =
-        new Date(
-            partes.anio,
-            partes.mes - 1,
-            partes.dia
-        );
-
-    const ahora =
-        new Date();
-
-    const fechaServidor =
-        new Date(
-            ahora.getFullYear(),
-            ahora.getMonth(),
-            ahora.getDate()
-        );
-
-    return (
-        fechaReporte >
-        fechaServidor
+    const fechaReporte = new Date(
+        partes.anio,
+        partes.mes - 1,
+        partes.dia
     );
+
+    const ahora = new Date();
+
+    const fechaServidor = new Date(
+        ahora.getFullYear(),
+        ahora.getMonth(),
+        ahora.getDate()
+    );
+
+    return fechaReporte > fechaServidor;
 }
 
 export function isParasitoValido(parasito) {
@@ -258,25 +211,11 @@ export function isParasitoValido(parasito) {
         return false;
     }
 
-    const parasitos =
-        Object.values(
-            ParasitoParasitologia
-        );
+    const parasitos = Object.values(ParasitoParasitologia);
+    const parasitoTexto = String(parasito).trim();
 
-    const parasitoTexto =
-        String(
-            parasito
-        ).trim();
-
-    for (
-        let i = 0;
-        i < parasitos.length;
-        i++
-    ) {
-        if (
-            parasitoTexto ===
-            parasitos[i]
-        ) {
+    for (let i = 0; i < parasitos.length; i++) {
+        if (parasitoTexto === parasitos[i]) {
             return true;
         }
     }
@@ -284,9 +223,7 @@ export function isParasitoValido(parasito) {
     return false;
 }
 
-export function isGradoInfeccionValido(
-    gradoInfeccion
-) {
+export function isGradoInfeccionValido(gradoInfeccion) {
     /*
     Descripcion:
     Valida que el grado de infeccion recibido exista
@@ -300,176 +237,20 @@ export function isGradoInfeccionValido(
     - false si no corresponde a un valor permitido.
     */
 
-    if (
-        isEmpty(
-            gradoInfeccion
-        )
-    ) {
+    if (isEmpty(gradoInfeccion)) {
         return false;
     }
 
-    const grados =
-        Object.values(
-            GradoInfeccion
-        );
+    const grados = Object.values(GradoInfeccion);
+    const gradoTexto = String(gradoInfeccion).trim().toLowerCase();
 
-    const gradoTexto =
-        String(
-            gradoInfeccion
-        )
-            .trim()
-            .toLowerCase();
-
-    for (
-        let i = 0;
-        i < grados.length;
-        i++
-    ) {
-        if (
-            gradoTexto ===
-            grados[i]
-        ) {
+    for (let i = 0; i < grados.length; i++) {
+        if (gradoTexto === grados[i]) {
             return true;
         }
     }
 
     return false;
-}
-
-export function isInfectadosValido(
-    camaronesMuestreados,
-    camaronesInfectados
-) {
-    /*
-    Descripcion:
-    Valida que los camarones infectados no sean mayores
-    que los camarones muestreados cuando ambos valores
-    fueron proporcionados.
-
-    Parametros:
-    - camaronesMuestreados: Total de camarones revisados.
-    - camaronesInfectados: Total de camarones infectados.
-
-    Retorna:
-    - true si la relacion es valida o no aplica.
-    - false si la relacion es invalida.
-    */
-
-    if (
-        isEmpty(camaronesMuestreados) ||
-        isEmpty(camaronesInfectados)
-    ) {
-        return true;
-    }
-
-    if (
-        !isNumeroMayorCero(
-            camaronesMuestreados
-        )
-    ) {
-        return false;
-    }
-
-    if (
-        !isNumeroMayorIgualCero(
-            camaronesInfectados
-        )
-    ) {
-        return false;
-    }
-
-    const muestreados =
-        Number(
-            camaronesMuestreados
-        );
-
-    const infectados =
-        Number(
-            camaronesInfectados
-        );
-
-    if (
-        infectados >
-        muestreados
-    ) {
-        return false;
-    }
-
-    return true;
-}
-
-export function calcularPorcentajeInfeccion(
-    camaronesMuestreados,
-    camaronesInfectados
-) {
-    /*
-    Descripcion:
-    Calcula el porcentaje de infeccion del muestreo.
-    El calculo solamente se realiza cuando ambos valores
-    opcionales fueron proporcionados y son validos.
-
-    Parametros:
-    - camaronesMuestreados: Total de camarones revisados.
-    - camaronesInfectados: Total de camarones infectados.
-
-    Retorna:
-    - Porcentaje de infeccion con dos decimales.
-    - null cuando no existen datos suficientes o validos.
-    */
-
-    if (
-        isEmpty(camaronesMuestreados) ||
-        isEmpty(camaronesInfectados)
-    ) {
-        return null;
-    }
-
-    if (
-        !isNumeroMayorCero(
-            camaronesMuestreados
-        )
-    ) {
-        return null;
-    }
-
-    if (
-        !isNumeroMayorIgualCero(
-            camaronesInfectados
-        )
-    ) {
-        return null;
-    }
-
-    if (
-        !isInfectadosValido(
-            camaronesMuestreados,
-            camaronesInfectados
-        )
-    ) {
-        return null;
-    }
-
-    const muestreados =
-        Number(
-            camaronesMuestreados
-        );
-
-    const infectados =
-        Number(
-            camaronesInfectados
-        );
-
-    const porcentaje =
-        (
-            infectados /
-            muestreados
-        ) * 100;
-
-    return Number(
-        porcentaje.toFixed(
-            2
-        )
-    );
 }
 
 export function obtenerCatalogoParasitos() {
@@ -487,127 +268,31 @@ export function obtenerCatalogoParasitos() {
     return catalogoParasitos;
 }
 
-export function construirResumenParasitologias(
-    registros
-) {
+export function construirResumenParasitologias(registros) {
     /*
     Descripcion:
     Construye un resumen general de los registros de
-    parasitologias.
-
-    Los registros que no poseen datos de muestreo no se
-    utilizan para calcular el promedio de infeccion.
+    parasitologias utilizando los grados de infeccion y
+    los parasitos registrados.
 
     Parametros:
     - registros: Lista de registros de parasitologias.
 
     Retorna:
-    - Objeto con totales, promedio y frecuencias.
+    - Objeto con total de registros y frecuencias.
     */
 
     const resumen = {
-        totalRegistros:
-            registros.length,
-
-        totalCamaronesMuestreados:
-            0,
-
-        totalCamaronesInfectados:
-            0,
-
-        promedioInfeccion:
-            null,
-
-        gradosFrecuentes:
-            [],
-
-        parasitosFrecuentes:
-            []
+        totalRegistros: registros.length,
+        gradosFrecuentes: [],
+        parasitosFrecuentes: []
     };
 
     const contadorGrados = {};
     const contadorParasitos = {};
 
-    let sumaPorcentajeInfeccion =
-        0;
-
-    let registrosConPorcentaje =
-        0;
-
-    for (
-        let i = 0;
-        i < registros.length;
-        i++
-    ) {
-        const registro =
-            registros[i];
-
-        if (
-            !isEmpty(
-                registro.camaronesMuestreados
-            )
-        ) {
-            const muestreados =
-                Number(
-                    registro.camaronesMuestreados
-                );
-
-            if (
-                Number.isNaN(
-                    muestreados
-                ) === false
-            ) {
-                resumen.totalCamaronesMuestreados =
-                    resumen.totalCamaronesMuestreados +
-                    muestreados;
-            }
-        }
-
-        if (
-            !isEmpty(
-                registro.camaronesInfectados
-            )
-        ) {
-            const infectados =
-                Number(
-                    registro.camaronesInfectados
-                );
-
-            if (
-                Number.isNaN(
-                    infectados
-                ) === false
-            ) {
-                resumen.totalCamaronesInfectados =
-                    resumen.totalCamaronesInfectados +
-                    infectados;
-            }
-        }
-
-        if (
-            !isEmpty(
-                registro.porcentajeInfeccion
-            )
-        ) {
-            const porcentaje =
-                Number(
-                    registro.porcentajeInfeccion
-                );
-
-            if (
-                Number.isNaN(
-                    porcentaje
-                ) === false
-            ) {
-                sumaPorcentajeInfeccion =
-                    sumaPorcentajeInfeccion +
-                    porcentaje;
-
-                registrosConPorcentaje =
-                    registrosConPorcentaje +
-                    1;
-            }
-        }
+    for (let i = 0; i < registros.length; i++) {
+        const registro = registros[i];
 
         contarValor(
             contadorGrados,
@@ -620,30 +305,8 @@ export function construirResumenParasitologias(
         );
     }
 
-    if (
-        registrosConPorcentaje > 0
-    ) {
-        const promedio =
-            sumaPorcentajeInfeccion /
-            registrosConPorcentaje;
-
-        resumen.promedioInfeccion =
-            Number(
-                promedio.toFixed(
-                    2
-                )
-            );
-    }
-
-    resumen.gradosFrecuentes =
-        construirListaContador(
-            contadorGrados
-        );
-
-    resumen.parasitosFrecuentes =
-        construirListaContador(
-            contadorParasitos
-        );
+    resumen.gradosFrecuentes = construirListaContador(contadorGrados);
+    resumen.parasitosFrecuentes = construirListaContador(contadorParasitos);
 
     return resumen;
 }
@@ -675,79 +338,36 @@ function obtenerPartesFecha(fecha) {
         return null;
     }
 
-    const fechaTexto =
-        String(
-            fecha
-        ).trim();
+    const fechaTexto = String(fecha).trim();
 
-    const patronIso =
-        /^\d{4}-\d{2}-\d{2}$/;
-
-    const patronLocal =
-        /^\d{2}\/\d{2}\/\d{4}$/;
+    const patronIso = /^\d{4}-\d{2}-\d{2}$/;
+    const patronLocal = /^\d{2}\/\d{2}\/\d{4}$/;
 
     let anio;
     let mes;
     let dia;
 
-    if (
-        patronIso.test(
-            fechaTexto
-        )
-    ) {
-        const partes =
-            fechaTexto.split(
-                "-"
-            );
+    if (patronIso.test(fechaTexto)) {
+        const partes = fechaTexto.split("-");
 
-        anio =
-            Number(
-                partes[0]
-            );
+        anio = Number(partes[0]);
+        mes = Number(partes[1]);
+        dia = Number(partes[2]);
+    } else if (patronLocal.test(fechaTexto)) {
+        const partes = fechaTexto.split("/");
 
-        mes =
-            Number(
-                partes[1]
-            );
-
-        dia =
-            Number(
-                partes[2]
-            );
-    } else if (
-        patronLocal.test(
-            fechaTexto
-        )
-    ) {
-        const partes =
-            fechaTexto.split(
-                "/"
-            );
-
-        dia =
-            Number(
-                partes[0]
-            );
-
-        mes =
-            Number(
-                partes[1]
-            );
-
-        anio =
-            Number(
-                partes[2]
-            );
+        dia = Number(partes[0]);
+        mes = Number(partes[1]);
+        anio = Number(partes[2]);
     } else {
         return null;
     }
 
-    const fechaValidar =
-        new Date(
-            anio,
-            mes - 1,
-            dia
-        );
+    const fechaValidar = new Date(
+        anio,
+        mes - 1,
+        dia
+    );
 
     if (
         fechaValidar.getFullYear() !== anio ||
@@ -764,10 +384,7 @@ function obtenerPartesFecha(fecha) {
     };
 }
 
-function contarValor(
-    contador,
-    valor
-) {
+function contarValor(contador, valor) {
     /*
     Descripcion:
     Suma una ocurrencia dentro de un objeto contador.
@@ -784,20 +401,14 @@ function contarValor(
         return;
     }
 
-    if (
-        contador[valor] ===
-        undefined
-    ) {
+    if (contador[valor] === undefined) {
         contador[valor] = 0;
     }
 
-    contador[valor] =
-        contador[valor] + 1;
+    contador[valor] = contador[valor] + 1;
 }
 
-function construirListaContador(
-    contador
-) {
+function construirListaContador(contador) {
     /*
     Descripcion:
     Convierte un objeto contador en una lista ordenada.
@@ -810,37 +421,20 @@ function construirListaContador(
     */
 
     const lista = [];
+    const claves = Object.keys(contador);
 
-    const claves =
-        Object.keys(
-            contador
-        );
-
-    for (
-        let i = 0;
-        i < claves.length;
-        i++
-    ) {
-        const clave =
-            claves[i];
+    for (let i = 0; i < claves.length; i++) {
+        const clave = claves[i];
 
         lista.push({
-            valor:
-                clave,
-
-            cantidad:
-                contador[clave]
+            valor: clave,
+            cantidad: contador[clave]
         });
     }
 
-    lista.sort(
-        function (a, b) {
-            return (
-                b.cantidad -
-                a.cantidad
-            );
-        }
-    );
+    lista.sort(function (a, b) {
+        return b.cantidad - a.cantidad;
+    });
 
     return lista;
 }

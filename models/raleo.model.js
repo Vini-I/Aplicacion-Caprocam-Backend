@@ -8,8 +8,6 @@ Fecha: 03/07/2026
 Modulo: Raleo
 Descripcion:
 Capa de datos del modulo de raleo.
-Por ahora trabaja con datos mock. Cuando haya DB,
-solo este archivo cambia.
 //////////////////////////////////////////////////////////
 */
 
@@ -94,12 +92,12 @@ export async function findByEstanqueYFecha(grupoDatos, idEstanque, fecha) {
             grupo_datos,
             finca_id,
             estanque_id,
+            siembra_id,
             fecha,
             porcentaje,
-            peso_estimado,
+            kg_retirados,
+            biomasa_restante,
             biomasa_estimada,
-            objetivo,
-            metodos,
             observaciones,
             creado_por_usuario_id,
             creado_por_colaborador_id,            
@@ -144,12 +142,12 @@ export async function create(dto, grupoDatos) {
             grupo_datos,
             finca_id,
             estanque_id,
+            siembra_id,
             fecha,
             porcentaje,
-            peso_estimado,
+            kg_retirados,
+            biomasa_restante,
             biomasa_estimada,
-            objetivo,
-            metodos,
             observaciones,
             creado_por_usuario_id,
             creado_por_colaborador_id
@@ -160,12 +158,12 @@ export async function create(dto, grupoDatos) {
             grupoDatos,
             dto.idFinca,
             dto.idEstanque,
+            dto.idSiembra,
             dto.fecha,
             dto.porcentaje,
-            dto.pesoEstimado,
-            dto.biomasaEstimado,
-            dto.objetivo,
-            dto.metodo,
+            dto.kgRetirados,
+            dto.biomasaRestante,
+            dto.biomasaEstimada,
             dto.observaciones,
             dto.creadoPorUsuarioId,
             dto.creadoPorColaboradorId
@@ -202,12 +200,12 @@ export async function update(id, dto, grupoDatos) {
         SET
             finca_id = ?,
             estanque_id = ?,
+            siembra_id = ?,
             fecha = ?,
             porcentaje = ?,
-            peso_estimado = ?,
+            kg_retirados = ?,
+            biomasa_restante = ?,
             biomasa_estimada = ?,
-            objetivo = ?,
-            metodos = ?,
             observaciones = ?,
             version = version + 1
         WHERE id = ?
@@ -218,12 +216,12 @@ export async function update(id, dto, grupoDatos) {
         [
             dto.idFinca,
             dto.idEstanque,
+            dto.idSiembra,
             dto.fecha,
             dto.porcentaje,
-            dto.pesoEstimado,
-            dto.biomasaEstimado,
-            dto.objetivo,
-            dto.metodo,
+            dto.kgRetirados,
+            dto.biomasaRestante,
+            dto.biomasaEstimada,
             dto.observaciones,
             id,
             grupoDatos
@@ -286,12 +284,12 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         idFinca: row.finca_id,
         idEstanque: row.estanque_id,
+        idsiembra: row.siembra_id,
         fecha: formatearFecha(row.fecha),
         porcentaje: Number(row.porcentaje),
-        pesoEstimado: Number(row.peso_estimado),
-        biomasaEstimado: Number(row.biomasa_estimada),
-        objetivo: row.objetivo,
-        metodo: row.metodos,
+        kgRetirados: Number(row.kg_retirados),
+        biomasaRestante: Number(row.biomasa_restante),
+        biomasaEstimada: Number(row.biomasa_estimada),
         observaciones: row.observaciones,
         creadoPorUsuarioId: row.creado_por_usuario_id,
         creadoPorColaboradorId: row.creado_por_colaborador_id,        
