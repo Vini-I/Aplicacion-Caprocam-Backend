@@ -272,7 +272,7 @@ export async function remove(id, grupoDatos) {
 
     await pool.query(
         `UPDATE productos 
-         SET estado = "INACTIVO", deleted_at = CURRENT_TIMESTAMP
+         SET estado = "INACTIVO", activo = FALSE, deleted_at = CURRENT_TIMESTAMP
          WHERE id = ? AND grupo_datos = ?`,
         [id, grupoDatos]
     );
