@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: syncDescarga.dto.js
 Autor: Greivin Eliecer A.G
-Fecha: 011/08/2026
+Fecha: 13/08/2026
 Modulo: Sincronizacion
 Descripcion:
 DTO para la descarga de catalogos del modulo de sincronizacion.
@@ -28,7 +28,6 @@ export class DescargaCatalogosDTO {
     inventario,
     equipos,
     tareas,
-    colaboradores,
     laboratorios,
     procedencias,
     proveedoresLarva,
@@ -51,7 +50,6 @@ export class DescargaCatalogosDTO {
         - inventario:    Array de inventario del grupo.
         - equipos:       Array de equipos del grupo.
         - tareas:        Array de tareas del grupo.
-        - colaboradores: Array de colaboradores del grupo.
         - laboratorios:  Array de laboratorios del grupo.
         - procedencias:  Array de procedencias del grupo.
         - proveedoresLarva: Array de proveedores de larvas del grupo.
@@ -73,7 +71,6 @@ export class DescargaCatalogosDTO {
     this.inventario       = inventario       ?? [];
     this.equipos          = equipos          ?? [];
     this.tareas           = tareas           ?? [];
-    this.colaboradores    = colaboradores    ?? [];
     this.laboratorios     = laboratorios     ?? [];
     this.procedencias     = procedencias     ?? [];
     this.proveedoresLarva = proveedoresLarva ?? [];
@@ -93,7 +90,6 @@ export class DescargaCatalogosDTO {
         inventario:       this.inventario.length,
         equipos:          this.equipos.length,
         tareas:           this.tareas.length,
-        colaboradores:    this.colaboradores.length,
         laboratorios:     this.laboratorios.length,
         procedencias:     this.procedencias.length,
         proveedoresLarva: this.proveedoresLarva.length,
