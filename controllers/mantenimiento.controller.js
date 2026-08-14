@@ -211,18 +211,15 @@ export async function createMantenimiento(req, res) {
 export async function updateMantenimiento(req, res) {
     /*
     Descripcion:
-    Actualiza un ticket de mantenimiento existente por su ID.
-    codigoTicket no se puede modificar.
-    costoProductos no se modifica aqui — lo recalcula el controller
-    de productos automaticamente.
-
+    Actualiza un ticket de mantenimiento por su ID.
+    Valida que no se pueda cambiar el estadoTicket a 'Terminado'
+    si el equipo continua en estado 'Mantenimiento'.
     Parametros:
     - req: Objeto request de Express (req.params.id, req.body)
     - res: Objeto response de Express
-
     Retorna:
     - 200 con el ticket actualizado
-    - 400/422 si hay errores de validacion
+    - 422 si se intenta cerrar con equipo en Mantenimiento
     - 404 si no existe
     */
     try {
@@ -236,22 +233,31 @@ export async function updateMantenimiento(req, res) {
             costoManoObra,
             estadoTicket,
         } = req.body;
-
         const err = validarCuerpo(
             { tituloTicket, descripcionTicket, equipoId, tipoPersonal, estadoTicket },
             res
         );
         if (err) return err;
-
+        // Consultar estado actual del equipo en BD
         const [equipos] = await pool.query(
-            `SELECT id FROM equipos WHERE id = ? AND activo = TRUE AND deleted_at IS NULL`,
-            [equipoId]
+            `SELECT id, estado_operativo FROM equipos
+             WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
+            [equipoId, grupoDatos]
         );
-
         if (equipos.length === 0)
             return error(res, 'El equipo indicado no existe.', null, 404);
-
-        const dto         = new MantenimientoDTO({
+        const equipoActual = equipos[0];
+        const nuevoEstadoEquipo = req.body.estadoEquipo ??
+                                 req.body.estadoOperativo ??
+                                 equipoActual.estado_operativo;
+        // Regla: No cerrar ticket (Terminado) si el equipo sigue en 'Mantenimiento'
+        if (estadoTicket === EstadoTicket.TERMINADO && nuevoEstadoEquipo === 'Mantenimiento') {
+            const msgErr = 'No se puede finalizar el ticket mientras el equipo ' +
+                           'continúe en estado "Mantenimiento". Debe cambiar el ' +
+                           'estado del equipo a "Activo" o "Inactivo".';
+            return error(res, msgErr, null, 422);
+        }
+        const dto = new MantenimientoDTO({
             equipoId,
             fechaMantenimiento,
             tituloTicket,
@@ -261,10 +267,16 @@ export async function updateMantenimiento(req, res) {
             estadoTicket,
         });
         const actualizado = await MantenimientoModel.update(req.params.id, dto, grupoDatos);
-
         if (!actualizado)
             return error(res, 'Mantenimiento no encontrado.', null, 404);
-
+        // Actualizar estado del equipo si fue proporcionado o se finalizo el ticket
+        if (nuevoEstadoEquipo !== equipoActual.estado_operativo) {
+            await pool.query(
+                `UPDATE equipos SET estado_operativo = ?, version = version + 1
+                 WHERE id = ? AND grupo_datos = ?`,
+                [nuevoEstadoEquipo, equipoId, grupoDatos]
+            );
+        }
         return exito(res, 'Mantenimiento actualizado correctamente.', actualizado);
     } catch (err) {
         return error(res, 'Error al actualizar mantenimiento.', err);
