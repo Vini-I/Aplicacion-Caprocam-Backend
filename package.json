@@ -1,6 +1,6 @@
 {
   "name": "aplicacion-caprocam-backend",
-  "version": "0.7.97",
+  "version": "0.9.1",
   "description": "",
   "main": "index.js",
   "scripts": {

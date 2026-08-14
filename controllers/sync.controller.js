@@ -4,7 +4,7 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: sync.controller.js
 Autor: Greivin Eliecer A.G
-Fecha: 11/08/2026
+Fecha: 13/08/2026
 Modulo: Sincronizacion
 Descripcion:
 Controlador del modulo de sincronizacion movil.
@@ -171,7 +171,6 @@ export async function descargarCatalogos(req, res) {
       inventario,
       equipos,
       tareas,
-      colaboradores,
       laboratorios,
       procedencias,
       proveedoresLarva,
@@ -187,7 +186,6 @@ export async function descargarCatalogos(req, res) {
       InventarioModel.findAll(grupoDatos),
       EquipoModel.findAll({ grupoDatos }),
       TareaModel.findAll(grupoDatos),
-      ColaboradorModel.findAll(grupoDatos),
       LaboratorioModel.findAll(grupoDatos),
       ProcedenciaModel.findAll(grupoDatos),
       ProveedorLarvaModel.findAll(grupoDatos),
@@ -208,7 +206,6 @@ export async function descargarCatalogos(req, res) {
         inventario,
         equipos,
         tareas,
-        colaboradores,
         laboratorios,
         procedencias,
         proveedoresLarva,
@@ -490,6 +487,7 @@ export async function subirCambios(req, res) {
         resultado.enfermedades.eliminados++;
       }
     }
+
     if (cambios.parasitologias) {
       resultado.parasitologias = { creados: [], actualizados: 0, eliminados: 0 };
       const { crear = [], actualizar = [], eliminar = [] } = cambios.parasitologias;
@@ -508,6 +506,7 @@ export async function subirCambios(req, res) {
         resultado.parasitologias.eliminados++;
       }
     }
+
     if (cambios.raleos) {
       resultado.raleos = { creados: [], actualizados: 0, eliminados: 0 };
       const { crear = [], actualizar = [], eliminar = [] } = cambios.raleos;
@@ -524,6 +523,7 @@ export async function subirCambios(req, res) {
         resultado.raleos.eliminados++;
       }
     }
+
     if (cambios.ventas) {
       resultado.ventas = { creados: [], actualizados: 0, eliminados: 0 };
       const { crear = [], actualizar = [], eliminar = [] } = cambios.ventas;
@@ -541,6 +541,7 @@ export async function subirCambios(req, res) {
         resultado.ventas.eliminados++;
       }
     }
+
     if (cambios.trazabilidad) {
       resultado.trazabilidad = { creados: [], actualizados: 0, eliminados: 0 };
       const { crear = [], actualizar = [], eliminar = [] } = cambios.trazabilidad;
@@ -558,6 +559,7 @@ export async function subirCambios(req, res) {
         resultado.trazabilidad.eliminados++;
       }
     }
+
     if (cambios.movimientosInventario) {
       resultado.movimientosInventario = { creados: [], eliminados: 0 };
       const { crear = [], eliminar = [] } = cambios.movimientosInventario;
@@ -674,9 +676,18 @@ export async function subirCambios(req, res) {
     );
   } catch (err) {
     if (connection) {
-      try { await connection.rollback(); } catch (re) { console.error("Rollback error:", re.message); }
+      try { 
+        await connection.rollback();
+      } 
+      catch (re) { 
+        console.error("Rollback error:", re.message); 
+      }
     }
-    return error(res, "Error al subir los cambios. Se revirtieron todos los cambios.", err, 500);
+    return error(
+      res, 
+      "Error al subir los cambios. Se revirtieron todos los cambios.", 
+      err, 
+      500);
   } finally {
     if (connection) connection.release();
   }
