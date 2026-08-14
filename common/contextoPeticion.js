@@ -19,40 +19,26 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
+export const GRUPO_DATOS_CAPROCAM = 1;
+
 export function obtenerContextoPeticion(req) {
-    /*
-    Descripcion:
-    Analiza req.user y req.colaborador para retornar el contexto
-    seguro de ejecucion de la peticion HTTP.
-
-    Parametros:
-    - req: Objeto request de Express autenticado con verificarAuth.
-
-    Retorna:
-    - Objeto { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId }
-    */
     const user        = req.user ?? null;
     const colaborador = req.colaborador ?? null;
 
-    // Jerarquia: Solo si un usuario web tiene accesoGlobal = true se respeta req.body
-    const grupoDatos = user?.accesoGlobal && req.body?.grupoDatos
+    // Detecta si es Administrador Caprocam por el numero de grupo 22776226 o flag
+    const esGlobal = Boolean(
+        user?.accesoGlobal || Number(user?.grupoDatos) === GRUPO_DATOS_CAPROCAM
+    );
+
+    // Si es Caprocam, acepta req.body.grupoDatos si viene en la peticion (ej: 101).
+    // Si es usuario de finca normal (ej: 101), fuerza su grupo de sesion (101).
+    const grupoDatos = esGlobal && req.body?.grupoDatos
         ? Number(req.body.grupoDatos)
         : Number(user?.grupoDatos ?? colaborador?.grupoDatos);
 
-    // Identidad de Creador (Dualidad):
-    const esColab = Boolean(colaborador || user?.esColaborador);
-
-    const creadoPorUsuarioId = esColab
-        ? null
-        : (user?.id ?? null);
-
-    const creadoPorColaboradorId = colaborador
-        ? colaborador.id
-        : (user?.esColaborador ? user.id : null);
-
     return {
         grupoDatos,
-        creadoPorUsuarioId,
-        creadoPorColaboradorId,
+        creadoPorUsuarioId:     colaborador ? null : (user?.id ?? null),
+        creadoPorColaboradorId: colaborador ? colaborador.id : null,
     };
 }
