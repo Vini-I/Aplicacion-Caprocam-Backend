@@ -1144,6 +1144,28 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
 );
 
+CREATE TABLE historial_sincronizaciones (
+    id                        INT AUTO_INCREMENT PRIMARY KEY,
+    uuid                      CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    grupo_datos               INT NOT NULL,
+    colaborador_id            INT NOT NULL,
+    android_id                VARCHAR(64) NOT NULL,
+    fecha_sincronizacion      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    total_creados             INT NOT NULL DEFAULT 0,
+    total_actualizados        INT NOT NULL DEFAULT 0,
+    total_eliminados          INT NOT NULL DEFAULT 0,
+    total_registros           INT NOT NULL DEFAULT 0,
+    estado                    ENUM('exitoso', 'fallido', 'parcial') NOT NULL DEFAULT 'exitoso',
+    activo                    BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_creacion            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_historial_sync_grupo 
+    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
+
+    CONSTRAINT fk_historial_sync_colaborador 
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+);
+
 CREATE INDEX idx_usuarios_grupo ON usuarios(grupo_datos);
 CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_colaboradores_grupo ON colaboradores(grupo_datos);
@@ -1155,6 +1177,11 @@ CREATE INDEX idx_parasitologias_grupo ON parasitologias(grupo_datos);
 CREATE INDEX idx_enfermedades_grupo ON enfermedades(grupo_datos);
 CREATE INDEX idx_alimentaciones_grupo ON alimentaciones(grupo_datos);
 CREATE INDEX idx_fisico_quimico_grupo ON fisico_quimico(grupo_datos);
+
+CREATE INDEX idx_historial_sync_grupo       ON historial_sincronizaciones(grupo_datos);
+CREATE INDEX idx_historial_sync_colaborador ON historial_sincronizaciones(colaborador_id);
+CREATE INDEX idx_historial_sync_fecha       ON historial_sincronizaciones(fecha_sincronizacion);
+CREATE INDEX idx_historial_sync_android_id  ON historial_sincronizaciones(android_id);
 
 CREATE INDEX idx_equipos_grupo ON equipos(grupo_datos);
 CREATE INDEX idx_equipos_estanque ON equipos(estanque_id);

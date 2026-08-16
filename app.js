@@ -69,9 +69,9 @@ MIDDLEWARES GLOBALES
 */
 
 app.use(cors({
-    origin: 'http://localhost:8081', // direccion del frontend en desarrollo
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    origin: 'http://localhost:8081', //Direccion del front-end
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-android-id'],
     exposedHeaders: ['X-Renewed-Token'],
 }));
 app.use(express.json());
