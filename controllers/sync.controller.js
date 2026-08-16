@@ -259,10 +259,13 @@ export async function subirCambios(req, res) {
     */
   
   // Función ayudante incluida
-  function resolverIdForanea(idLocal, listaCreados = []) {
+  function resolverIdForanea(idLocal, listaCreados = [], listaActualizados = []) {
     if (!idLocal) return null;
-    const match = listaCreados.find((c) => c.idLocal == idLocal);
-    return match ? match.idServidor : idLocal; 
+    const matchCreado = listaCreados.find((c) => c.idLocal == idLocal);
+    if (matchCreado) return matchCreado.idServidor;
+    const matchActualizado = listaActualizados.find((c) => c.id == idLocal && (c.servidor_id || c.servidorId));
+    if (matchActualizado) return matchActualizado.servidor_id ?? matchActualizado.servidorId;
+    return idLocal; 
   }
 
   let connection;
@@ -299,12 +302,13 @@ export async function subirCambios(req, res) {
         resultado.alimentacion.creados.push({ idLocal: r.idLocal ?? r.id ?? null, idServidor: res2.insertId });
       }
       for (const r of actualizar) {
+        const idReal = r.servidor_id ?? r.servidorId ?? r.id;
         const [check] = await connection.execute(`SELECT id FROM alimentaciones WHERE id=? 
-          AND grupo_datos=? AND deleted_at IS NULL`, [r.id, grupoDatos]);
+          AND grupo_datos=? AND deleted_at IS NULL`, [idReal, grupoDatos]);
         if (check.length > 0) {
           await connection.execute(`UPDATE alimentaciones SET fecha=?, hora=?, metodo=?, 
             cantidad_kg=?, observaciones=? WHERE id=? AND grupo_datos=?`,
-            [r.fecha, r.hora, r.metodo, r.cantidadKg ?? r.cantidad_kg, r.observaciones, r.id, grupoDatos]);
+            [r.fecha, r.hora, r.metodo, r.cantidadKg ?? r.cantidad_kg, r.observaciones, idReal, grupoDatos]);
           resultado.alimentacion.actualizados++;
         }
       }
@@ -333,12 +337,13 @@ export async function subirCambios(req, res) {
         resultado.crecimiento.creados.push({ idLocal: r.idLocal ?? r.id ?? null, idServidor: res2.insertId });
       }
       for (const r of actualizar) {
+        const idReal = r.servidor_id ?? r.servidorId ?? r.id;
         const [check] = await connection.execute(`SELECT id FROM crecimientos 
-          WHERE id=? AND grupo_datos=? AND deleted_at IS NULL`, [r.id, grupoDatos]);
+          WHERE id=? AND grupo_datos=? AND deleted_at IS NULL`, [idReal, grupoDatos]);
         if (check.length > 0) {
           await connection.execute(`UPDATE crecimientos SET 
             fecha_registro=?, peso_actual=? WHERE id=? AND grupo_datos=?`,
-            [r.fechaRegistro ?? r.fecha_registro, r.pesoActual ?? r.peso_actual, r.id, grupoDatos]);
+            [r.fechaRegistro ?? r.fecha_registro, r.pesoActual ?? r.peso_actual, idReal, grupoDatos]);
           resultado.crecimiento.actualizados++;
         }
       }
@@ -356,7 +361,7 @@ export async function subirCambios(req, res) {
       resultado.calculosCrecimiento = { creados: [], actualizados: 0, eliminados: 0 };
       const { crear = [], actualizar = [], eliminar = [] } = cambios.calculosCrecimiento;
       for (const r of crear) {
-        const mappedCrecimientoId = resolverIdForanea(r.crecimientoId ?? r.crecimiento_id, resultado.crecimiento?.creados);
+        const mappedCrecimientoId = resolverIdForanea(r.crecimientoId ?? r.crecimiento_id, resultado.crecimiento?.creados, cambios.crecimiento?.actualizar);
         const [res2] = await connection.execute(
           `INSERT INTO calculos_crecimiento
            (grupo_datos, crecimiento_id, cantidad_individuos, peso_total,
@@ -368,6 +373,19 @@ export async function subirCambios(req, res) {
           ]
         );
         resultado.calculosCrecimiento.creados.push({ idLocal: r.idLocal ?? r.id ?? null, idServidor: res2.insertId });
+      }
+      for (const r of actualizar) {
+        const idReal = r.servidor_id ?? r.servidorId ?? r.id;
+        const [check] = await connection.execute(
+          `SELECT id FROM calculos_crecimiento WHERE id=? AND grupo_datos=?`, [idReal, grupoDatos]);
+        if (check.length > 0) {
+          await connection.execute(`UPDATE calculos_crecimiento SET 
+            cantidad_individuos=?, peso_total=?, peso_promedio_individual=?
+            WHERE id=? AND grupo_datos=?`,
+            [r.cantidadIndividuos ?? r.cantidad_individuos, r.pesoTotal ?? r.peso_total, 
+             r.pesoPromedioIndividual ?? r.peso_promedio_individual, idReal, grupoDatos]);
+          resultado.calculosCrecimiento.actualizados++;
+        }
       }
       for (const id of eliminar) {
         await connection.execute(`UPDATE calculos_crecimiento SET activo=FALSE, 
@@ -401,9 +419,9 @@ export async function subirCambios(req, res) {
     // ─────────────────────────────────────────────────────────────
     if (cambios.detalleFisicoQuimica) {
       resultado.detalleFisicoQuimica = { creados: [], eliminados: 0 };
-      const { crear = [], eliminar = [] } = cambios.detalleFisicoQuimica;
+      const { crear = [], actualizar = [], eliminar = [] } = cambios.detalleFisicoQuimica;
       for (const r of crear) {
-        const mappedLecturaId = resolverIdForanea(r.lecturaId ?? r.lectura_id, resultado.fisicoQuimica?.creados);
+        const mappedLecturaId = resolverIdForanea(r.lecturaId ?? r.lectura_id, resultado.fisicoQuimica?.creados, cambios.fisicoQuimica?.actualizar);
         const [res2] = await connection.execute(
           `INSERT INTO fisico_quimico_detalle (lectura_id, tipo_medicion, etiqueta, valor) VALUES (?,?,?,?)`,
           [mappedLecturaId, r.tipoMedicion ?? r.tipo_medicion ?? null, r.etiqueta ?? null, r.valor ?? null]
@@ -451,9 +469,9 @@ export async function subirCambios(req, res) {
     // ─────────────────────────────────────────────────────────────
     if (cambios.detalleTirosDensidad) {
       resultado.detalleTirosDensidad = { creados: [], eliminados: 0 };
-      const { crear = [], eliminar = [] } = cambios.detalleTirosDensidad;
+      const { crear = [], actualizar = [], eliminar = [] } = cambios.detalleTirosDensidad;
       for (const r of crear) {
-        const mappedDensidadId = resolverIdForanea(r.densidadId ?? r.densidad_id, resultado.densidadPoblacional?.creados);
+        const mappedDensidadId = resolverIdForanea(r.densidadId ?? r.densidad_id, resultado.densidadPoblacional?.creados, cambios.densidadPoblacional?.actualizar);
         const [res2] = await connection.execute(
           `INSERT INTO densidad_detalle_tiros (densidad_id, numero_tiro, cantidad_camarones) VALUES (?,?,?)`,
           [mappedDensidadId, r.numeroTiro ?? r.numero_tiro ?? null, r.cantidadCamarones ?? r.cantidad_camarones ?? null]
@@ -599,12 +617,13 @@ export async function subirCambios(req, res) {
         resultado.mantenimientos.creados.push({ idLocal: r.idLocal ?? r.id ?? null, idServidor: res2.insertId });
       }
       for (const r of actualizar) {
+        const idReal = r.servidor_id ?? r.servidorId ?? r.id;
         const [check] = await connection.execute(`SELECT id FROM mantenimiento_equipo WHERE id=? 
-          AND grupo_datos=? AND deleted_at IS NULL`, [r.id, grupoDatos]);
+          AND grupo_datos=? AND deleted_at IS NULL`, [idReal, grupoDatos]);
         if (check.length > 0) {
           await connection.execute(`UPDATE mantenimiento_equipo SET titulo_ticket=?, 
             descripcion_ticket=?, estado_ticket=?, version=version+1 WHERE id=? AND grupo_datos=?`,
-            [r.tituloTicket ?? r.titulo_ticket, r.descripcionTicket ?? r.descripcion_ticket, r.estadoTicket ?? r.estado_ticket, r.id, grupoDatos]);
+            [r.tituloTicket ?? r.titulo_ticket, r.descripcionTicket ?? r.descripcion_ticket, r.estadoTicket ?? r.estado_ticket, idReal, grupoDatos]);
           resultado.mantenimientos.actualizados++;
         }
       }
@@ -622,7 +641,7 @@ export async function subirCambios(req, res) {
       resultado.tareasMantenimiento = { creados: [], actualizados: 0, eliminados: 0 };
       const { crear = [], actualizar = [], eliminar = [] } = cambios.tareasMantenimiento;
       for (const r of crear) {
-        const mappedMantenimientoId = resolverIdForanea(r.mantenimientoId ?? r.mantenimiento_id ?? r.mantenimiento_equipo_id, resultado.mantenimientos?.creados);
+        const mappedMantenimientoId = resolverIdForanea(r.mantenimientoId ?? r.mantenimiento_id ?? r.mantenimiento_equipo_id, resultado.mantenimientos?.creados, cambios.mantenimientos?.actualizar);
         const [res2] = await connection.execute(
           `INSERT INTO mantenimiento_equipo_tareas (grupo_datos, mantenimiento_equipo_id, tarea_id, estado_tarea) VALUES (?,?,?,?)`,
           [grupoDatos, mappedMantenimientoId, r.tareaId ?? r.tarea_id ?? null, r.estadoTarea ?? r.estado_tarea ?? "Pendiente"]
@@ -630,12 +649,13 @@ export async function subirCambios(req, res) {
         resultado.tareasMantenimiento.creados.push({ idLocal: r.idLocal ?? r.id ?? null, idServidor: res2.insertId });
       }
       for (const r of actualizar) {
+        const idReal = r.servidor_id ?? r.servidorId ?? r.id;
         const [check] = await connection.execute(`SELECT id FROM mantenimiento_equipo_tareas 
-          WHERE id=? AND grupo_datos=? AND deleted_at IS NULL`, [r.id, grupoDatos]);
+          WHERE id=? AND grupo_datos=? AND deleted_at IS NULL`, [idReal, grupoDatos]);
         if (check.length > 0) {
           await connection.execute(`UPDATE mantenimiento_equipo_tareas SET estado_tarea=?, 
             version=version+1 WHERE id=? AND grupo_datos=?`,
-            [r.estadoTarea ?? r.estado_tarea, r.id, grupoDatos]);
+            [r.estadoTarea ?? r.estado_tarea, idReal, grupoDatos]);
           resultado.tareasMantenimiento.actualizados++;
         }
       }
@@ -651,9 +671,9 @@ export async function subirCambios(req, res) {
     // ─────────────────────────────────────────────────────────────
     if (cambios.productosMantenimiento) {
       resultado.productosMantenimiento = { creados: [], eliminados: 0 };
-      const { crear = [], eliminar = [] } = cambios.productosMantenimiento;
+      const { crear = [], actualizar = [], eliminar = [] } = cambios.productosMantenimiento;
       for (const r of crear) {
-        const mappedMantenimientoId = resolverIdForanea(r.mantenimientoId ?? r.mantenimiento_id ?? r.mantenimiento_equipo_id, resultado.mantenimientos?.creados);
+        const mappedMantenimientoId = resolverIdForanea(r.mantenimientoId ?? r.mantenimiento_id ?? r.mantenimiento_equipo_id, resultado.mantenimientos?.creados, cambios.mantenimientos?.actualizar);
         const [res2] = await connection.execute(
           `INSERT INTO mantenimiento_equipo_productos (grupo_datos, mantenimiento_equipo_id
           , producto_id, cantidad, costo_unitario, subtotal) VALUES (?,?,?,?,?,?)`,
@@ -666,6 +686,37 @@ export async function subirCambios(req, res) {
           activo=FALSE, deleted_at=CURRENT_TIMESTAMP WHERE id=? AND grupo_datos=?`, [id, grupoDatos]);
         resultado.productosMantenimiento.eliminados++;
       }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // REGISTRAR HISTORIAL DE SINCRONIZACIÓN
+    // ─────────────────────────────────────────────────────────────
+    const androidId = req.body.androidId ?? req.headers['x-android-id'] ?? 'desconocido';
+
+    let totalCreados = 0, totalActualizados = 0, totalEliminados = 0;
+    for (const modulo of Object.values(resultado)) {
+      totalCreados     += modulo.creados?.length  ?? 0;
+      totalActualizados += modulo.actualizados    ?? 0;
+      totalEliminados   += modulo.eliminados      ?? 0;
+    }
+    const totalRegistros = totalCreados + totalActualizados + totalEliminados;
+
+    if (totalRegistros > 0) {
+      await connection.execute(
+        `INSERT INTO historial_sincronizaciones
+         (grupo_datos, colaborador_id, android_id,
+          total_creados, total_actualizados, total_eliminados, total_registros, estado)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'exitoso')`,
+        [
+          grupoDatos,
+          creadoPorColaboradorId,
+          androidId,
+          totalCreados,
+          totalActualizados,
+          totalEliminados,
+          totalRegistros,
+        ]
+      );
     }
 
     await connection.commit();
