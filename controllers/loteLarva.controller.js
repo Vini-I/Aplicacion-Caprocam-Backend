@@ -3,11 +3,12 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: loteLarva.controller.js
-Autor: oscar mario
-Fecha: 1/08/2026
+Autor: Oscar Mario / Marco Vásquez
+Fecha: 18/08/2026
 Modulo: loteLarva
 Descripcion:
 Maneja las peticiones HTTP y la logica de loteLarva.
+Soporta GETs globales para Administrador Caprocam (22776226).
 //////////////////////////////////////////////////////////
 */
 
@@ -16,6 +17,7 @@ Maneja las peticiones HTTP y la logica de loteLarva.
 IMPORTS
 //////////////////////////////////////////////////////////
 */
+
 import { LoteLarvaDTO, EstadoLote } from "../dtos/loteLarva.dto.js";
 import {
     isEmpty,
@@ -24,21 +26,22 @@ import {
     isCodigoLarvaValido,
 } from "../services/loteLarva.service.js";
 import * as loteLarvaModel from "../models/loteLarvas.model.js";
+import pool from "../config/database.js";
 import { exito, error } from "../common/respuestaJson.js";
 import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
- 
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 */
- 
+
 function validarCuerpo(body, res) {
     const errores = [];
     const proveedorIdValor = body.proveedor_id ?? body.proveedorId;
     const laboratorioIdValor  = body.laboratorio_id ?? body.laboratorioId;
     const procedenciaIdValor  = body.procedencia_id ?? body.procedenciaId;
- 
+
     const codigoLoteFinal = body.codigo_lote ?? body.codigoLote;
     const certLarvaFinal = body.certificado_larva ?? body.certificadoLarva;
     const cantInicialFinal = body.cantidad_inicial ?? body.cantidadInicial;
@@ -84,25 +87,30 @@ function validarCuerpo(body, res) {
     }
     return null;
 }
- 
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
- 
-export async function listarLotes(req, res) {
-    /*
-    Descripcion:
-    Obtiene un listado completo de todos los registros activos del modulo loteLarva.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
+export async function listarLotes(req, res) {
     try {
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT id, uuid, grupo_datos AS grupoDatos, codigo_lote AS codigoLote,
+                        proveedor_id AS proveedorId, laboratorio_id AS laboratorioId,
+                        procedencia_id AS procedenciaId, certificado_larva AS certificadoLarva,
+                        pl_inicial AS plInicial, cantidad_inicial AS cantidadInicial,
+                        fecha_ingreso AS fechaIngreso, estado_lote AS estadoLote, activo
+                 FROM lotes_larva WHERE activo = TRUE AND deleted_at IS NULL`
+            );
+            return exito(res, "Lotes de larva obtenidos correctamente.", rows);
+        }
+
         const { grupoDatos } = obtenerContextoPeticion(req);
         const lotes = await loteLarvaModel.findAll(grupoDatos);
         return exito(res, "Lotes de larva obtenidos correctamente.", lotes);
@@ -110,19 +118,27 @@ export async function listarLotes(req, res) {
         return error(res, "Error al obtener los lotes de larva.", err, 500);
     }
 }
- 
-export async function obtenerLote(req, res) {
-    /*
-    Descripcion:
-    Busca y retorna un registro especifico de loteLarva mediante su identificador unico.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
+export async function obtenerLote(req, res) {
     try {
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT id, uuid, grupo_datos AS grupoDatos, codigo_lote AS codigoLote,
+                        proveedor_id AS proveedorId, laboratorio_id AS laboratorioId,
+                        procedencia_id AS procedenciaId, certificado_larva AS certificadoLarva,
+                        pl_inicial AS plInicial, cantidad_inicial AS cantidadInicial,
+                        fecha_ingreso AS fechaIngreso, estado_lote AS estadoLote, activo
+                 FROM lotes_larva WHERE id = ? AND activo = TRUE AND deleted_at IS NULL`,
+                [req.params.id]
+            );
+            if (rows.length === 0)
+                return error(res, "Lote de larva no encontrado.", null, 404);
+            return exito(res, "Lote de larva obtenido correctamente.", rows[0]);
+        }
+
         const { grupoDatos } = obtenerContextoPeticion(req);
         const { id } = req.params;
         const lote = await loteLarvaModel.findById(id, grupoDatos);
@@ -132,25 +148,15 @@ export async function obtenerLote(req, res) {
         return error(res, "Error al obtener el lote de larva.", err, 500);
     }
 }
- 
-export async function crearLote(req, res) {
-    /*
-    Descripcion:
-    Registra una nueva entidad de loteLarva en la base de datos, estructurando la informacion proveniente del cliente.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
+export async function crearLote(req, res) {
     const err = validarCuerpo(req.body, res);
     if (err) return err;
- 
+
     try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
             obtenerContextoPeticion(req);
-        
+
         const codigoLoteFinal = req.body.codigo_lote ?? req.body.codigoLote;
         const proveedorIdFinal = req.body.proveedor_id ?? req.body.proveedorId;
         const laboratorioIdFinal = req.body.laboratorio_id ?? req.body.laboratorioId;
@@ -160,28 +166,28 @@ export async function crearLote(req, res) {
         if (existente) {
             return error(res, "Ya existe un lote con ese codigo.", null, 409);
         }
- 
+
         if (!isEmpty(proveedorIdFinal)) {
             const existe = await loteLarvaModel.verificarProveedorExiste(proveedorIdFinal, grupoDatos);
             if (!existe) {
                 return error(res, "El proveedor indicado no existe.", null, 400);
             }
         }
- 
+
         if (!isEmpty(laboratorioIdFinal)) {
             const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioIdFinal, grupoDatos);
             if (!existe) {
                 return error(res, "El laboratorio indicado no existe.", null, 400);
             }
         }
- 
+
         if (!isEmpty(procedenciaIdFinal)) {
             const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaIdFinal, grupoDatos);
             if (!existe) {
                 return error(res, "La procedencia indicada no existe.", null, 400);
             }
         }
- 
+
         const dto = new LoteLarvaDTO({
             codigoLote: codigoLoteFinal,
             proveedorId: proveedorIdFinal,
@@ -205,27 +211,17 @@ export async function crearLote(req, res) {
         return error(res, "Error al crear el lote de larva.", err, 500);
     }
 }
- 
-export async function actualizarLote(req, res) {
-    /*
-    Descripcion:
-    Actualiza parcialmente los datos de un registro existente de loteLarva, verificando primero su existencia y gestionando conflictos de unicidad.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
+export async function actualizarLote(req, res) {
     const { id } = req.params;
     const err = validarCuerpo(req.body, res);
     if (err) return err;
- 
+
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const actual = await loteLarvaModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Lote de larva no encontrado.", null, 404);
- 
+
         if (actual.estado_lote !== EstadoLote.DISPONIBLE) {
             return error(
                 res,
@@ -248,28 +244,28 @@ export async function actualizarLote(req, res) {
         if (existente) {
             return error(res, "Ya existe otro lote con ese codigo.", null, 409);
         }
- 
+
         if (!isEmpty(proveedorIdFinal)) {
             const existe = await loteLarvaModel.verificarProveedorExiste(proveedorIdFinal, grupoDatos);
             if (!existe) {
                 return error(res, "El proveedor indicado no existe.", null, 400);
             }
         }
-        
+
         if (!isEmpty(laboratorioIdFinal)) {
             const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioIdFinal, grupoDatos);
             if (!existe) {
                 return error(res, "El laboratorio indicado no existe.", null, 400);
             }
         }
- 
+
         if (!isEmpty(procedenciaIdFinal)) {
             const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaIdFinal, grupoDatos);
             if (!existe) {
                 return error(res, "La procedencia indicada no existe.", null, 400);
             }
         }
- 
+
         const dto = new LoteLarvaDTO({
             codigoLote: codigoLoteFinal,
             proveedorId: proveedorIdFinal,
@@ -283,7 +279,7 @@ export async function actualizarLote(req, res) {
             creadoPorUsuarioId: null,
             creadoPorColaboradorId: null,
         });
-        
+
         const actualizado = await loteLarvaModel.update(id, dto, grupoDatos);
         return exito(res, "Lote de larva actualizado correctamente.", actualizado);
     } catch (err) {
@@ -293,18 +289,8 @@ export async function actualizarLote(req, res) {
         return error(res, "Error al actualizar el lote de larva.", err, 500);
     }
 }
- 
+
 export async function eliminarLote(req, res) {
-    /*
-    Descripcion:
-    Realiza un borrado logico (soft-delete) sobre un registro de loteLarva, marcandolo como inactivo (activo = FALSE) y dejando rastro en deleted_at.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
- 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
     const { id } = req.params;
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);

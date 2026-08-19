@@ -4,11 +4,11 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantenimientoTarea.controller.js
 Autor: Marco Vásquez
-Fecha: 22/07/2026
+Fecha: 18/08/2026
 Modulo: MantenimientoTareas
 Descripcion:
-Recibe las peticiones HTTP para el modulo de tareas
-vinculadas a mantenimientos y devuelve la respuesta.
+Recibe las peticiones HTTP para tareas vinculadas a mantenimientos.
+Soporta GETs globales para Administrador Caprocam (22776226).
 //////////////////////////////////////////////////////////
 */
 
@@ -22,11 +22,13 @@ DTOs
 
 import { MantenimientoTareaDTO, EstadoTareaMantenimiento } from '../dtos/mantenimientoTarea.dto.js';
 
-// Modelos
+// Modelos y Config
 import * as MantenimientoTareaModel from '../models/mantenimientoTarea.model.js';
+import pool from '../config/database.js';
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
+import { obtenerContextoPeticion } from '../common/contextoPeticion.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -35,20 +37,23 @@ FUNCIONES PRINCIPALES
 */
 
 export async function getTareasByMantenimiento(req, res) {
-    /*
-    Descripcion:
-    Obtiene todas las tareas de un ticket de mantenimiento.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.mantenimientoId)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con lista de tareas del mantenimiento
-    */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const data       = await MantenimientoTareaModel.findByMantenimiento(
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT mt.*, mt.grupo_datos AS grupoDatos
+                 FROM mantenimiento_tareas mt
+                 WHERE mt.mantenimiento_equipo_id = ?
+                   AND mt.activo = TRUE AND mt.deleted_at IS NULL`,
+                [req.params.mantenimientoId]
+            );
+            return exito(res, 'Tareas del mantenimiento obtenidas correctamente.', rows);
+        }
+
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const data = await MantenimientoTareaModel.findByMantenimiento(
             req.params.mantenimientoId,
             grupoDatos
         );
@@ -59,24 +64,12 @@ export async function getTareasByMantenimiento(req, res) {
 }
 
 export async function agregarTarea(req, res) {
-    /*
-    Descripcion:
-    Vincula una tarea a un ticket de mantenimiento.
-
-    Parametros:
-    - req: Objeto request de Express (req.body)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 201 con el vinculo creado
-    - 400 si faltan campos
-    */
     try {
-        const grupoDatos = req.user.grupoDatos;
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const { mantenimientoEquipoId, tareaId, estadoTarea } = req.body;
 
-        const dto    = new MantenimientoTareaDTO({ mantenimientoEquipoId, tareaId, estadoTarea });
-        const nuevo  = await MantenimientoTareaModel.create(dto, grupoDatos);
+        const dto   = new MantenimientoTareaDTO({ mantenimientoEquipoId, tareaId, estadoTarea });
+        const nuevo = await MantenimientoTareaModel.create(dto, grupoDatos);
 
         return exito(res, 'Tarea agregada al mantenimiento correctamente.', nuevo, 201);
     } catch (err) {
@@ -85,21 +78,8 @@ export async function agregarTarea(req, res) {
 }
 
 export async function actualizarEstadoTarea(req, res) {
-    /*
-    Descripcion:
-    Actualiza el estado de una tarea dentro de un mantenimiento.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id, req.body.estadoTarea)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con el registro actualizado
-    - 400 si el estado es invalido
-    - 404 si no existe
-    */
     try {
-        const grupoDatos  = req.user.grupoDatos;
+        const { grupoDatos }  = obtenerContextoPeticion(req);
         const { estadoTarea } = req.body;
 
         if (!estadoTarea || !Object.values(EstadoTareaMantenimiento).includes(estadoTarea))
@@ -117,21 +97,9 @@ export async function actualizarEstadoTarea(req, res) {
 }
 
 export async function eliminarTarea(req, res) {
-    /*
-    Descripcion:
-    Elimina el vinculo de una tarea con un mantenimiento.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con el registro eliminado
-    - 404 si no existe
-    */
     try {
-        const grupoDatos = req.user.grupoDatos;
-        const eliminado  = await MantenimientoTareaModel.remove(req.params.id, grupoDatos);
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const eliminado     = await MantenimientoTareaModel.remove(req.params.id, grupoDatos);
 
         if (!eliminado)
             return error(res, 'Registro no encontrado.', null, 404);
