@@ -11,7 +11,6 @@ Punto de entrada del servidor. Configura Express,
 monta los middlewares globales y registra las rutas
 de todos los módulos del proyecto.
 //////////////////////////////////////////////////////////
-*/
 
 /*
 //////////////////////////////////////////////////////////
@@ -21,6 +20,7 @@ IMPORTS
 
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
 
 // Rutas
 import colaboradoresRouter from "./routes/colaborador.routes.js";
@@ -53,6 +53,14 @@ import mantenimientoTareaRouter   from './routes/mantenimientoTarea.routes.js';
 import mantenimientoProductoRouter from './routes/mantenimientoProducto.routes.js';
 import sincronizacionRouter from './routes/sync.routes.js';
 
+/*
+//////////////////////////////////////////////////////////
+CONFIGURACIONES
+//////////////////////////////////////////////////////////
+Inicializa el uso de las variables de entorno definidas
+en el archivo .env
+*/
+dotenv.config();
 
 /*
 //////////////////////////////////////////////////////////
@@ -69,7 +77,7 @@ MIDDLEWARES GLOBALES
 */
 
 app.use(cors({
-    origin: process.env.FRONTEND_URL ||'http://localhost:8081', //Direccion del front-end
+    origin: process.env.FRONTEND_URL, //Direccion del front-end
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-android-id'],
     exposedHeaders: ['X-Renewed-Token'],

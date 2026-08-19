@@ -19,7 +19,7 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
-export const GRUPO_DATOS_CAPROCAM = 1;
+export const GRUPO_DATOS_CAPROCAM = 22776226;
 
 export function obtenerContextoPeticion(req) {
     const user        = req.user ?? null;
