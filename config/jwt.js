@@ -2,17 +2,19 @@
 //////////////////////////////////////////////////////////
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
-Archivo: index.js
-Autor: Greivin Arguedas
-Fecha: 08/08/2026
-Modulo: Core
+Archivo: jwt.js
+Autor: Marco Vásquez
+Fecha: 29/07/2026
+Modulo: Config
 Descripcion:
-Punto de arranque de la aplicacion. Carga las variables
-de entorno e inicia la escucha del servidor en el puerto configurado.
+Constantes de configuracion para JSON Web Tokens.
+Incluye umbral de renovacion continua de sesion.
 //////////////////////////////////////////////////////////
 */
 
+
 /*
+
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
@@ -21,8 +23,6 @@ Librerias externas
 */
 import dotenv from "dotenv";
 
-// Instancia de Express configurada
-import app from "./app.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -37,18 +37,19 @@ dotenv.config();
 //////////////////////////////////////////////////////////
 CONSTANTES
 //////////////////////////////////////////////////////////
-Define el puerto de ejecucion tomando la variable de entorno
-o usando el puerto 4000 por defecto.
 */
-const PORT = process.env.PORT;
 
-/*
-//////////////////////////////////////////////////////////
-INICIALIZACION DEL SERVIDOR
-//////////////////////////////////////////////////////////
-Levanta el servicio HTTP para comenzar a escuchar las
-peticiones entrantes.
-*/
-app.listen(PORT, () => {
-    console.log(`Servidor ejecutándose en puerto http://localhost:${PORT}`);
-});
+export const JWT_SECRET =
+    process.env.JWT_SECRET
+
+export const JWT_REFRESH_SECRET =
+    process.env.JWT_REFRESH_SECRET
+
+export const JWT_EXPIRES_IN =
+    process.env.JWT_EXPIRES_IN
+
+export const JWT_REFRESH_EXPIRES =
+    process.env.JWT_REFRESH_EXPIRES
+
+// Umbral en segundos (5 min) para auto-renovar el token si hay actividad continua
+export const JWT_RENEW_THRESHOLD = 300;

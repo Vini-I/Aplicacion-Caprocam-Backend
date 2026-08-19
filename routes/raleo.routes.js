@@ -1,0 +1,63 @@
+/*
+//////////////////////////////////////////////////////////
+CABEZA DE ARCHIVO
+//////////////////////////////////////////////////////////
+Archivo: estanques.routes.js
+Autor: Sebastian Vilelgas Barquero
+Fecha: 03/07/2026
+Modulo: Raleo
+Descripcion:
+Define las rutas HTTP del modulo de raleo.
+//////////////////////////////////////////////////////////
+*/
+
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+
+Librerias externas
+*/
+
+import { Router } from "express";
+
+// Middlewares
+import { verificarAuth } from "../middlewares/auth.middleware.js";
+import { validarBodyRaleo } from "../middlewares/raleo.middleware.js";
+
+// Controladores
+import {
+    getRaleo,
+    getRaleoById,
+    createRaleo,
+    updateRaleo,
+    deleteRaleo
+} from "../controllers/raleo.controller.js";
+
+/*
+//////////////////////////////////////////////////////////
+CONSTANTES
+//////////////////////////////////////////////////////////
+*/
+
+const router = Router();
+
+/*
+//////////////////////////////////////////////////////////
+RUTAS
+//////////////////////////////////////////////////////////
+*/
+
+router.get("/", verificarAuth, getRaleo);
+router.get("/:id", verificarAuth, getRaleoById);
+router.post("/", verificarAuth, validarBodyRaleo, createRaleo);
+router.put("/:id", verificarAuth, validarBodyRaleo, updateRaleo);
+router.delete("/:id", verificarAuth, deleteRaleo);
+
+/*
+//////////////////////////////////////////////////////////
+EXPORT
+//////////////////////////////////////////////////////////
+*/
+
+export default router;

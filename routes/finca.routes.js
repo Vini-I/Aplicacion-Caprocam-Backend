@@ -1,0 +1,61 @@
+/*
+//////////////////////////////////////////////////////////
+CABEZA DE ARCHIVO
+//////////////////////////////////////////////////////////
+Archivo: mantFinca.routes.js
+Autor: Greivin Arguedas
+Fecha: 04/07/2026
+Modulo: Finca
+Descripcion:
+Define las rutas HTTP del modulo de finca.
+//////////////////////////////////////////////////////////
+*/
+
+/*
+//////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+*/
+
+import { Router } from "express";
+
+// Middlewares
+import { verificarAuth } from "../middlewares/auth.middleware.js";
+import { validarMantFinca } from "../middlewares/finca.middleware.js";
+
+// Controladores
+import {
+    getFincas,
+    getFincaById,
+    createFinca,
+    updateFinca,
+    deleteFinca
+} from "../controllers/finca.controller.js";
+
+/*
+//////////////////////////////////////////////////////////
+CONSTANTES
+//////////////////////////////////////////////////////////
+*/
+
+const router = Router();
+
+/*
+//////////////////////////////////////////////////////////
+RUTAS
+//////////////////////////////////////////////////////////
+*/
+
+router.get("/", verificarAuth, getFincas);
+router.get("/:id", verificarAuth, getFincaById);
+router.post("/", verificarAuth, validarMantFinca, createFinca);
+router.put("/:id", verificarAuth, validarMantFinca, updateFinca);
+router.delete("/:id", verificarAuth, deleteFinca);
+
+/*
+//////////////////////////////////////////////////////////
+EXPORT
+//////////////////////////////////////////////////////////
+*/
+
+export default router;
