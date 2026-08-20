@@ -64,7 +64,7 @@ export async function getTareas(req, res) {
         if (esGlobal && !req.query.grupoDatos) {
             const [rows] = await pool.query(
                 `SELECT id, uuid, grupo_datos AS grupoDatos, codigo_tarea AS codigoTarea,
-                        nombre, descripcion, categoria, horas, estado, activo
+                        nombre, descripcion, categoria, horas, activo
                  FROM tareas WHERE activo = TRUE AND deleted_at IS NULL`
             );
             return exito(res, 'Tareas obtenidas correctamente.', rows);
@@ -86,7 +86,7 @@ export async function getTareaById(req, res) {
         if (esGlobal && !req.query.grupoDatos) {
             const [rows] = await pool.query(
                 `SELECT id, uuid, grupo_datos AS grupoDatos, codigo_tarea AS codigoTarea,
-                        nombre, descripcion, categoria, horas, estado, activo
+                        nombre, descripcion, categoria, horas, activo
                  FROM tareas WHERE id = ? AND activo = TRUE AND deleted_at IS NULL`,
                 [req.params.id]
             );
@@ -132,12 +132,12 @@ export async function getCatalogoTareas(req, res) {
 export async function createTarea(req, res) {
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
-        const { codigoTarea, nombre, descripcion, categoria, horas, estado } = req.body;
+        const { codigoTarea, nombre, descripcion, categoria, horas } = req.body;
 
         const err = validarCuerpo({ nombre, descripcion, categoria, horas }, res);
         if (err) return err;
 
-        const dto = new TareaDTO({ codigoTarea, nombre, descripcion, categoria, horas, estado });
+        const dto = new TareaDTO({ codigoTarea, nombre, descripcion, categoria, horas });
         const nueva = await TareaModel.create(dto, grupoDatos);
 
         return exito(res, 'Tarea creada correctamente.', nueva, 201);
@@ -149,12 +149,12 @@ export async function createTarea(req, res) {
 export async function updateTarea(req, res) {
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
-        const { nombre, descripcion, categoria, horas, estado } = req.body;
+        const { nombre, descripcion, categoria, horas} = req.body;
 
         const err = validarCuerpo({ nombre, descripcion, categoria, horas }, res);
         if (err) return err;
 
-        const dto = new TareaDTO({ nombre, descripcion, categoria, horas, estado });
+        const dto = new TareaDTO({ nombre, descripcion, categoria, horas });
         const actualizada = await TareaModel.update(req.params.id, dto, grupoDatos);
 
         if (!actualizada)

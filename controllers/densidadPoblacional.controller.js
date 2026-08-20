@@ -20,7 +20,7 @@ IMPORTS
 DTOs
 */
 
-import { DensidadPoblacionalDTO } from "../dtos/densidadpoblacional.dto.js";
+import { DensidadPoblacionalDTO } from "../dtos/densidadPoblacional.dto.js";
 
 // Servicios
 import {
