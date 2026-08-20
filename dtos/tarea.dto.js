@@ -25,13 +25,6 @@ export const CategoriasTarea = Object.freeze({
     EMERGENCIA:  'Emergencia',
 });
 
-export const EstadoTarea = Object.freeze({
-    PENDIENTE:  'Pendiente',
-    EN_PROCESO: 'En proceso',
-    FINALIZADA: 'Finalizada',
-    CANCELADA:  'Cancelada',
-});
-
 /*
 //////////////////////////////////////////////////////////
 DTO
@@ -47,7 +40,6 @@ export class TareaDTO {
         descripcion,
         categoria,
         horas,
-        estado,
     }) {
         /*
         Descripcion:
@@ -61,7 +53,6 @@ export class TareaDTO {
         - descripcion: Descripcion de la tarea (requerido)
         - categoria:   Categoria (usar CategoriasTarea)
         - horas:       Duracion estimada en horas (requerido, numerico)
-        - estado:      Estado de la tarea (usar EstadoTarea, default Pendiente)
         */
         this.id          = id;
         this.grupoDatos  = grupoDatos;
@@ -70,6 +61,5 @@ export class TareaDTO {
         this.descripcion = descripcion;
         this.categoria   = categoria;
         this.horas       = Number(horas);
-        this.estado      = estado ?? EstadoTarea.PENDIENTE;
     }
 }
