@@ -122,11 +122,10 @@ export async function createUsuario(dto) {
             nombre_usuario,
             password_hash
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, UUID(), ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,
-            UUID(),
             dto.nombre,
             dto.apellidos,
             dto.email,
