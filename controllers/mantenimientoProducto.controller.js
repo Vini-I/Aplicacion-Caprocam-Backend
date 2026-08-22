@@ -4,12 +4,11 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: mantenimientoProducto.controller.js
 Autor: Marco Vásquez
-Fecha: 30/07/2026
+Fecha: 18/08/2026
 Modulo: MantenimientoProductos
 Descripcion:
-Recibe las peticiones HTTP para el modulo de productos
-vinculados a mantenimientos. Extrae precio_unidad de la BD,
-calcula subtotal y recalcula costos del ticket de forma automatica.
+Recibe las peticiones HTTP para productos vinculados a mantenimientos.
+Soporta GETs globales para Administrador Caprocam (22776226).
 //////////////////////////////////////////////////////////
 */
 
@@ -23,11 +22,9 @@ DTOs
 
 import { MantenimientoProductoDTO } from '../dtos/mantenimientoProducto.dto.js';
 
-// Modelos
+// Modelos y Config
 import * as MantenimientoProductoModel from '../models/mantenimientoProducto.model.js';
 import * as MantenimientoModel         from '../models/mantenimiento.model.js';
-
-// Config
 import pool from '../config/database.js';
 
 // Common
@@ -41,20 +38,24 @@ FUNCIONES PRINCIPALES
 */
 
 export async function getProductosByMantenimiento(req, res) {
-    /*
-    Descripcion:
-    Obtiene todos los productos de un ticket de mantenimiento.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.mantenimientoId)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con lista de productos del mantenimiento
-    */
     try {
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT mp.*, mp.grupo_datos AS grupoDatos, p.nombre AS nombreProducto
+                 FROM mantenimiento_productos mp
+                 LEFT JOIN productos p ON mp.producto_id = p.id
+                 WHERE mp.mantenimiento_equipo_id = ?
+                   AND mp.activo = TRUE AND mp.deleted_at IS NULL`,
+                [req.params.mantenimientoId]
+            );
+            return exito(res, 'Productos del mantenimiento obtenidos correctamente.', rows);
+        }
+
         const { grupoDatos } = obtenerContextoPeticion(req);
-        const data           = await MantenimientoProductoModel.findByMantenimiento(
+        const data = await MantenimientoProductoModel.findByMantenimiento(
             req.params.mantenimientoId,
             grupoDatos
         );
@@ -65,21 +66,6 @@ export async function getProductosByMantenimiento(req, res) {
 }
 
 export async function agregarProducto(req, res) {
-    /*
-    Descripcion:
-    Vincula un producto a un ticket de mantenimiento.
-    Extrae el precio_unidad de la tabla productos en BD si no viene.
-    Calcula subtotal de forma automatica y recalcula los
-    costos totales del ticket.
-
-    Parametros:
-    - req: Objeto request de Express (req.body: { mantenimientoEquipoId, productoId, cantidad })
-    - res: Objeto response de Express
-
-    Retorna:
-    - 201 con el vinculo creado
-    - 400/404 si faltan campos o no existe el producto/ticket
-    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const { mantenimientoEquipoId, productoId, cantidad } = req.body;
@@ -88,7 +74,6 @@ export async function agregarProducto(req, res) {
         if (isNaN(cantNum) || cantNum <= 0)
             return error(res, 'La cantidad debe ser un numero mayor a 0.', null, 400);
 
-        // Buscar el precio de unidad en la tabla productos de la BD
         let costoNum = req.body.costoUnitario !== undefined
             ? Number(req.body.costoUnitario)
             : null;
@@ -110,7 +95,7 @@ export async function agregarProducto(req, res) {
             ? Number(req.body.subtotal)
             : (cantNum * costoNum);
 
-        const dto   = new MantenimientoProductoDTO({
+        const dto = new MantenimientoProductoDTO({
             mantenimientoEquipoId,
             productoId,
             cantidad: cantNum,
@@ -119,7 +104,6 @@ export async function agregarProducto(req, res) {
         });
 
         const nuevo = await MantenimientoProductoModel.create(dto, grupoDatos);
-
         await MantenimientoModel.recalcularCostos(mantenimientoEquipoId, grupoDatos);
 
         return exito(res, 'Producto agregado al mantenimiento correctamente.', nuevo, 201);
@@ -129,19 +113,6 @@ export async function agregarProducto(req, res) {
 }
 
 export async function actualizarProducto(req, res) {
-    /*
-    Descripcion:
-    Actualiza cantidad, costo y subtotal de un producto en un mantenimiento.
-    Recalcula costo_productos y costo_total_estimado del ticket.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id, req.body)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con el registro actualizado
-    - 404 si no existe
-    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const { cantidad }   = req.body;
@@ -162,7 +133,7 @@ export async function actualizarProducto(req, res) {
             ? Number(req.body.subtotal)
             : (cantNum * costoNum);
 
-        const dto         = new MantenimientoProductoDTO({
+        const dto = new MantenimientoProductoDTO({
             cantidad: cantNum,
             costoUnitario: costoNum,
             subtotal,
@@ -190,22 +161,9 @@ export async function actualizarProducto(req, res) {
 }
 
 export async function eliminarProducto(req, res) {
-    /*
-    Descripcion:
-    Elimina el vinculo de un producto con un mantenimiento.
-    Recalcula costo_productos y costo_total_estimado del ticket.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con el registro eliminado
-    - 404 si no existe
-    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
-        const eliminado      = await MantenimientoProductoModel.remove(
+        const eliminado = await MantenimientoProductoModel.remove(
             req.params.id,
             grupoDatos
         );
