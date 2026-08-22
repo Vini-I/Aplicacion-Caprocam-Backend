@@ -50,7 +50,6 @@ function mapearTarea(fila) {
         descripcion:   fila.descripcion,
         categoria:     fila.categoria,
         horas:         fila.horas,
-        estado:        fila.estado,
         fechaCreacion:      fila.fecha_creacion,
         fechaActualizacion: fila.fecha_actualizacion,
     };
@@ -115,8 +114,8 @@ export async function create(dto, grupoDatos) {
     */
     const [result] = await pool.query(
         `INSERT INTO tareas
-         (grupo_datos, codigo_tarea, nombre, descripcion, categoria, horas, estado)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         (grupo_datos, codigo_tarea, nombre, descripcion, categoria, horas)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
             grupoDatos,
             dto.codigoTarea,
@@ -124,7 +123,6 @@ export async function create(dto, grupoDatos) {
             dto.descripcion,
             dto.categoria,
             dto.horas,
-            dto.estado,
         ]
     );
     return findById(result.insertId, grupoDatos);
@@ -147,14 +145,13 @@ export async function update(id, dto, grupoDatos) {
     const [result] = await pool.query(
         `UPDATE tareas
          SET nombre = ?, descripcion = ?, categoria = ?,
-             horas = ?, estado = ?, version = version + 1
+             horas = ?, version = version + 1
          WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
         [
             dto.nombre,
             dto.descripcion,
             dto.categoria,
             dto.horas,
-            dto.estado,
             id,
             grupoDatos,
         ]

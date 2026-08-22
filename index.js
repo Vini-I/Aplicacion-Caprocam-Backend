@@ -40,7 +40,7 @@ CONSTANTES
 Define el puerto de ejecucion tomando la variable de entorno
 o usando el puerto 4000 por defecto.
 */
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT;
 
 /*
 //////////////////////////////////////////////////////////
