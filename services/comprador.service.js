@@ -15,7 +15,7 @@ const phoneRegex = /^\d{8}$/;
 
 /**
  * Descripcion:
- * Valida si el valor ingresado es un numero telefonico de 8 digitos.
+ * Valida si el valor ingresado es un numero telefonico de exactamente 8 digitos numéricos.
  *
  * Parametros:
  * - phone: Cadena o numero a evaluar.
@@ -24,7 +24,7 @@ const phoneRegex = /^\d{8}$/;
  * - Boolean indicando si es valido o no.
  */
 export function isPhone(phone) {
-    if (phone === undefined || phone === null) return false;
+    if (phone === undefined || phone === null || phone === '') return true;
     return phoneRegex.test(String(phone).trim());
 }
 
