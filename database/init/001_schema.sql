@@ -961,6 +961,7 @@ CREATE TABLE IF NOT EXISTS fisico_quimico_detalle (
     lectura_id INT NOT NULL,
     tipo_medicion ENUM('ph', 'salinidad', 'temperatura', 'oxigeno') NOT NULL,
     etiqueta VARCHAR(20) NOT NULL,
+    hora_medicion TIME NULL,
     valor DECIMAL(6,2) NOT NULL,
     creado_por_usuario_id INT NULL,
     creado_por_colaborador_id INT NULL,
