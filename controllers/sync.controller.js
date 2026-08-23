@@ -889,6 +889,7 @@ export async function subirCambios(req, res) {
           r.tipoMedicion ?? r.tipo_medicion
         );
         const etiqueta = normalizarEtiquetaSync(r.etiqueta);
+        const horaMedicion = r.horaMedicion ?? r.hora_medicion ?? null;
         const valor = r.valor ?? null;
 
         const existente = await buscarRegistroSync(
@@ -906,6 +907,7 @@ export async function subirCambios(req, res) {
             connection,
             "fisico_quimico_detalle",
             {
+              hora_medicion: horaMedicion,
               valor,
             },
             {
@@ -929,6 +931,7 @@ export async function subirCambios(req, res) {
             lectura_id: mappedLecturaId,
             tipo_medicion: tipoMedicion,
             etiqueta,
+            hora_medicion: horaMedicion,
             valor,
           }
         );
