@@ -183,7 +183,7 @@ function validarCampos(req, res) {
         return error(
             res,
             'El oxigeno disuelto debe contener ' +
-                'mediciones validas.',
+                'mediciones validas con horaMedicion.',
             null,
             400
         );
