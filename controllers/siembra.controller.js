@@ -191,7 +191,7 @@ function validarCuerpoLoteYSiembra(body, res) {
 }
 
 async function validarReferencias(body, res, grupoDatos, opciones = {}) {
-    const { esCreacion = false, siembraIdActual = null } = opciones;
+    const { esCreacion = false, siembraIdActual = null, estanqueIdActual = null } = opciones;
 
     const loteLarvaIdValor = body.lote_larva_id ?? body.loteLarvaId;
     const fincaIdValor = body.finca_id ?? body.fincaId;
@@ -233,11 +233,15 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
         );
     }
 
-    if (esCreacion) {
+        const cambioDeEstanque = esCreacion || String(estanqueIdValor) !== String(estanqueIdActual);
+
+    if (cambioDeEstanque) {
         if (String(estanque.estado).toLowerCase() !== EstadoEstanque.ACTIVO.toLowerCase()) {
             return error(
                 res,
-                "Solo se puede crear una siembra en un estanque en estado 'Activo'. " +
+                (esCreacion
+                    ? "Solo se puede crear una siembra en un estanque en estado 'Activo'. "
+                    : "Solo se puede actualizar una siembra a un estanque en estado 'Activo'. ") +
                     `Estado actual: ${estanque.estado}.`,
                 null,
                 409
@@ -527,6 +531,7 @@ export async function actualizarSiembra(req, res) {
         const errRef = await validarReferencias(req.body, res, grupoDatos, {
             esCreacion: false,
             siembraIdActual: id,
+            estanqueIdActual: actual.estanque_id,
         });
         if (errRef) return errRef;
 
