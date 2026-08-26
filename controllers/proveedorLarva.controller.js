@@ -4,11 +4,8 @@ CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: proveedorLarva.controller.js
 Autor: Joan Campos-Oscar Mario / Marco Vásquez
-Fecha: 18/08/2026
+Fecha: 25/08/2026
 Modulo: Proveedor Larva
-Descripcion:
-Controlador HTTP para el modulo de proveedor de larva.
-Soporta GETs globales para Administrador Caprocam (22776226).
 //////////////////////////////////////////////////////////
 */
 
@@ -19,6 +16,18 @@ import { exito, error } from "../common/respuestaJson.js";
 import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 export async function getProveedoresLarva(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion GET para obtener todos los proveedores de larva.
+    Permite acceso global si el usuario tiene permisos administrativos.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Respuesta HTTP con la lista de proveedores.
+    */
     try {
         const user = req.user ?? null;
         const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
@@ -40,6 +49,17 @@ export async function getProveedoresLarva(req, res) {
 }
 
 export async function getProveedorLarvaById(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion GET para obtener un proveedor de larva por su ID.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Respuesta HTTP con el proveedor solicitado.
+    */
     try {
         const user = req.user ?? null;
         const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
@@ -65,6 +85,17 @@ export async function getProveedorLarvaById(req, res) {
 }
 
 export async function createProveedorLarva(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion POST para crear un nuevo proveedor de larva.
+    
+    Parametros:
+    - req: Objeto de peticion Express con los datos en el body.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Respuesta HTTP con el proveedor creado.
+    */
     try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
             obtenerContextoPeticion(req);
@@ -85,6 +116,17 @@ export async function createProveedorLarva(req, res) {
 }
 
 export async function updateProveedorLarva(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion PUT para actualizar un proveedor de larva existente.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Respuesta HTTP con el proveedor actualizado.
+    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
 
@@ -105,8 +147,26 @@ export async function updateProveedorLarva(req, res) {
 }
 
 export async function deleteProveedorLarva(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion DELETE para borrar (logico) un proveedor de larva.
+    Evita la eliminacion si el proveedor esta en uso en algun lote.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Respuesta HTTP indicando exito o 409 si esta en uso.
+    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
+        
+        const enUso = await ProveedorLarvaModel.estaEnUso(req.params.id, grupoDatos);
+        if (enUso) {
+            return error(res, "No se puede eliminar este proveedor porque está asignado a uno o más lotes de larva.", null, 409);
+        }
+
         const eliminado = await ProveedorLarvaModel.remove(req.params.id, grupoDatos);
         if (!eliminado) return error(res, "Proveedor de larva no encontrado.", null, 404);
         return exito(res, "Proveedor de larva eliminado correctamente.", null);
