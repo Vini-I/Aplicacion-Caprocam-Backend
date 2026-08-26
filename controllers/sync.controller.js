@@ -78,14 +78,17 @@ function tieneValor(valor) {
 }
 
 function normalizarFecha(valor) {
-  if (!tieneValor(valor)) {
-    return null;
-  }
+  if (!tieneValor(valor)) return null;
 
   const texto = String(valor).trim();
 
+  if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(texto)) {
+    const [dia, mes, anio] = texto.split(/[\/-]/);
+    return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+  }
+
   if (/^\d{4}-\d{2}-\d{2}/.test(texto)) {
-    return texto.slice(0, 10);
+    return texto.substring(0, 10);
   }
 
   return texto;
@@ -1568,21 +1571,16 @@ export async function subirCambios(req, res) {
           "mantenimiento_equipo",
           {
             grupo_datos: grupoDatos,
+            codigo_ticket: r.codigoTicket ?? r.codigo_ticket ?? null,
             equipo_id: r.equipoId ?? r.equipo_id ?? null,
-            codigo_ticket: codigoTicket,
-            fecha_mantenimiento: normalizarFecha(
-              r.fechaMantenimiento ?? r.fecha_mantenimiento
-            ),
+            fecha_mantenimiento: normalizarFecha(r.fechaMantenimiento ?? r.fecha_mantenimiento),
             titulo_ticket: r.tituloTicket ?? r.titulo_ticket ?? null,
-            descripcion_ticket:
-              r.descripcionTicket ?? r.descripcion_ticket ?? null,
-            tipo_personal: r.tipoPersonal ?? r.tipo_personal ?? null,
+            descripcion_ticket: r.descripcionTicket ?? r.descripcion_ticket ?? null,
+            tipo_personal: r.tipoPersonal ?? r.tipo_personal ?? "Interno",
             costo_mano_obra: r.costoManoObra ?? r.costo_mano_obra ?? 0,
             costo_productos: r.costoProductos ?? r.costo_productos ?? 0,
-            costo_total_estimado:
-              r.costoTotalEstimado ?? r.costo_total_estimado ?? 0,
-            estado_ticket: r.estadoTicket ?? r.estado_ticket ?? "En espera",
-            estado_equipo: r.estadoEquipo ?? r.estado_equipo ?? "Mantenimiento",
+            costo_total_estimado: r.costoTotalEstimado ?? r.costo_total_estimado ?? 0,
+            estado_ticket: r.estadoTicket ?? r.estado_ticket ?? "Pendiente",
             creado_por_colaborador_id: creadoPorColaboradorId,
           }
         );
@@ -1600,14 +1598,15 @@ export async function subirCambios(req, res) {
           connection,
           "mantenimiento_equipo",
           {
+            equipo_id: r.equipoId ?? r.equipo_id,
+            fecha_mantenimiento: normalizarFecha(r.fechaMantenimiento ?? r.fecha_mantenimiento),
             titulo_ticket: r.tituloTicket ?? r.titulo_ticket,
             descripcion_ticket: r.descripcionTicket ?? r.descripcion_ticket,
-            estado_ticket: r.estadoTicket ?? r.estado_ticket,
-            estado_equipo: r.estadoEquipo ?? r.estado_equipo,
+            tipo_personal: r.tipoPersonal ?? r.tipo_personal,
             costo_mano_obra: r.costoManoObra ?? r.costo_mano_obra,
             costo_productos: r.costoProductos ?? r.costo_productos,
-            costo_total_estimado:
-              r.costoTotalEstimado ?? r.costo_total_estimado,
+            costo_total_estimado: r.costoTotalEstimado ?? r.costo_total_estimado,
+            estado_ticket: r.estadoTicket ?? r.estado_ticket,
           },
           {
             id: idReal,
