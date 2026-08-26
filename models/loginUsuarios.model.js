@@ -115,13 +115,14 @@ export async function createUsuario(dto) {
         `
         INSERT INTO usuarios (
             grupo_datos,
+            uuid,
             nombre,
             apellidos,
             email,
             nombre_usuario,
             password_hash
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, UUID(), ?, ?, ?, ?, ?)
         `,
         [
             grupoDatos,

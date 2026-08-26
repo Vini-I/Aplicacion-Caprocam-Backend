@@ -59,26 +59,15 @@ Crea un nuevo registro de raleo.
 {
     "idFinca": 1,
     "idEstanque": 1,
-    // ahora se llama desde el JWT por lo que no se agrega con el POST "idColaborador": 1,
+    "idSiembra": 1,
     "fecha": "2026-07-07",
     "porcentaje": 30,
-    "pesoEstimado": 0.35,
-    "biomasaEstimado": 15.2,
-    "objetivo": "Comercialización",
-    "metodo": "Atarraya",
-    "observaciones": "Raleo realizado sin inconvenientes."
+    "kgRetirados": 3000,
+    "biomasaRestante": 10000,
+    "biomasaEstimada": 15000,
+    "observaciones": "Raleo de prueba."
 }
 ```
-
-**Métodos de raleo permitidos:**
-
-```text
-Atarraya
-Red de arrastre
-Boleo
-Trampa selectiva
-```
-
 **Respuesta exitosa:**
 201 Created
 

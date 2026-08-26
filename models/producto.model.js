@@ -9,6 +9,7 @@ Modulo: Productos
 Descripcion:
 Capa de datos del modulo de productos e inventario.
 Conectado a MySQL via pool. Usa borrado logico y auditoria dual.
+Normalización precisa de fechas locales sin pérdida de día.
 //////////////////////////////////////////////////////////
 */
 
@@ -31,7 +32,7 @@ FUNCIONES SECUNDARIAS
 function normalizarFecha(fecha) {
     /*
     Descripcion:
-    Parsea una fecha a formato YYYY-MM-DD para MySQL.
+    Parsea una fecha a formato YYYY-MM-DD para MySQL evitando desfasajes UTC.
     Soporta formato ISO (YYYY-MM-DD) y formato latino (DD/MM/YYYY).
 
     Parametros:
@@ -42,17 +43,44 @@ function normalizarFecha(fecha) {
     */
     if (!fecha) return null;
 
-    if (typeof fecha === 'string' && fecha.includes('/')) {
-        const partes = fecha.split('/');
-        if (partes.length === 3) {
-            const [dia, mes, anio] = partes;
-            fecha = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+    if (typeof fecha === 'string') {
+        const limpia = fecha.split('T')[0];
+        if (limpia.includes('/')) {
+            const partes = limpia.split('/');
+            if (partes.length === 3) {
+                const [dia, mes, anio] = partes;
+                return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+            }
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(limpia)) {
+            return limpia;
         }
     }
 
     const d = new Date(fecha);
     if (isNaN(d.getTime())) return null;
-    return d.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function validarFechaIngreso(fechaIngresoStr) {
+    /*
+    Descripcion:
+    Verifica que la fecha de ingreso no sea posterior al día de hoy.
+
+    Parametros:
+    - fechaIngresoStr: Cadena en formato YYYY-MM-DD.
+
+    Retorna:
+    - Lanza error si la fecha es futura.
+    */
+    if (!fechaIngresoStr) return;
+    const hoyStr = new Date().toISOString().split('T')[0];
+    if (fechaIngresoStr > hoyStr) {
+        throw new Error('La fecha de ingreso no puede ser posterior a la fecha actual.');
+    }
 }
 
 function mapearProducto(fila) {
@@ -169,6 +197,8 @@ export async function create(dto, grupoDatos) {
     const fechaIng = normalizarFecha(entryDate);
     const fechaExp = normalizarFecha(expirationDate);
 
+    validarFechaIngreso(fechaIng);
+
     const [resultProducto] = await pool.query(
         `INSERT INTO productos 
             (codigo, grupo_datos, proveedor_id, nombre, categoria,
@@ -223,6 +253,8 @@ export async function update(id, dto, grupoDatos) {
     const fechaIng = normalizarFecha(entryDate);
     const fechaExp = normalizarFecha(expirationDate);
 
+    validarFechaIngreso(fechaIng);
+
     const [result] = await pool.query(
         `UPDATE productos 
          SET codigo = ?, proveedor_id = ?, nombre = ?,
@@ -272,7 +304,7 @@ export async function remove(id, grupoDatos) {
 
     await pool.query(
         `UPDATE productos 
-         SET estado = "INACTIVO", deleted_at = CURRENT_TIMESTAMP
+         SET estado = "INACTIVO", activo = FALSE, deleted_at = CURRENT_TIMESTAMP
          WHERE id = ? AND grupo_datos = ?`,
         [id, grupoDatos]
     );

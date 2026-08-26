@@ -322,8 +322,20 @@ export async function eliminarProveedor(req, res) {
     const errId = validarIdParametro(req.params.id, res);
     if (errId) return errId;
 
-    try {
+        try {
         const { grupoDatos } = obtenerContextoPeticion(req);
+
+        // Validación: No permitir eliminar si está en el inventario
+        const enUso = await proveedorModel.tieneInventarioAsociado(req.params.id, grupoDatos);
+        if (enUso) {
+            return error(
+                res,
+                "No se puede eliminar el proveedor porque se encuentra asociado a registros de Inventario.",
+                null,
+                409
+            );
+        }
+
         const eliminado = await proveedorModel.remove(req.params.id, grupoDatos);
         if (!eliminado) {
             return error(res, "Proveedor no encontrado.", null, 404);
@@ -334,8 +346,5 @@ export async function eliminarProveedor(req, res) {
             proveedorDTO(eliminado)
         );
     } catch (err) {
-        return error(
-            res, "Error al eliminar el proveedor.", err, 500
-        );
     }
 }

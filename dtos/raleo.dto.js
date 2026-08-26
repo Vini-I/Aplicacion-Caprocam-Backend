@@ -16,14 +16,6 @@ Transforma y normaliza los datos recibidos.
 ENUM
 //////////////////////////////////////////////////////////
 Define los valores permitidos para el campo metodo.
-*/
-export const MetodoRaleo = Object.freeze({
-    ATARRAYA: "Atarraya",
-    RED_DE_ARRASTRE: "Red de arrastre",
-    BOLEO: "Boleo",
-    TRAMPA_SELECTIVA: "Trampa selectiva",
-});
-/*
 //////////////////////////////////////////////////////////
 DTO
 //////////////////////////////////////////////////////////
@@ -40,12 +32,12 @@ export class RaleoDTO {
         - grupoDatos: Codigo del grupo de datos al que pertenece el raleo        
         - idFinca: Identificador de la finca                                     (requerido)
         - idEstanque: Identificador del estanque                                 (requerido)
+        - idSiembra: Identificador de la siembra                                 (requerido)
         - fecha: La fecha en la cual se realiza el raleo                         (requerido)
-        - porcentaje: Porcentaje del raleo                                       (requerido)
-        - pesoEstimado: El peso estimado                                         (requerido)
-        - biomasaEstimado: Biomasa estimada                                      (requerido)
-        - objetivo: El objetivo del raleo                                        (requerido)
-        - metodo: Mtodo de extraccion del raleo                                  (requerido)
+        - porcentaje: Porcentaje del raleo (esta se calcula en front y back)     (requerido)
+        - kgRetirados: Kg que se restan de la biomasa anterior                   (requerido)
+        - bimasaRestante: La biomasa restante                                    (requerido)
+        - biomasaEstimada: Biomasa estimada                                      (requerido)
         - observaciones: Apuntes adicionales del raleo                           (opcional)
         - creadoPorUsuarioId: Identificador del usuario que creó el registro.
         - creadoPorColaboradorId: Identificador del colaborador que realizó el raleo.        
@@ -63,12 +55,12 @@ export class RaleoDTO {
         grupoDatos,
         idFinca,
         idEstanque,
+        idSiembra,
         fecha,
         porcentaje,
-        pesoEstimado,
-        biomasaEstimado,
-        objetivo,
-        metodo,
+        kgRetirados,
+        biomasaRestante,
+        biomasaEstimada,
         observaciones,
         creadoPorUsuarioId,
         creadoPorColaboradorId,        
@@ -79,19 +71,19 @@ export class RaleoDTO {
         version
 
     }) {
-        this.id              = id;
-        this.uuid            = uuid;
-        this.grupoDatos      = grupoDatos;
-        this.idFinca         = Number(idFinca);
-        this.idEstanque      = Number(idEstanque);
-        this.fecha           = normalizarTexto(fecha);
-        this.porcentaje      = Number(porcentaje);
-        this.pesoEstimado    = Number(pesoEstimado);
-        this.biomasaEstimado = Number(biomasaEstimado);
-        this.objetivo        = normalizarTexto(objetivo);
-        this.metodo          = normalizarTexto(metodo);
-        this.observaciones   = normalizarTextoOpcional(observaciones);
-        this.creadoPorUsuarioId = normalizarNumeroOpcional(creadoPorUsuarioId);
+        this.id                     = id;
+        this.uuid                   = uuid;
+        this.grupoDatos             = grupoDatos;
+        this.idFinca                = Number(idFinca);
+        this.idEstanque             = Number(idEstanque);
+        this.idSiembra              = Number(idSiembra);
+        this.fecha                  = normalizarTexto(fecha);
+        this.porcentaje             = Number(porcentaje);
+        this.kgRetirados            = Number(kgRetirados);
+        this.biomasaRestante        = Number(biomasaRestante);
+        this.biomasaEstimada        = Number(biomasaEstimada);
+        this.observaciones          = normalizarTextoOpcional(observaciones);
+        this.creadoPorUsuarioId     = normalizarNumeroOpcional(creadoPorUsuarioId);
         this.creadoPorColaboradorId = normalizarNumeroOpcional(creadoPorColaboradorId);        
         /*
         Si activo no viene definido, el registro se considera activo

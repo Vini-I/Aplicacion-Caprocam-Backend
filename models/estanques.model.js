@@ -260,7 +260,7 @@ export async function create(dto) {
     /*
     Descripcion:
     Inserta un nuevo estanque utilizando el grupo de datos
-    recibido desde el controller.
+    y la identidad del creador recibidos desde el controller.
     */
 
     const fechaMantenimiento =
@@ -281,9 +281,11 @@ export async function create(dto) {
             profundidad,
             fuente_agua,
             fecha_mantenimiento,
-            precria
+            precria,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             dto.grupoDatos,
@@ -296,7 +298,9 @@ export async function create(dto) {
             dto.profundidad,
             dto.fuenteAgua,
             fechaMantenimiento,
-            dto.precria
+            dto.precria,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId
         ]
     );
 
@@ -314,7 +318,8 @@ export async function update(
     /*
     Descripcion:
     Actualiza un estanque que pertenece al grupo del usuario.
-    El campo grupo_datos no se modifica.
+    El campo grupo_datos y los campos de auditoria del
+    creador no se modifican.
     */
 
     const actual = await findById(
@@ -370,6 +375,108 @@ export async function update(
     return await findById(
         id,
         grupoDatos
+    );
+}
+
+export async function actualizarEstanqueOrigen(
+    connection,
+    idEstanque,
+    grupoDatos,
+    estado
+) {
+    /*
+    Descripcion:
+    Actualiza el estado del estanque de origen durante
+    un movimiento realizado desde el modulo Trazabilidad.
+
+    Esta funcion no crea ni confirma una transaccion.
+    Utiliza la connection recibida desde Trazabilidad
+    para formar parte de la misma transaccion.
+
+    Parametros:
+    - connection: Conexion MySQL con transaccion activa.
+    - idEstanque: Identificador del estanque de origen.
+    - grupoDatos: Grupo de datos obtenido desde el JWT.
+    - estado: Nuevo estado definido por la logica del
+      movimiento de Trazabilidad.
+
+    Retorna:
+    - true si el estanque fue actualizado.
+    - false si no se encontro un estanque valido.
+    */
+
+    const [resultado] =
+        await connection.execute(
+            `
+            UPDATE estanques
+            SET
+                estado = ?,
+                version = version + 1
+            WHERE id = ?
+            AND grupo_datos = ?
+            AND deleted_at IS NULL
+            AND activo = TRUE
+            `,
+            [
+                estado,
+                idEstanque,
+                grupoDatos
+            ]
+        );
+
+    return (
+        resultado.affectedRows > 0
+    );
+}
+
+export async function actualizarEstanqueDestino(
+    connection,
+    idEstanque,
+    grupoDatos,
+    estado
+) {
+    /*
+    Descripcion:
+    Actualiza el estado del estanque de destino durante
+    un movimiento realizado desde el modulo Trazabilidad.
+
+    Esta funcion no crea ni confirma una transaccion.
+    Utiliza la connection recibida desde Trazabilidad
+    para formar parte de la misma transaccion.
+
+    Parametros:
+    - connection: Conexion MySQL con transaccion activa.
+    - idEstanque: Identificador del estanque de destino.
+    - grupoDatos: Grupo de datos obtenido desde el JWT.
+    - estado: Nuevo estado definido por la logica del
+      movimiento de Trazabilidad.
+
+    Retorna:
+    - true si el estanque fue actualizado.
+    - false si no se encontro un estanque valido.
+    */
+
+    const [resultado] =
+        await connection.execute(
+            `
+            UPDATE estanques
+            SET
+                estado = ?,
+                version = version + 1
+            WHERE id = ?
+            AND grupo_datos = ?
+            AND deleted_at IS NULL
+            AND activo = TRUE
+            `,
+            [
+                estado,
+                idEstanque,
+                grupoDatos
+            ]
+        );
+
+    return (
+        resultado.affectedRows > 0
     );
 }
 
@@ -504,41 +611,45 @@ function mapearFila(row) {
     Convierte una fila de MySQL en un objeto camelCase.
     */
 
-    const precria = Boolean(
-        row.precria
-    );
-
     return {
         id: row.id,
         uuid: row.uuid,
         grupoDatos: row.grupo_datos,
-
         idFinca: row.finca_id,
-        fincaId: row.finca_id,
-
         codigo: row.codigo,
         tipoEstanque: row.tipo_estanque,
         estado: row.estado,
+
         largo: Number(
             row.largo
         ),
+
         ancho: Number(
             row.ancho
         ),
+
         profundidad: Number(
             row.profundidad
         ),
-        fuenteAgua: row.fuente_agua,
-        fechaMantenimiento: formatearFecha(
-            row.fecha_mantenimiento
-        ),
+
+        fuenteAgua:
+            row.fuente_agua,
+
+        fechaMantenimiento:
+            formatearFecha(
+                row.fecha_mantenimiento
+            ),
+
         precria: Boolean(
             row.precria
         ),
+
         creadoPorUsuarioId:
             row.creado_por_usuario_id,
+
         creadoPorColaboradorId:
             row.creado_por_colaborador_id,
+
         activo: Boolean(
             row.activo
         ),

@@ -16,7 +16,6 @@ Respuesta:
             "fincaId": 1,
             "estanqueOrigenId": 1,
             "estanqueDestinoId": 2,
-            "colaboradorId": null,
             "creadoPorUsuarioId": 7,
             "creadoPorColaboradorId": null,
             "fecha": "2026-07-19",
@@ -61,7 +60,6 @@ Respuesta exitosa:
         "fincaId": 1,
         "estanqueOrigenId": 1,
         "estanqueDestinoId": 2,
-        "colaboradorId": null,
         "creadoPorUsuarioId": 7,
         "creadoPorColaboradorId": null,
         "fecha": "2026-07-19",
@@ -98,12 +96,10 @@ Body (JSON):
     "fecha":             "2026-07-19",
     "tamano":            0.5,
     "dias":              30,
-    "pl":                15000,
-    "colaboradorId":     null
+    "pl":                15000
 }
 
 Notas:
-- `colaboradorId` es **opcional**: representa el colaborador responsable del movimiento en campo (por ejemplo, quien lo hizo fisicamente). El front lo manda solo si tiene esa informacion (ej. un selector de colaboradores); si no se envia, queda `null`.
 - `creadoPorUsuarioId` y `creadoPorColaboradorId` **no se envian en el body**, el backend los resuelve solo con `obtenerContextoPeticion(req)`:
   - Si quien esta autenticado es un usuario web (login por `/login`), se llena `creadoPorUsuarioId` y `creadoPorColaboradorId` queda `null`.
   - Si quien esta autenticado es un colaborador (login por PIN desde la APK), es al reves: se llena `creadoPorColaboradorId` y `creadoPorUsuarioId` queda `null`.
@@ -125,7 +121,6 @@ Respuesta exitosa:
         "fincaId": 1,
         "estanqueOrigenId": 1,
         "estanqueDestinoId": 2,
-        "colaboradorId": null,
         "creadoPorUsuarioId": 7,
         "creadoPorColaboradorId": null,
         "fecha": "2026-07-19",
@@ -153,13 +148,6 @@ Respuesta de error:
 {
     "success": false,
     "message": "El estanque destino ya tiene un movimiento activo. Debe liberarse antes de recibir un nuevo movimiento.",
-    "error": null
-}
-
-400 Bad Request (colaboradorId invalido)
-{
-    "success": false,
-    "message": "El campo colaboradorId debe ser numerico y mayor a cero.",
     "error": null
 }
 

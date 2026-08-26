@@ -14,11 +14,8 @@ Define las reglas de negocio de raleo.
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
-
-DTOs
 */
-
-import { MetodoRaleo } from "../dtos/raleo.dto.js";
+import * as SiembraModel from "../models/siembra.model.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -105,29 +102,6 @@ export function isNumeroMayorIgualCero(valor) {
     return true;
 }
 
-export function isMetodoRaleo(metodo) {
-    /*
-    Descripcion:
-    Valida que el metodo de raleo recibido exista dentro de los metodos
-    permitidos del modulo.
-
-    Parametros:
-    - estado: Estado recibido
-
-    Retorna:
-    - true si es valido, false si no
-    */
-    const metodos = Object.values(MetodoRaleo);
-
-    for (let i = 0; i < metodos.length; i++) {
-        if (metodo === metodos[i]) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 export function isIdValido(id) {
     /*
     Descripcion:
@@ -140,4 +114,80 @@ export function isIdValido(id) {
     - true si es valido, false si no
     */
     return isNumeroMayorCero(id);
+}
+
+//Validaciones de lógica de negocio.
+
+export function validarRetiroBiomasa(biomasaEstimada,kgRetirados){
+    if(Number(kgRetirados) > Number(biomasaEstimada)){
+        return false;
+    }
+    return true;
+}
+
+export function validarBiomasaRestante(biomasaEstimada,kgRetirados,biomasaRestanteRecibida){
+    const calculada = Number(biomasaEstimada) - Number(kgRetirados);
+    if(Number(biomasaRestanteRecibida)<0){
+        return false;
+    }
+    if(Number(biomasaRestanteRecibida)!==calculada){
+        return false;
+    }
+    return true;
+}
+
+export function validarPorcentajeRaleo(biomasaEstimada,kgRetirados,porcentajeRecibido){
+    const calculado = (Number(kgRetirados) / Number(biomasaEstimada)) *100;
+    //Se redondea (por si acaso)
+    const porcentajeRedondeado = Number(calculado.toFixed(2)); 
+    if(Number(porcentajeRecibido)!== porcentajeRedondeado){
+        return false;
+    }
+    return true;       
+}
+
+export function validarFechaNoFutura(fecha) {
+    /*
+    Descripcion:
+    Valida que la fecha recibida sea valida y no sea posterior
+    a la fecha actual.
+
+    Parametros:
+    - fecha: Fecha recibida en formato YYYY-MM-DD
+
+    Retorna:
+    - true si la fecha es valida
+    - false si es futura o invalida
+    */
+    if (!fecha) {
+        return false;
+    }
+
+    const fechaIngresada = new Date(fecha);
+    // Validar fecha incorrecta
+    if (Number.isNaN(fechaIngresada.getTime())) {
+        return false;
+    }
+    const hoy = new Date();
+
+    // Eliminamos horas para comparar solamente fechas
+    hoy.setHours(0, 0, 0, 0);
+    fechaIngresada.setHours(0, 0, 0, 0);
+    if (fechaIngresada > hoy) {
+        return false;
+    }
+
+    return true;
+}
+
+//Validacion de estanque activo o no activo para el raleo
+export async function validarEstanque(idEstanque, grupoDatos) {
+
+    const siembra = await SiembraModel.findActivaByEstanque(idEstanque, grupoDatos);
+
+    if (!siembra) {
+        return null;
+    }
+
+    return siembra.id;
 }

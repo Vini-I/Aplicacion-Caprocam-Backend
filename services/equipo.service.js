@@ -216,7 +216,7 @@ export function isIdValido(id) {
 export function isFechaValida(fecha) {
     /*
     Descripcion:
-    Valida que una fecha tenga formato dd/mm/aaaa y
+    Valida que una fecha tenga formato dd/mm/aaaa o YYYY-MM-DD y
     represente una fecha calendario real.
 
     Parametros:
@@ -231,8 +231,20 @@ export function isFechaValida(fecha) {
     }
 
     const texto = String(fecha).trim();
-    const partes = texto.split("/");
 
+    // Formato ISO: YYYY-MM-DD o YYYY/MM/DD
+    if (/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/.test(texto)) {
+        const partes = texto.split(/[-\/]/);
+        const anio = Number(partes[0]);
+        const mes = Number(partes[1]);
+        const dia = Number(partes[2]);
+        if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return false;
+        const fechaObj = new Date(anio, mes - 1, dia);
+        return fechaObj.getFullYear() === anio && fechaObj.getMonth() === mes - 1 && fechaObj.getDate() === dia;
+    }
+
+    // Formato Latino: DD/MM/YYYY o DD-MM-YYYY
+    const partes = texto.split(/[-\/]/);
     if (partes.length !== 3) {
         return false;
     }

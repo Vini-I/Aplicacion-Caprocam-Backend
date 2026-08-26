@@ -3,11 +3,9 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: procedencia.model.js
-Autor: oscar mario
-Fecha: 01/08/2026
+Autor: oscar mario-Joan Campos
+Fecha: 25/08/2026
 Modulo: Procedencia
-Descripcion:
-Capa de acceso a datos para el modulo de procedencia.
 //////////////////////////////////////////////////////////
 */
 
@@ -18,13 +16,14 @@ export async function findAll(grupoDatos) {
     /*
     Descripcion:
     Obtiene un listado completo de todos los registros activos del modulo procedencia.
+    
     Parametros:
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - grupoDatos: Entero que identifica el tenant.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - Array de objetos ProcedenciaDTO.
     */
-const [rows] = await pool.execute(
+    const [rows] = await pool.execute(
         `SELECT id, uuid, grupo_datos, nombre, descripcion, creado_por_usuario_id, creado_por_colaborador_id, activo, fecha_creacion, fecha_actualizacion
          FROM procedencias
          WHERE grupo_datos = ? AND deleted_at IS NULL AND activo = TRUE
@@ -37,15 +36,16 @@ const [rows] = await pool.execute(
 export async function findById(id, grupoDatos) {
     /*
     Descripcion:
-    Busca y retorna un registro especifico de procedencia mediante su identificador unico.
+    Busca y retorna un registro especifico de procedencia.
+    
     Parametros:
-    - id: Entero que representa el identificador unico primario (PK) del registro.
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - id: Identificador unico del registro.
+    - grupoDatos: Entero que identifica el tenant.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - Objeto ProcedenciaDTO o null si no se encuentra.
     */
-const [rows] = await pool.execute(
+    const [rows] = await pool.execute(
         `SELECT id, uuid, grupo_datos, nombre, descripcion, creado_por_usuario_id, creado_por_colaborador_id, activo, fecha_creacion, fecha_actualizacion
          FROM procedencias
          WHERE id = ? AND grupo_datos = ? AND deleted_at IS NULL AND activo = TRUE
@@ -58,15 +58,16 @@ const [rows] = await pool.execute(
 export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Registra una nueva entidad de procedencia en la base de datos, estructurando la informacion proveniente del cliente.
+    Registra una nueva procedencia en la base de datos.
+    
     Parametros:
-    - dto: Objeto JSON/DTO con la carga util (payload) a procesar en la transaccion.
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - dto: Objeto ProcedenciaDTO con los datos.
+    - grupoDatos: Entero que identifica el tenant.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - Objeto ProcedenciaDTO del registro creado.
     */
-const [result] = await pool.execute(
+    const [result] = await pool.execute(
         `INSERT INTO procedencias (grupo_datos, nombre, descripcion, creado_por_usuario_id, creado_por_colaborador_id)
          VALUES (?, ?, ?, ?, ?)`,
         [grupoDatos, dto.nombre, dto.descripcion ?? null, dto.creado_por_usuario_id, dto.creado_por_colaborador_id]
@@ -77,16 +78,17 @@ const [result] = await pool.execute(
 export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
-    Actualiza parcialmente los datos de un registro existente de procedencia, verificando primero su existencia y gestionando conflictos de unicidad.
+    Actualiza parcialmente los datos de una procedencia.
+    
     Parametros:
-    - id: Entero que representa el identificador unico primario (PK) del registro.
-    - dto: Objeto JSON/DTO con la carga util (payload) a procesar en la transaccion.
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - id: Identificador unico del registro.
+    - dto: Objeto ProcedenciaDTO con los datos a actualizar.
+    - grupoDatos: Entero que identifica el tenant.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - Objeto ProcedenciaDTO del registro actualizado.
     */
-await pool.execute(
+    await pool.execute(
         `UPDATE procedencias
          SET nombre = COALESCE(?, nombre),
              descripcion = COALESCE(?, descripcion)
@@ -99,19 +101,40 @@ await pool.execute(
 export async function remove(id, grupoDatos) {
     /*
     Descripcion:
-    Realiza un borrado logico (soft-delete) sobre un registro de procedencia, marcandolo como inactivo (activo = FALSE) y dejando rastro en deleted_at.
+    Realiza un borrado logico sobre un registro de procedencia.
+    
     Parametros:
-    - id: Entero que representa el identificador unico primario (PK) del registro.
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - id: Identificador unico del registro.
+    - grupoDatos: Entero que identifica el tenant.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - Booleano indicando exito.
     */
-const [result] = await pool.execute(
+    const [result] = await pool.execute(
         `UPDATE procedencias
          SET activo = FALSE, deleted_at = CURRENT_TIMESTAMP
          WHERE id = ? AND grupo_datos = ? AND deleted_at IS NULL`,
         [id, grupoDatos]
     );
     return result.affectedRows > 0;
+}
+
+export async function estaEnUso(procedenciaId, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica si una procedencia esta asignada a algun lote de larva activo.
+    
+    Parametros:
+    - procedenciaId: Identificador unico de la procedencia.
+    - grupoDatos: Entero que identifica el tenant.
+
+    Retorna:
+    - Booleano true si esta en uso, false de lo contrario.
+    */
+    const [rows] = await pool.execute(`
+        SELECT id FROM lotes_larva
+        WHERE procedencia_id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
+        LIMIT 1
+    `, [procedenciaId, grupoDatos]);
+    return rows.length > 0;
 }
