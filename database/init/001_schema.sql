@@ -4,20 +4,6 @@ COLLATE utf8mb4_unicode_ci;
 
 USE caprocam;
 
-CREATE TABLE IF NOT EXISTS grupos_datos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
-    codigo INT NOT NULL UNIQUE,
-    nombre VARCHAR(150) NOT NULL,
-    descripcion VARCHAR(255) NULL,
-    acceso_global BOOLEAN NOT NULL DEFAULT FALSE,
-    activo BOOLEAN NOT NULL DEFAULT TRUE,
-    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at DATETIME NULL,
-    version INT NOT NULL DEFAULT 1
-);
-
 CREATE TABLE IF NOT EXISTS usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
@@ -31,10 +17,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
-    version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_usuarios_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo)
+    version INT NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS fincas (
@@ -58,9 +41,6 @@ CREATE TABLE IF NOT EXISTS fincas (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_fincas_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_fincas_usuarios
     FOREIGN KEY (propietario_usuario_id) REFERENCES usuarios(id),
@@ -88,9 +68,6 @@ CREATE TABLE IF NOT EXISTS colaboradores (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_colaboradores_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_colaboradores_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
@@ -126,9 +103,6 @@ CREATE TABLE IF NOT EXISTS estanques (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_estanques_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_estanques_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
@@ -173,9 +147,6 @@ CREATE TABLE IF NOT EXISTS equipos (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_equipos_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_equipos_estanques
     FOREIGN KEY (estanque_id) REFERENCES estanques(id),
 
@@ -205,9 +176,6 @@ CREATE TABLE IF NOT EXISTS tareas (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_tareas_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT uq_tarea_codigo_grupo
     UNIQUE (grupo_datos, codigo_tarea),
@@ -242,9 +210,6 @@ CREATE TABLE IF NOT EXISTS mantenimiento_equipo (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_mantenimiento_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_mantenimiento_equipos
     FOREIGN KEY (equipo_id) REFERENCES equipos(id),
 
@@ -272,9 +237,6 @@ CREATE TABLE IF NOT EXISTS mantenimiento_equipo_tareas (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_mant_tareas_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_mant_tareas_mantenimiento
     FOREIGN KEY (mantenimiento_equipo_id) REFERENCES mantenimiento_equipo(id),
@@ -310,9 +272,6 @@ CREATE TABLE IF NOT EXISTS proveedores (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_proveedores_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_proveedores_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
 
@@ -340,9 +299,6 @@ CREATE TABLE IF NOT EXISTS productos (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_productos_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_productos_proveedores
     FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
@@ -374,9 +330,6 @@ CREATE TABLE IF NOT EXISTS mantenimiento_equipo_productos (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_mant_prod_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_mant_prod_mantenimiento
     FOREIGN KEY (mantenimiento_equipo_id) REFERENCES mantenimiento_equipo(id),
 
@@ -405,9 +358,6 @@ CREATE TABLE IF NOT EXISTS inventario (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_inventario_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_inventario_productos
     FOREIGN KEY (producto_id) REFERENCES productos(id),
@@ -443,9 +393,6 @@ CREATE TABLE IF NOT EXISTS movimientos_inventario (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_mov_inv_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_mov_inv_inventario
     FOREIGN KEY (inventario_id) REFERENCES inventario(id),
 
@@ -473,9 +420,6 @@ CREATE TABLE IF NOT EXISTS laboratorios (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_laboratorios_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT uq_laboratorio_nombre_grupo
     UNIQUE (grupo_datos, nombre),
 
@@ -500,9 +444,6 @@ CREATE TABLE IF NOT EXISTS procedencias (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_procedencias_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT uq_procedencia_nombre_grupo
     UNIQUE (grupo_datos, nombre),
 
@@ -526,9 +467,6 @@ CREATE TABLE IF NOT EXISTS proveedores_larva (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_proveedores_larva_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT uq_proveedor_larva_nombre_grupo
     UNIQUE (grupo_datos, nombre),
@@ -560,9 +498,6 @@ CREATE TABLE IF NOT EXISTS lotes_larva (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_lotes_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_lotes_proveedores_larva
     FOREIGN KEY (proveedor_larva_id) REFERENCES proveedores_larva(id),
@@ -606,9 +541,6 @@ CREATE TABLE IF NOT EXISTS precrias (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_precrias_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_precrias_lotes
     FOREIGN KEY (lote_larva_id) REFERENCES lotes_larva(id),
 
@@ -649,9 +581,6 @@ CREATE TABLE IF NOT EXISTS siembras (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_siembras_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_siembras_lotes
     FOREIGN KEY (lote_larva_id) REFERENCES lotes_larva(id),
 
@@ -687,9 +616,6 @@ CREATE TABLE IF NOT EXISTS crecimientos (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_crecimientos_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_crecimientos_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
 
@@ -718,9 +644,6 @@ CREATE TABLE IF NOT EXISTS calculos_crecimiento (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_calculos_crecimiento_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_calculos_crecimiento_crecimiento
     FOREIGN KEY (crecimiento_id) REFERENCES crecimientos(id),
@@ -751,9 +674,6 @@ CREATE TABLE IF NOT EXISTS compradores (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_compradores_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_compradores_creado_usuario
     FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
 
@@ -780,9 +700,6 @@ CREATE TABLE IF NOT EXISTS ventas (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_ventas_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_ventas_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
@@ -820,9 +737,6 @@ CREATE TABLE IF NOT EXISTS parasitologias (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_parasitologias_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_parasitologias_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
 
@@ -855,9 +769,6 @@ CREATE TABLE IF NOT EXISTS enfermedades (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_enfermedades_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_enfermedades_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
@@ -895,9 +806,6 @@ CREATE TABLE IF NOT EXISTS alimentaciones (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_alimentaciones_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_alimentaciones_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
@@ -944,9 +852,6 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_densidad_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_densidad_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
 
@@ -963,16 +868,23 @@ CREATE TABLE IF NOT EXISTS densidad_poblacional (
 CREATE TABLE IF NOT EXISTS densidad_detalle_tiros (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    grupo_datos INT NOT NULL,
     densidad_id INT NOT NULL,
     numero_tiro INT NOT NULL,
     cantidad_camarones INT NOT NULL,
+    creado_por_usuario_id INT NULL,
+    creado_por_colaborador_id INT NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_densidad_detalle_tiros_densidad
-    FOREIGN KEY (densidad_id) REFERENCES densidad_poblacional(id),
-
-    CONSTRAINT uq_densidad_detalle_tiro
-    UNIQUE (densidad_id, numero_tiro)
+    CONSTRAINT fk_densidad_detalle_maestro FOREIGN KEY (densidad_id) REFERENCES densidad_poblacional(id) ON DELETE CASCADE,
+    CONSTRAINT fk_densidad_detalle_usuario FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_densidad_detalle_colab FOREIGN KEY (creado_por_colaborador_id) REFERENCES colaboradores(id),
+        
+    CONSTRAINT uq_densidad_detalle_tiro UNIQUE (densidad_id, numero_tiro) 
 );
 
 CREATE TABLE IF NOT EXISTS raleos (
@@ -995,9 +907,6 @@ CREATE TABLE IF NOT EXISTS raleos (
     fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
-
-    CONSTRAINT fk_raleos_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
 
     CONSTRAINT fk_raleos_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
@@ -1030,9 +939,6 @@ CREATE TABLE IF NOT EXISTS fisico_quimico (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_fq_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_fq_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
 
@@ -1055,6 +961,7 @@ CREATE TABLE IF NOT EXISTS fisico_quimico_detalle (
     lectura_id INT NOT NULL,
     tipo_medicion ENUM('ph', 'salinidad', 'temperatura', 'oxigeno') NOT NULL,
     etiqueta VARCHAR(20) NOT NULL,
+    hora_medicion TIME NULL,
     valor DECIMAL(6,2) NOT NULL,
     creado_por_usuario_id INT NULL,
     creado_por_colaborador_id INT NULL,
@@ -1097,9 +1004,6 @@ CREATE TABLE IF NOT EXISTS trazabilidad (
     deleted_at DATETIME NULL,
     version INT NOT NULL DEFAULT 1,
 
-    CONSTRAINT fk_trazabilidad_grupos_datos
-    FOREIGN KEY (grupo_datos) REFERENCES grupos_datos(codigo),
-
     CONSTRAINT fk_trazabilidad_fincas
     FOREIGN KEY (finca_id) REFERENCES fincas(id),
 
@@ -1136,6 +1040,25 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
 );
 
+CREATE TABLE IF NOT EXISTS historial_sincronizaciones (
+    id                        INT AUTO_INCREMENT PRIMARY KEY,
+    uuid                      CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
+    grupo_datos               INT NOT NULL,
+    colaborador_id            INT NOT NULL,
+    android_id                VARCHAR(64) NOT NULL,
+    fecha_sincronizacion      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    total_creados             INT NOT NULL DEFAULT 0,
+    total_actualizados        INT NOT NULL DEFAULT 0,
+    total_eliminados          INT NOT NULL DEFAULT 0,
+    total_registros           INT NOT NULL DEFAULT 0,
+    estado                    ENUM('exitoso', 'fallido', 'parcial') NOT NULL DEFAULT 'exitoso',
+    activo                    BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_creacion            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_historial_sync_colaborador 
+    FOREIGN KEY (colaborador_id) REFERENCES colaboradores(id)
+);
+
 CREATE INDEX idx_usuarios_grupo ON usuarios(grupo_datos);
 CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_colaboradores_grupo ON colaboradores(grupo_datos);
@@ -1147,6 +1070,11 @@ CREATE INDEX idx_parasitologias_grupo ON parasitologias(grupo_datos);
 CREATE INDEX idx_enfermedades_grupo ON enfermedades(grupo_datos);
 CREATE INDEX idx_alimentaciones_grupo ON alimentaciones(grupo_datos);
 CREATE INDEX idx_fisico_quimico_grupo ON fisico_quimico(grupo_datos);
+
+CREATE INDEX idx_historial_sync_grupo       ON historial_sincronizaciones(grupo_datos);
+CREATE INDEX idx_historial_sync_colaborador ON historial_sincronizaciones(colaborador_id);
+CREATE INDEX idx_historial_sync_fecha       ON historial_sincronizaciones(fecha_sincronizacion);
+CREATE INDEX idx_historial_sync_android_id  ON historial_sincronizaciones(android_id);
 
 CREATE INDEX idx_equipos_grupo ON equipos(grupo_datos);
 CREATE INDEX idx_equipos_estanque ON equipos(estanque_id);
@@ -1235,3 +1163,7 @@ CREATE INDEX idx_calculos_crecimiento_grupo ON calculos_crecimiento(grupo_datos)
 CREATE INDEX idx_calculos_crecimiento_crecimiento_id ON calculos_crecimiento(crecimiento_id);
 CREATE INDEX idx_calculos_crecimiento_creado_usuario ON calculos_crecimiento(creado_por_usuario_id);
 CREATE INDEX idx_calculos_crecimiento_creado_colaborador ON calculos_crecimiento(creado_por_colaborador_id);
+
+CREATE INDEX idx_densidad_fecha ON densidad_poblacional (estanque_id, fecha);
+CREATE INDEX idx_detalle_tiros_maestro ON densidad_detalle_tiros (densidad_id);
+CREATE INDEX idx_detalle_tiros_sync ON densidad_detalle_tiros (uuid, version);

@@ -27,7 +27,7 @@ export class MantCrecimientoDto {
         pesoActual,
         creadoPorUsuarioId,
         creadoPorColaboradorId,
-        muestreos = []
+        muestreos = undefined
     ) {
         /*
         Descripcion:
@@ -54,6 +54,8 @@ export class MantCrecimientoDto {
         this.pesoActual = pesoActual;
         this.creadoPorUsuarioId     = creadoPorUsuarioId ?? null;
         this.creadoPorColaboradorId = creadoPorColaboradorId ?? null;
-        this.muestreos = Array.isArray(muestreos) ? muestreos : [];
+        this.muestreos = muestreos !== undefined
+            ? (Array.isArray(muestreos) ? muestreos : [])
+            : undefined;
     }
 }

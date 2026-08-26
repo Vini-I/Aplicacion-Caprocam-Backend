@@ -3,11 +3,12 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: inventario.controller.js
-Autor: Oscar Mario
-Fecha: 1/08/2026
+Autor: Oscar Mario / Marco Vásquez
+Fecha: 18/08/2026
 Modulo: Inventario
 Descripcion:
-Controlador CRUD  para inventario.   
+Controlador CRUD para inventario.
+Soporta GETs globales para Administrador Caprocam (22776226).
 //////////////////////////////////////////////////////////
 */
 
@@ -17,16 +18,12 @@ IMPORTS
 //////////////////////////////////////////////////////////
 */
 
-import {
-  InventarioCreateDTO,
-  InventarioUpdateDTO,
-} from "../dtos/inventario.dto.js";
+import { InventarioCreateDTO, InventarioUpdateDTO } from "../dtos/inventario.dto.js";
 
-// Servicios (Validaciones)
+// Servicios y Modelos
 import { isNumeroValido, isEmpty } from "../services/inventario.service.js";
-
-// Modelos
 import * as InventarioModel from "../models/inventario.model.js";
+import pool from "../config/database.js";
 
 // Common
 import { exito, error } from "../common/respuestaJson.js";
@@ -39,74 +36,36 @@ FUNCIONES SECUNDARIAS
 */
 
 function validarCuerpo(body, res) {
-  /*
-    Descripcion:
-    Valida los campos obligatorios y formatos del body para
-    crear un registro de inventario. proveedor_id/proveedorId
-    es opcional (FK nullable en la DB).
- 
-    Parametros:
-    - body: Objeto body del request.
-    - res:  Objeto response de Express.
- 
-    Retorna:
-    - Objeto error de Express si falla, o null si es correcto.
-  */
-
-  if (isEmpty(body.producto_id) && isEmpty(body.productoId)) {
-    return error(res, "El campo producto_id es requerido.", null, 400);
-  }
-  const productoIdNum = Number(body.producto_id ?? body.productoId);
-  if (
-    Number.isNaN(productoIdNum) ||
-    !Number.isInteger(productoIdNum) ||
-    productoIdNum <= 0
-  ) {
-    return error(res, "El producto_id debe ser un entero positivo.", null, 422);
-  }
-
-  const stockMinimoValor = body.stock_minimo ?? body.stockMinimo;
-  if (!isNumeroValido(stockMinimoValor)) {
-    return error(res, "El stock_minimo debe ser mayor o igual a 0.", null, 422);
-  }
-
-  const proveedorIdValor = body.proveedor_id ?? body.proveedorId;
-  if (!isEmpty(proveedorIdValor)) {
-    const idNumero = Number(proveedorIdValor);
-    if (
-      Number.isNaN(idNumero) ||
-      !Number.isInteger(idNumero) ||
-      idNumero <= 0
-    ) {
-      return error(
-        res,
-        "El proveedor_id debe ser un entero positivo.",
-        null,
-        422,
-      );
+    if (isEmpty(body.producto_id) && isEmpty(body.productoId)) {
+        return error(res, "El campo producto_id es requerido.", null, 400);
     }
-  }
+    const productoIdNum = Number(body.producto_id ?? body.productoId);
+    if (Number.isNaN(productoIdNum) || !Number.isInteger(productoIdNum) || productoIdNum <= 0) {
+        return error(res, "El producto_id debe ser un entero positivo.", null, 422);
+    }
 
-  return null;
+    const stockMinimoValor = body.stock_minimo ?? body.stockMinimo;
+    if (!isNumeroValido(stockMinimoValor)) {
+        return error(res, "El stock_minimo debe ser mayor o igual a 0.", null, 422);
+    }
+
+    const proveedorIdValor = body.proveedor_id ?? body.proveedorId;
+    if (!isEmpty(proveedorIdValor)) {
+        const idNumero = Number(proveedorIdValor);
+        if (Number.isNaN(idNumero) || !Number.isInteger(idNumero) || idNumero <= 0) {
+            return error(res, "El proveedor_id debe ser un entero positivo.", null, 422);
+        }
+    }
+
+    return null;
 }
 
 function validarIdParametro(id, res) {
-  /*
-    Descripcion:
-    Valida que el ID recibido como parametro de ruta sea correcto.
- 
-    Parametros:
-    - id:  ID del parametro de ruta.
-    - res: Objeto response de Express.
- 
-    Retorna:
-    - Objeto error si es invalido, o null si es correcto.
-    */
-  const numero = Number(id);
-  if (Number.isNaN(numero) || numero <= 0) {
-    return error(res, "El id debe ser numerico y mayor que cero.", null, 400);
-  }
-  return null;
+    const numero = Number(id);
+    if (Number.isNaN(numero) || numero <= 0) {
+        return error(res, "El id debe ser numerico y mayor que cero.", null, 400);
+    }
+    return null;
 }
 
 /*
@@ -116,241 +75,173 @@ FUNCIONES PRINCIPALES
 */
 
 export async function getInventarios(req, res) {
-  /*
-    Descripcion:
-    Controlador para obtener todos los registros de inventario
-    activos del grupo_datos actual.
- 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
- 
-    Retorna:
-    - 200 con la lista de registros de inventario.
-  */
+    try {
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
 
-  try {
-    const { grupoDatos } = obtenerContextoPeticion(req);
-    const data = await InventarioModel.findAll(grupoDatos);
-    return exito(res, "Inventario obtenido correctamente.", data);
-  } catch (err) {
-    return error(res, "Error al obtener el inventario.", err, 500);
-  }
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT i.id, i.uuid, i.grupo_datos AS grupoDatos,
+                        i.producto_id AS productoId, p.nombre AS nombreProducto,
+                        i.proveedor_id AS proveedorId, pr.nombre_empresa AS nombreProveedor,
+                        i.cantidad, i.stock_minimo AS stockMinimo, i.activo
+                 FROM inventario i
+                 LEFT JOIN productos p ON i.producto_id = p.id
+                 LEFT JOIN proveedores pr ON i.proveedor_id = pr.id
+                 WHERE i.activo = TRUE AND i.deleted_at IS NULL`
+            );
+            return exito(res, "Inventario obtenido correctamente.", rows);
+        }
+
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const data = await InventarioModel.findAll(grupoDatos);
+        return exito(res, "Inventario obtenido correctamente.", data);
+    } catch (err) {
+        return error(res, "Error al obtener el inventario.", err, 500);
+    }
 }
 
 export async function getInventarioById(req, res) {
-  /*
-    Descripcion:
-    Controlador para obtener un registro de inventario activo
-    por su ID.
- 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
- 
-    Retorna:
-    - 200 con el registro de inventario, o 404 si no existe.
-    */
-  const errId = validarIdParametro(req.params.id, res);
-  if (errId) return errId;
+    const errId = validarIdParametro(req.params.id, res);
+    if (errId) return errId;
 
-  try {
-    const { grupoDatos } = obtenerContextoPeticion(req);
-    const item = await InventarioModel.findById(req.params.id, grupoDatos);
-    if (!item)
-      return error(res, "Registro de inventario no encontrado.", null, 404);
-    return exito(res, "Registro de inventario obtenido correctamente.", item);
-  } catch (err) {
-    return error(res, "Error al obtener el registro de inventario.", err, 500);
-  }
+    try {
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT i.id, i.uuid, i.grupo_datos AS grupoDatos,
+                        i.producto_id AS productoId, p.nombre AS nombreProducto,
+                        i.proveedor_id AS proveedorId, pr.nombre_empresa AS nombreProveedor,
+                        i.cantidad, i.stock_minimo AS stockMinimo, i.activo
+                 FROM inventario i
+                 LEFT JOIN productos p ON i.producto_id = p.id
+                 LEFT JOIN proveedores pr ON i.proveedor_id = pr.id
+                 WHERE i.id = ? AND i.activo = TRUE AND i.deleted_at IS NULL`,
+                [req.params.id]
+            );
+            if (rows.length === 0)
+                return error(res, "Registro de inventario no encontrado.", null, 404);
+            return exito(res, "Registro de inventario obtenido correctamente.", rows[0]);
+        }
+
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const item = await InventarioModel.findById(req.params.id, grupoDatos);
+
+        if (!item)
+            return error(res, "Registro de inventario no encontrado.", null, 404);
+
+        return exito(res, "Registro de inventario obtenido correctamente.", item);
+    } catch (err) {
+        return error(res, "Error al obtener el registro de inventario.", err, 500);
+    }
 }
 
 export async function createInventario(req, res) {
-  /*
-    Descripcion:
-    Controlador para crear un registro de inventario para un
-    producto existente. La cantidad inicia siempre en 0.
- 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
- 
-    Retorna:
-    - 201 con el registro de inventario creado.
-    */
-  const err = validarCuerpo(req.body, res);
-  if (err) return err;
+    const err = validarCuerpo(req.body, res);
+    if (err) return err;
 
-  try {
-    const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
-      obtenerContextoPeticion(req);
+    try {
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
 
-    const productoIdFinal = req.body.productoId ?? req.body.producto_id;
-    const proveedorIdFinal = req.body.proveedorId ?? req.body.proveedor_id;
-    const stockMinimoFinal = req.body.stockMinimo ?? req.body.stock_minimo;
+        const productoIdFinal = req.body.productoId ?? req.body.producto_id;
+        const proveedorIdFinal = req.body.proveedorId ?? req.body.proveedor_id;
+        const stockMinimoFinal = req.body.stockMinimo ?? req.body.stock_minimo;
 
-    const productoExiste = await InventarioModel.verificarProductoExiste(
-      productoIdFinal,
-      grupoDatos
-    );
-    if (!productoExiste) {
-      return error(res, "El producto indicado no existe.", null, 400);
+        const productoExiste = await InventarioModel.verificarProductoExiste(
+            productoIdFinal,
+            grupoDatos
+        );
+        if (!productoExiste) {
+            return error(res, "El producto indicado no existe.", null, 400);
+        }
+
+        const yaExiste = await InventarioModel.findByProductoId(productoIdFinal, grupoDatos);
+        if (yaExiste) {
+            return error(res, "Ya existe un registro de inventario para ese producto.", null, 409);
+        }
+
+        if (!isEmpty(proveedorIdFinal)) {
+            const provExiste = await InventarioModel.verificarProveedorExiste(
+                proveedorIdFinal,
+                grupoDatos
+            );
+            if (!provExiste) {
+                return error(res, "El proveedor indicado no existe.", null, 400);
+            }
+        }
+
+        const dto = new InventarioCreateDTO({
+            productoId: productoIdFinal,
+            proveedorId: proveedorIdFinal,
+            stockMinimo: stockMinimoFinal,
+            creadoPorUsuarioId,
+            creadoPorColaboradorId,
+        });
+
+        const nuevo = await InventarioModel.create(dto, grupoDatos);
+        return exito(res, "Registro de inventario creado correctamente.", nuevo, 201);
+    } catch (err) {
+        if (err.code === "ER_DUP_ENTRY") {
+            return error(res, "Ya existe un registro de inventario para ese producto.", err, 409);
+        }
+        return error(res, "Error al crear el registro de inventario.", err, 500);
     }
-
-    const yaExiste = await InventarioModel.findByProductoId(
-      productoIdFinal,
-      grupoDatos
-    );
-    if (yaExiste) {
-      return error(
-        res,
-        "Ya existe un registro de inventario para ese producto.",
-        null,
-        409,
-      );
-    }
-
-    if (!isEmpty(proveedorIdFinal)) {
-      const provExiste = await InventarioModel.verificarProveedorExiste(
-        proveedorIdFinal,
-        grupoDatos
-      );
-      if (!provExiste) {
-        return error(res, "El proveedor indicado no existe.", null, 400);
-      }
-    }
-
-    const dto = new InventarioCreateDTO({
-      productoId: productoIdFinal,
-      proveedorId: proveedorIdFinal,
-      stockMinimo: stockMinimoFinal,
-      creadoPorUsuarioId,
-      creadoPorColaboradorId,
-    });
-    
-    const nuevo = await InventarioModel.create(dto, grupoDatos);
-
-    return exito(
-      res,
-      "Registro de inventario creado correctamente.",
-      nuevo,
-      201,
-    );
-  } catch (err) {
-    if (err.code === "ER_DUP_ENTRY") {
-      return error(
-        res,
-        "Ya existe un registro de inventario para ese producto.",
-        err,
-        409,
-      );
-    }
-    return error(res, "Error al crear el registro de inventario.", err, 500);
-  }
 }
 
 export async function updateInventario(req, res) {
-  /*
-    Descripcion:
-    Controlador para actualizar proveedor_id y stock_minimo de
-    un registro de inventario existente. No permite tocar
-    cantidad (ver movimientoInventario.controller.js).
- 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
- 
-    Retorna:
-    - 200 con el registro de inventario actualizado.
-    */
-  const errId = validarIdParametro(req.params.id, res);
-  if (errId) return errId;
+    const errId = validarIdParametro(req.params.id, res);
+    if (errId) return errId;
 
-  const stockMinimoValor = req.body.stockMinimo ?? req.body.stock_minimo;
-  if (!isNumeroValido(stockMinimoValor)) {
-    return error(res, "El stock_minimo debe ser mayor o igual a 0.", null, 422);
-  }
-
-  try {
-    const { grupoDatos } = obtenerContextoPeticion(req);
-    
-    const proveedorIdFinal = req.body.proveedorId ?? req.body.proveedor_id;
-    
-    if (!isEmpty(proveedorIdFinal)) {
-      const idNumero = Number(proveedorIdFinal);
-      if (
-        Number.isNaN(idNumero) ||
-        !Number.isInteger(idNumero) ||
-        idNumero <= 0
-      ) {
-        return error(
-          res,
-          "El proveedor_id debe ser un entero positivo.",
-          null,
-          422,
-        );
-      }
-      const provExiste = await InventarioModel.verificarProveedorExiste(
-        idNumero, 
-        grupoDatos
-      );
-      if (!provExiste) {
-        return error(res, "El proveedor indicado no existe.", null, 400);
-      }
+    const stockMinimoValor = req.body.stockMinimo ?? req.body.stock_minimo;
+    if (!isNumeroValido(stockMinimoValor)) {
+        return error(res, "El stock_minimo debe ser mayor o igual a 0.", null, 422);
     }
-    
-    const actual = await InventarioModel.findById(req.params.id, grupoDatos);
-    if (!actual)
-      return error(res, "Registro de inventario no encontrado.", null, 404);
 
-    const dto = new InventarioUpdateDTO({
-        proveedorId: proveedorIdFinal,
-        stockMinimo: stockMinimoValor
-    });
-    const actualizado = await InventarioModel.update(req.params.id, dto, grupoDatos);
+    try {
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const proveedorIdFinal = req.body.proveedorId ?? req.body.proveedor_id;
 
-    return exito(
-      res,
-      "Registro de inventario actualizado correctamente.",
-      actualizado,
-    );
-  } catch (err) {
-    return error(
-      res,
-      "Error al actualizar el registro de inventario.",
-      err,
-      500,
-    );
-  }
+        if (!isEmpty(proveedorIdFinal)) {
+            const idNumero = Number(proveedorIdFinal);
+            if (Number.isNaN(idNumero) || !Number.isInteger(idNumero) || idNumero <= 0) {
+                return error(res, "El proveedor_id debe ser un entero positivo.", null, 422);
+            }
+            const provExiste = await InventarioModel.verificarProveedorExiste(idNumero, grupoDatos);
+            if (!provExiste) {
+                return error(res, "El proveedor indicado no existe.", null, 400);
+            }
+        }
+
+        const actual = await InventarioModel.findById(req.params.id, grupoDatos);
+        if (!actual)
+            return error(res, "Registro de inventario no encontrado.", null, 404);
+
+        const dto = new InventarioUpdateDTO({
+            proveedorId: proveedorIdFinal,
+            stockMinimo: stockMinimoValor
+        });
+        const actualizado = await InventarioModel.update(req.params.id, dto, grupoDatos);
+
+        return exito(res, "Registro de inventario actualizado correctamente.", actualizado);
+    } catch (err) {
+        return error(res, "Error al actualizar el registro de inventario.", err, 500);
+    }
 }
 
 export async function deleteInventario(req, res) {
-  /*
-    Descripcion:
-    Controlador para desactivar (borrado logico) un registro
-    de inventario.
- 
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
- 
-    Retorna:
-    - 200 con el registro de inventario eliminado.
-    */
-  const errId = validarIdParametro(req.params.id, res);
-  if (errId) return errId;
+    const errId = validarIdParametro(req.params.id, res);
+    if (errId) return errId;
 
-  try {
-    const { grupoDatos } = obtenerContextoPeticion(req);
-    const eliminado = await InventarioModel.remove(req.params.id, grupoDatos);
-    if (!eliminado)
-      return error(res, "Registro de inventario no encontrado.", null, 404);
-    return exito(
-      res,
-      "Registro de inventario eliminado correctamente.",
-      eliminado,
-    );
-  } catch (err) {
-    return error(res, "Error al eliminar el registro de inventario.", err, 500);
-  }
+    try {
+        const { grupoDatos } = obtenerContextoPeticion(req);
+        const eliminado = await InventarioModel.remove(req.params.id, grupoDatos);
+        if (!eliminado)
+            return error(res, "Registro de inventario no encontrado.", null, 404);
+        return exito(res, "Registro de inventario eliminado correctamente.", eliminado);
+    } catch (err) {
+        return error(res, "Error al eliminar el registro de inventario.", err, 500);
+    }
 }

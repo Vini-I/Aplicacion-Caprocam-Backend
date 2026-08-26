@@ -69,6 +69,7 @@ export async function findAll(grupoDatos) {
             peso_promedio_individual AS pesoPromedio
         FROM calculos_crecimiento
         WHERE grupo_datos = ?
+        AND activo = TRUE
         AND deleted_at IS NULL`,
         [grupoDatos]
     );
@@ -129,6 +130,7 @@ export async function findById(id, grupoDatos) {
         FROM calculos_crecimiento
         WHERE crecimiento_id = ?
         AND grupo_datos = ?
+        AND activo = TRUE
         AND deleted_at IS NULL`,
         [id, grupoDatos]
     );
@@ -199,42 +201,127 @@ export async function create(dto) {
 }
 
 export async function update(id, grupoDatos, dto) {
-  /*
+    /*
     Descripcion:
-    Actualiza un registro de crecimiento.
+    Actualiza un registro de crecimiento y opcionalmente sus muestreos asociados de forma transaccional.
 
     Parametros:
     - id: Identificador del crecimiento.
     - grupoDatos: Grupo de datos al que pertenece el crecimiento.
-    - dto: Datos actualizados.
+    - dto: Datos actualizados (puede o no contener el arreglo de muestreos).
 
     Retorna:
-    - El registro actualizado o null si no existe.
+    - El registro actualizado con sus muestreos o null si no existe.
     */
 
     const registro = await findById(id, grupoDatos);
     if (!registro) return null;
 
-    await pool.execute(
-        `UPDATE crecimientos
-        SET
-            finca_id = ?,
-            estanque_id = ?,
-            fecha_registro = ?,
-            peso_actual = ?
-        WHERE id = ?
-        AND grupo_datos = ?`,
-        [
-            dto.finca,
-            dto.estanque,
-            dto.fechaRegistro,
-            dto.pesoActual,
-            id,
-            grupoDatos
-        ]
-    );
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
 
-    return await findById(id, grupoDatos);
+        await conn.execute(
+            `UPDATE crecimientos
+            SET
+                finca_id = ?,
+                estanque_id = ?,
+                fecha_registro = ?,
+                peso_actual = ?
+            WHERE id = ?
+            AND grupo_datos = ?`,
+            [
+                dto.finca,
+                dto.estanque,
+                dto.fechaRegistro,
+                dto.pesoActual,
+                id,
+                grupoDatos
+            ]
+        );
+
+        if (dto.muestreos !== undefined && Array.isArray(dto.muestreos)) {
+            
+            const [muestreosActivos] = await conn.execute(
+                `SELECT id FROM calculos_crecimiento
+                WHERE crecimiento_id = ?
+                AND grupo_datos = ?
+                AND activo = TRUE
+                AND deleted_at IS NULL`,
+                [id, grupoDatos]
+            );
+            const idsEnDB = muestreosActivos.map(r => r.id);
+
+            const idsEnviados = dto.muestreos
+                .filter(m => m.id != null)
+                .map(m => Number(m.id));
+
+            const idsAEliminar = idsEnDB.filter(idDB => !idsEnviados.includes(idDB));
+            for (const idEliminar of idsAEliminar) {
+                await conn.execute(
+                    `UPDATE calculos_crecimiento
+                    SET
+                        activo = FALSE,
+                        deleted_at = NOW()
+                    WHERE id = ?
+                    AND grupo_datos = ?`,
+                    [idEliminar, grupoDatos]
+                );
+            }
+            // Procesar cada muestreo del DTO
+            for (const m of dto.muestreos) {
+                if (m.id != null) {
+                    await conn.execute(
+                        `UPDATE calculos_crecimiento
+                        SET
+                            cantidad_individuos = ?,
+                            peso_total = ?,
+                            peso_promedio_individual = ?
+                        WHERE id = ?
+                        AND crecimiento_id = ?
+                        AND grupo_datos = ?`,
+                        [
+                            m.cantidad, 
+                            m.pesoTotal, 
+                            m.pesoPromedio, 
+                            m.id, 
+                            id, 
+                            grupoDatos
+                        ]
+                    );
+                } else {
+                    await conn.execute(
+                        `INSERT INTO calculos_crecimiento (
+                            grupo_datos,
+                            crecimiento_id,
+                            cantidad_individuos,
+                            peso_total,
+                            peso_promedio_individual,
+                            creado_por_usuario_id,
+                            creado_por_colaborador_id
+                        ) VALUES (?,?,?,?,?,?,?)`,
+                        [
+                            grupoDatos, 
+                            id, 
+                            m.cantidad, 
+                            m.pesoTotal, 
+                            m.pesoPromedio,
+                            registro.creadoPorUsuarioId, 
+                            registro.creadoPorColaboradorId
+                        ]
+                    );
+                }
+            }
+        }
+        await conn.commit();
+        return await findById(id, grupoDatos);
+        
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
+    }
 }
 
 export async function remove(id, grupoDatos) {
