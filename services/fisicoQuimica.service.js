@@ -21,13 +21,19 @@ Contiene las funciones internas utilizadas para validar
 las mediciones del modulo.
 */
 
-function isMedicionValida(medicion) {
+function isMedicionValida(
+    medicion,
+    requiereHora = false
+) {
     /*
     Descripcion:
     Valida la estructura de una medicion fisico quimica.
+    La hora es obligatoria para mediciones que la requieran
+    y opcional para las demas.
 
     Parametros:
-    - medicion: Objeto con valor y etiqueta.
+    - medicion: Objeto con valor, etiqueta y horaMedicion.
+    - requiereHora: Indica si horaMedicion es obligatoria.
 
     Retorna:
     - true si la medicion es valida.
@@ -46,6 +52,21 @@ function isMedicionValida(medicion) {
     }
 
     if (isEmpty(medicion.etiqueta)) {
+        return false;
+    }
+
+    if (
+        requiereHora &&
+        !isHoraValida(medicion.horaMedicion)
+    ) {
+        return false;
+    }
+
+    if (
+        !requiereHora &&
+        !isEmpty(medicion.horaMedicion) &&
+        !isHoraValida(medicion.horaMedicion)
+    ) {
         return false;
     }
 
@@ -127,15 +148,43 @@ export function isNumeroMayorCero(valor) {
     return Number(valor) > 0;
 }
 
-export function isArrayValido(arreglo) {
+export function isHoraValida(hora) {
+    /*
+    Descripcion:
+    Valida una hora en formato de 24 horas.
+    Acepta HH:MM y HH:MM:SS.
+
+    Parametros:
+    - hora: Hora de la medicion.
+
+    Retorna:
+    - true si la hora es valida.
+    - false si la hora es invalida.
+    */
+    if (
+        typeof hora !== 'string' ||
+        !/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(hora)
+    ) {
+        return false;
+    }
+
+    return true;
+}
+
+export function isArrayValido(
+    arreglo,
+    requiereHora = false
+) {
     /*
     Descripcion:
     Valida que un arreglo exista y, si contiene elementos,
-    que cada medicion tenga las propiedades valor y etiqueta.
+    que cada medicion tenga valor y etiqueta. Cuando
+    requiereHora es true, tambien exige horaMedicion valida.
     Permite arreglos vacios para parametros no registrados.
 
     Parametros:
     - arreglo: Arreglo de mediciones a validar.
+    - requiereHora: Indica si cada medicion requiere hora.
 
     Retorna:
     - true si el arreglo es valido o esta vacio.
@@ -150,7 +199,10 @@ export function isArrayValido(arreglo) {
     }
 
     return arreglo.every(
-        isMedicionValida
+        medicion => isMedicionValida(
+            medicion,
+            requiereHora
+        )
     );
 }
 
@@ -265,6 +317,8 @@ export function isOxigeno(oxigenoDisuelto) {
     /*
     Descripcion:
     Valida el arreglo de mediciones de oxigeno disuelto.
+    Cada medicion de oxigeno debe incluir horaMedicion
+    para conservar la hora real en que fue tomada.
 
     Parametros:
     - oxigenoDisuelto: Arreglo de mediciones.
@@ -274,6 +328,7 @@ export function isOxigeno(oxigenoDisuelto) {
     - false si no es valido.
     */
     return isArrayValido(
-        oxigenoDisuelto
+        oxigenoDisuelto,
+        true
     );
 }
