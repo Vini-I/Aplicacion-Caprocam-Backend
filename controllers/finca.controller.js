@@ -172,14 +172,32 @@ export async function updateFinca(req, res) {
 }
 
 export async function deleteFinca(req, res) {
-    try {
+try {
         const { grupoDatos } = obtenerContextoPeticion(req);
-        const eliminado = await FincaModel.remove(req.params.id, grupoDatos);
-        if (!eliminado) {
+        const fincaParam = req.params.id;
+
+        const finca = await FincaModel.findByIdCBO(fincaParam, grupoDatos);
+        if (!finca) {
             return error(res, "Finca no encontrada.", null, 404);
         }
-        return exito(res, "Finca eliminada correctamente.", eliminado);
+
+        const estaOcupada = await FincaModel.tieneEstanquesOcupados(finca.id, grupoDatos);
+        if (estaOcupada) {
+            return error(
+                res,
+                "No se puede eliminar: contiene estanques activos.",
+                null,
+                409
+            );
+        }
+
+        const eliminado = await FincaModel.remove(finca.id, grupoDatos);
+        if (!eliminado) {
+            return error(res, "No se pudo eliminar la finca.", null, 400);
+        }
+
+        return exito(res, "Finca y sus estanques asociados han sido eliminados correctamente.", eliminado);
     } catch (err) {
-        return error(res, "Error al eliminar la finca.", err, 500);
+        return error(res, "Error al eliminar la finca.", err?.message ?? err, 500);
     }
 }
