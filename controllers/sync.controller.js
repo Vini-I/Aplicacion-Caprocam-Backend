@@ -1461,7 +1461,10 @@ export async function subirCambios(req, res) {
           dias: r.dias ?? null,
           pl: r.pl ?? null,
           tipo_movimiento: r.tipoMovimiento ?? r.tipo_movimiento ?? null,
-          creado_por_colaborador_id: creadoPorColaboradorId,
+          creado_por_colaborador_id:
+            r.creadoPorColaboradorId ??
+            r.creado_por_colaborador_id ??
+            creadoPorColaboradorId,
         });
 
         resultado.trazabilidad.creados.push({
