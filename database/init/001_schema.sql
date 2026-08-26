@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS equipos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
-    identificador VARCHAR(5) NOT NULL,
+    identificador VARCHAR(50) NOT NULL,
     nombre_equipo VARCHAR(100) NOT NULL,
     descripcion TEXT NOT NULL,
     tipo_equipo ENUM(
