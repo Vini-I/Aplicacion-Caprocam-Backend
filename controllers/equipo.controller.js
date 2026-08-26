@@ -138,6 +138,24 @@ FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
 
+function normalizarCuerpoEquipo(body) {
+    if (!body || typeof body !== 'object') return {};
+    return {
+        identificador: body.identificador,
+        nombreEquipo: body.nombreEquipo ?? body.nombre_equipo,
+        descripcion: body.descripcion,
+        funcionEquipo: body.funcionEquipo ?? body.funcion_equipo,
+        fechaInstalacion: body.fechaInstalacion ?? body.fecha_instalacion,
+        tipoEquipo: body.tipoEquipo ?? body.tipo_equipo,
+        estadoOperativo: body.estadoOperativo ?? body.estado_operativo,
+        estado: body.estado,
+        estanqueId: body.estanqueId ?? body.estanque_id,
+        horasMantenimiento: body.horasMantenimiento ?? body.horas_mantenimiento,
+        horasActuales: body.horasActuales ?? body.horas_actuales,
+        fechaUltimoEncendido: body.fechaUltimoEncendido ?? body.fecha_ultimo_encendido,
+    };
+}
+
 export async function getEquipos(req, res) {
     try {
         const user = req.user ?? null;
@@ -151,10 +169,16 @@ export async function getEquipos(req, res) {
                         funcion_equipo AS funcionEquipo, estanque_id AS estanqueId,
                         horas_mantenimiento AS horasMantenimiento,
                         horas_actuales AS horasActuales,
-                        estado_operativo AS estadoOperativo, estado, activo
+                        estado_operativo AS estadoOperativo, estado, fecha_ultimo_encendido AS fechaUltimoEncendido, UNIX_TIMESTAMP(fecha_ultimo_encendido) AS unix_ts, activo
                  FROM equipos WHERE activo = TRUE AND deleted_at IS NULL`
             );
-            return exito(res, "Equipos obtenidos correctamente.", rows);
+            const rowsMapeadas = rows.map(r => ({
+                ...r,
+                fechaUltimoEncendido: r.fechaUltimoEncendido
+                    ? (r.unix_ts != null ? new Date(Number(r.unix_ts) * 1000).toISOString() : new Date(r.fechaUltimoEncendido).toISOString())
+                    : null
+            }));
+            return exito(res, "Equipos obtenidos correctamente.", rowsMapeadas);
         }
 
         const grupoDatos = obtenerGrupoDatosUsuario(req, res);
@@ -187,13 +211,20 @@ export async function getEquipoById(req, res) {
                         funcion_equipo AS funcionEquipo, estanque_id AS estanqueId,
                         horas_mantenimiento AS horasMantenimiento,
                         horas_actuales AS horasActuales,
-                        estado_operativo AS estadoOperativo, estado, activo
+                        estado_operativo AS estadoOperativo, estado, fecha_ultimo_encendido AS fechaUltimoEncendido, UNIX_TIMESTAMP(fecha_ultimo_encendido) AS unix_ts, activo
                  FROM equipos WHERE id = ? AND activo = TRUE AND deleted_at IS NULL`,
                 [req.params.id]
             );
             if (rows.length === 0)
                 return error(res, "Equipo no encontrado.", null, 404);
-            return exito(res, "Equipo obtenido correctamente.", rows[0]);
+            const r = rows[0];
+            const rowMapeada = {
+                ...r,
+                fechaUltimoEncendido: r.fechaUltimoEncendido
+                    ? (r.unix_ts != null ? new Date(Number(r.unix_ts) * 1000).toISOString() : new Date(r.fechaUltimoEncendido).toISOString())
+                    : null
+            };
+            return exito(res, "Equipo obtenido correctamente.", rowMapeada);
         }
 
         const grupoDatos = obtenerGrupoDatosUsuario(req, res);
@@ -216,11 +247,12 @@ export async function createEquipo(req, res) {
         const grupoDatos = obtenerGrupoDatosUsuario(req, res);
         if (grupoDatos === null) return;
 
-        const cuerpoError = validarCuerpo(req.body, res);
+        const bodyNormalizado = normalizarCuerpoEquipo(req.body);
+        const cuerpoError = validarCuerpo(bodyNormalizado, res);
         if (cuerpoError) return cuerpoError;
 
         const existente = await EquipoModel.findByIdentificador(
-            req.body.identificador,
+            bodyNormalizado.identificador,
             null,
             grupoDatos
         );
@@ -229,7 +261,7 @@ export async function createEquipo(req, res) {
             return error(res, "Ya existe un equipo con ese identificador.", null, 409);
         }
 
-        const dto = new EquipoDTO({ ...req.body, grupoDatos });
+        const dto = new EquipoDTO({ ...bodyNormalizado, grupoDatos });
         const nuevo = await EquipoModel.create(dto);
 
         return exito(res, "Equipo registrado correctamente.", nuevo, 201);
@@ -246,11 +278,12 @@ export async function updateEquipo(req, res) {
         const grupoDatos = obtenerGrupoDatosUsuario(req, res);
         if (grupoDatos === null) return;
 
-        const cuerpoError = validarCuerpo(req.body, res);
+        const bodyNormalizado = normalizarCuerpoEquipo(req.body);
+        const cuerpoError = validarCuerpo(bodyNormalizado, res);
         if (cuerpoError) return cuerpoError;
 
         const existente = await EquipoModel.findByIdentificador(
-            req.body.identificador,
+            bodyNormalizado.identificador,
             req.params.id,
             grupoDatos
         );
@@ -259,7 +292,7 @@ export async function updateEquipo(req, res) {
             return error(res, "Ya existe un equipo con ese identificador.", null, 409);
         }
 
-        const dto = new EquipoDTO({ ...req.body, grupoDatos });
+        const dto = new EquipoDTO({ ...bodyNormalizado, grupoDatos });
         const actualizado = await EquipoModel.update(req.params.id, dto, grupoDatos);
 
         if (!actualizado) {
@@ -291,3 +324,33 @@ export async function deleteEquipo(req, res) {
         return error(res, "Error al eliminar el equipo.", null, 500);
     }
 }
+export async function toggleEquipo(req, res) {
+    try {
+        const idError = validarIdParametro(req.params.id, res);
+        if (idError) return idError;
+
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        let grupoDatos = null;
+        if (!esGlobal) {
+            grupoDatos = obtenerGrupoDatosUsuario(req, res);
+            if (grupoDatos === null) return;
+        }
+
+        const actualizado = await EquipoModel.toggle(req.params.id, grupoDatos, esGlobal);
+
+        if (!actualizado) {
+            return error(res, "Equipo no encontrado.", null, 404);
+        }
+
+        const accion = actualizado.estado === "Encendido" ? "encendido" : "apagado";
+        return exito(res, `Equipo ${accion} correctamente.`, actualizado);
+    } catch (err) {
+        if (err.status === 400) {
+            return error(res, err.message, null, 400);
+        }
+        return error(res, "Error al cambiar el estado del equipo.", null, 500);
+    }
+}
+
