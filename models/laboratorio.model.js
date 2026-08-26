@@ -3,11 +3,9 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: laboratorio.model.js
-Autor: Joan
-Fecha: 19/07/2026
+Autor: Joan Campos
+Fecha: 25/08/2026
 Modulo: Laboratorio
-Descripcion:
-Capa de acceso a datos para el modulo de laboratorio.
 //////////////////////////////////////////////////////////
 */
 
@@ -18,13 +16,14 @@ export async function findAll(grupoDatos) {
     /*
     Descripcion:
     Obtiene un listado completo de todos los registros activos del modulo laboratorio.
+    
     Parametros:
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - grupoDatos: Entero que identifica el tenant.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - Array de objetos LaboratorioDTO.
     */
-const [rows] = await pool.execute(
+    const [rows] = await pool.execute(
         `SELECT id, uuid, grupo_datos, nombre, descripcion,creado_por_usuario_id, creado_por_colaborador_id, activo, fecha_creacion, fecha_actualizacion
          FROM laboratorios
          WHERE grupo_datos = ? AND deleted_at IS NULL AND activo = TRUE
@@ -37,15 +36,16 @@ const [rows] = await pool.execute(
 export async function findById(id, grupoDatos) {
     /*
     Descripcion:
-    Busca y retorna un registro especifico de laboratorio mediante su identificador unico.
+    Busca y retorna un registro especifico de laboratorio.
+    
     Parametros:
-    - id: Entero que representa el identificador unico primario (PK) del registro.
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - id: Identificador unico del registro.
+    - grupoDatos: Entero que identifica el tenant.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - Objeto LaboratorioDTO o null si no se encuentra.
     */
-const [rows] = await pool.execute(
+    const [rows] = await pool.execute(
         `SELECT id, uuid, grupo_datos, nombre, descripcion,creado_por_usuario_id, creado_por_colaborador_id, activo, fecha_creacion, fecha_actualizacion
          FROM laboratorios
          WHERE id = ? AND grupo_datos = ? AND deleted_at IS NULL AND activo = TRUE
@@ -58,15 +58,16 @@ const [rows] = await pool.execute(
 export async function create(dto, grupoDatos) {
     /*
     Descripcion:
-    Registra una nueva entidad de laboratorio en la base de datos, estructurando la informacion proveniente del cliente.
+    Registra una nueva entidad de laboratorio en la base de datos.
+    
     Parametros:
-    - dto: Objeto JSON/DTO con la carga util (payload) a procesar en la transaccion.
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - dto: Objeto LaboratorioDTO con los datos.
+    - grupoDatos: Entero que identifica el tenant.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - Objeto LaboratorioDTO del registro creado.
     */
-const [result] = await pool.execute(
+    const [result] = await pool.execute(
         `INSERT INTO laboratorios (grupo_datos, nombre, descripcion, creado_por_usuario_id, creado_por_colaborador_id)
          VALUES (?, ?, ?, ?, ?)`,
         [grupoDatos, dto.nombre, dto.descripcion ?? null, dto.creado_por_usuario_id, dto.creado_por_colaborador_id]
@@ -77,16 +78,17 @@ const [result] = await pool.execute(
 export async function update(id, dto, grupoDatos) {
     /*
     Descripcion:
-    Actualiza parcialmente los datos de un registro existente de laboratorio, verificando primero su existencia y gestionando conflictos de unicidad.
+    Actualiza parcialmente los datos de un laboratorio.
+    
     Parametros:
-    - id: Entero que representa el identificador unico primario (PK) del registro.
-    - dto: Objeto JSON/DTO con la carga util (payload) a procesar en la transaccion.
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - id: Identificador unico del registro.
+    - dto: Objeto LaboratorioDTO con los datos a actualizar.
+    - grupoDatos: Entero que identifica el tenant.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - Objeto LaboratorioDTO del registro actualizado.
     */
-await pool.execute(
+    await pool.execute(
         `UPDATE laboratorios
          SET nombre = COALESCE(?, nombre),
              descripcion = COALESCE(?, descripcion)
@@ -99,19 +101,40 @@ await pool.execute(
 export async function remove(id, grupoDatos) {
     /*
     Descripcion:
-    Realiza un borrado logico (soft-delete) sobre un registro de laboratorio, marcandolo como inactivo (activo = FALSE) y dejando rastro en deleted_at.
+    Realiza un borrado logico sobre un registro de laboratorio.
+    
     Parametros:
-    - id: Entero que representa el identificador unico primario (PK) del registro.
-    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+    - id: Identificador unico del registro.
+    - grupoDatos: Entero que identifica el tenant.
 
     Retorna:
-    - El registro afectado en forma de objeto (mapeado por DTO), una coleccion de registros en un array, o null si la consulta no produce resultados.
+    - Booleano indicando exito.
     */
-const [result] = await pool.execute(
+    const [result] = await pool.execute(
         `UPDATE laboratorios
          SET activo = FALSE, deleted_at = CURRENT_TIMESTAMP
          WHERE id = ? AND grupo_datos = ? AND deleted_at IS NULL`,
         [id, grupoDatos]
     );
     return result.affectedRows > 0;
+}
+
+export async function estaEnUso(laboratorioId, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica si un laboratorio esta asignado a algun lote de larva activo.
+    
+    Parametros:
+    - laboratorioId: Identificador unico del laboratorio.
+    - grupoDatos: Entero que identifica el tenant.
+
+    Retorna:
+    - Booleano true si esta en uso, false de lo contrario.
+    */
+    const [rows] = await pool.execute(`
+        SELECT id FROM lotes_larva
+        WHERE laboratorio_id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
+        LIMIT 1
+    `, [laboratorioId, grupoDatos]);
+    return rows.length > 0;
 }

@@ -220,17 +220,16 @@ export async function create(dto) {
             grupo_datos,
             finca_id,
             estanque_id,
-            creado_por_usuario_id,
-            creado_por_colaborador_id,
             tipo_registro,
             fecha_reporte,
             responsable,
             enfermedad,
             severidad,
-            mortalidad_registrada,
-            reporte
+            reporte,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [resultado] = await db.execute(
@@ -239,15 +238,14 @@ export async function create(dto) {
             dto.grupoDatos,
             dto.fincaId,
             dto.estanqueId,
-            dto.creadoPorUsuarioId,
-            dto.creadoPorColaboradorId,
             dto.tipoRegistro,
             dto.fechaReporte,
             dto.responsable,
             dto.enfermedad,
             dto.severidad,
-            dto.mortalidadRegistrada,
-            dto.reporte
+            dto.reporte,
+            dto.creadoPorUsuarioId,
+            dto.creadoPorColaboradorId
         ]
     );
 
@@ -288,7 +286,6 @@ export async function update(
             fecha_reporte = ?,
             enfermedad = ?,
             severidad = ?,
-            mortalidad_registrada = ?,
             reporte = ?,
             version = version + 1
         WHERE id = ?
@@ -305,7 +302,6 @@ export async function update(
             dto.fechaReporte,
             dto.enfermedad,
             dto.severidad,
-            dto.mortalidadRegistrada,
             dto.reporte,
             id,
             grupoDatos
@@ -391,17 +387,15 @@ function seleccionarCampos() {
             grupo_datos AS grupoDatos,
             finca_id AS fincaId,
             estanque_id AS estanqueId,
-            creado_por_usuario_id AS creadoPorUsuarioId,
-            creado_por_colaborador_id
-                AS creadoPorColaboradorId,
             tipo_registro AS tipoRegistro,
             fecha_reporte AS fechaReporte,
             responsable,
             enfermedad,
             severidad,
-            mortalidad_registrada
-                AS mortalidadRegistrada,
             reporte,
+            creado_por_usuario_id AS creadoPorUsuarioId,
+            creado_por_colaborador_id
+                AS creadoPorColaboradorId,
             activo,
             fecha_creacion AS fechaCreacion,
             fecha_actualizacion AS fechaActualizacion,
@@ -537,12 +531,6 @@ function mapearFila(row) {
         fincaId: row.fincaId,
         estanqueId: row.estanqueId,
 
-        creadoPorUsuarioId:
-            row.creadoPorUsuarioId,
-
-        creadoPorColaboradorId:
-            row.creadoPorColaboradorId,
-
         tipoRegistro:
             row.tipoRegistro,
 
@@ -570,11 +558,14 @@ function mapearFila(row) {
                 row.severidad
             ),
 
-        mortalidadRegistrada:
-            row.mortalidadRegistrada,
-
         reporte:
             row.reporte,
+
+        creadoPorUsuarioId:
+            row.creadoPorUsuarioId,
+
+        creadoPorColaboradorId:
+            row.creadoPorColaboradorId,
 
         activo:
             row.activo === 1 ||

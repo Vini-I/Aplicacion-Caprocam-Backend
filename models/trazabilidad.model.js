@@ -67,7 +67,6 @@ export async function findAll(grupoDatos) {
             finca_id,
             estanque_origen_id,
             estanque_destino_id,
-            colaborador_id,
             creado_por_usuario_id,
             creado_por_colaborador_id,
             fecha,
@@ -113,7 +112,6 @@ export async function findById(id, grupoDatos) {
             finca_id,
             estanque_origen_id,
             estanque_destino_id,
-            colaborador_id,
             creado_por_usuario_id,
             creado_por_colaborador_id,
             fecha,
@@ -209,12 +207,52 @@ export async function estanqueDestinoOcupado(estanqueId, grupoDatos) {
     return Number(ultimo.estanque_destino_id) === Number(estanqueId);
 }
 
+/*
+//////////////////////////////////////////////////////////
+INTEGRACION CON ESTANQUES (Gerald) -- 08/08/2026
+//////////////////////////////////////////////////////////
+
+Gerald entrego actualizarEstanqueOrigen y actualizarEstanqueDestino
+en su propio model (estanques.model.js). Ambas reciben la misma
+connection con transaccion activa que abre este archivo -- no
+crean ni confirman su propia transaccion.
+
+SUPUESTO A CONFIRMAR CON GERALD/PROFE (no es un detalle tecnico,
+es una decision de negocio): que estado le corresponde a cada
+estanque tras un movimiento. Se uso la misma convencion que ya
+usa Siembra (siembra.model.js) para EstadoEstanque, por
+consistencia:
+- Destino (recibe camaron)  -> EstadoEstanque.ENGORDE
+- Origen  (se vacia)        -> EstadoEstanque.COSECHADO
+
+PENDIENTE, mencionado por Gerald en su PR pero todavia sin
+resolver: la transaccion completa deberia "aplicar los cambios
+correspondientes en Siembra" tambien -- eso no esta armado
+todavia (no hay funciones equivalentes del lado de Siembra), es
+un tercer pendiente aparte de esta integracion con Estanques.
+*/
+
+import {
+    actualizarEstanqueOrigen,
+    actualizarEstanqueDestino
+} from "./estanques.model.js";
+import { EstadoEstanque } from "../dtos/estanques.dto.js";
+
 export async function create(dto) {
 
     /*
     Descripcion:
-    Inserta un nuevo registro de trazabilidad
-    en la base de datos.
+    Inserta un nuevo registro de trazabilidad y actualiza el
+    estado de los estanques origen/destino, todo dentro de una
+    misma transaccion (o se guarda todo, o no se guarda nada).
+
+    Antes esta funcion solo hacia el INSERT: trazabilidad
+    quedaba como una bitacora que nunca reflejaba el movimiento
+    real en los estanques (hallazgo de la companera, confirmado
+    con Gerald el 08/08/2026). El INSERT ahora corre junto con
+    dos llamadas a Estanques (actualizarEstanqueOrigen /
+    actualizarEstanqueDestino, entregadas por Gerald -- ver nota
+    de integracion mas arriba).
 
     Parametros:
     - dto: Objeto TrazabilidadDTO con la
@@ -228,41 +266,87 @@ export async function create(dto) {
     const grupoDatos = obtenerGrupoDatos(dto.grupoDatos);
     const fecha = normalizarFechaMysql(dto.fecha);
 
-    const [result] = await pool.execute(
-        `
-        INSERT INTO trazabilidad (
-            grupo_datos,
-            finca_id,
-            estanque_origen_id,
-            estanque_destino_id,
-            colaborador_id,
-            creado_por_usuario_id,
-            creado_por_colaborador_id,
-            fecha,
-            tamano,
-            dias,
-            pl,
-            tipo_movimiento
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        [
-            grupoDatos,
-            dto.fincaId,
-            dto.estanqueOrigenId,
-            dto.estanqueDestinoId,
-            dto.colaboradorId,
-            dto.creadoPorUsuarioId,
-            dto.creadoPorColaboradorId,
-            fecha,
-            dto.tamano,
-            dto.dias,
-            dto.pl,
-            TIPO_MOVIMIENTO
-        ]
-    );
+    const connection = await pool.getConnection();
 
-    return await findById(result.insertId, grupoDatos);
+    try {
+        await connection.beginTransaction();
+
+        const [result] = await connection.execute(
+            `
+            INSERT INTO trazabilidad (
+                grupo_datos,
+                finca_id,
+                estanque_origen_id,
+                estanque_destino_id,
+                creado_por_usuario_id,
+                creado_por_colaborador_id,
+                fecha,
+                tamano,
+                dias,
+                pl,
+                tipo_movimiento
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+                grupoDatos,
+                dto.fincaId,
+                dto.estanqueOrigenId,
+                dto.estanqueDestinoId,
+                dto.creadoPorUsuarioId,
+                dto.creadoPorColaboradorId,
+                fecha,
+                dto.tamano,
+                dto.dias,
+                dto.pl,
+                TIPO_MOVIMIENTO
+            ]
+        );
+
+        const origenActualizado = await actualizarEstanqueOrigen(
+            connection,
+            dto.estanqueOrigenId,
+            grupoDatos,
+            EstadoEstanque.COSECHADO
+        );
+
+        if (!origenActualizado) {
+            const err = new Error(
+                'No se encontro el estanque de origen (id ' +
+                dto.estanqueOrigenId + ') activo para este grupo ' +
+                'de datos. No se guarda el movimiento.'
+            );
+            err.status = 400;
+            throw err;
+        }
+
+        const destinoActualizado = await actualizarEstanqueDestino(
+            connection,
+            dto.estanqueDestinoId,
+            grupoDatos,
+            EstadoEstanque.ENGORDE
+        );
+
+        if (!destinoActualizado) {
+            const err = new Error(
+                'No se encontro el estanque de destino (id ' +
+                dto.estanqueDestinoId + ') activo para este grupo ' +
+                'de datos. No se guarda el movimiento.'
+            );
+            err.status = 400;
+            throw err;
+        }
+
+        await connection.commit();
+
+        return await findById(result.insertId, grupoDatos);
+    } catch (err) {
+        await connection.rollback();
+
+        throw err;
+    } finally {
+        connection.release();
+    }
 }
 
 /*
@@ -326,7 +410,6 @@ function mapearFila(row) {
         fincaId: row.finca_id,
         estanqueOrigenId: row.estanque_origen_id,
         estanqueDestinoId: row.estanque_destino_id,
-        colaboradorId: row.colaborador_id,
         creadoPorUsuarioId: row.creado_por_usuario_id,
         creadoPorColaboradorId: row.creado_por_colaborador_id,
         fecha: formatearFecha(row.fecha),

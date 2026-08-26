@@ -3,13 +3,14 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: equipo.controller.js
-Autor: Rodolfo Chaves
-Fecha: 20/07/2026
+Autor: Rodolfo Chaves / Marco Vásquez
+Fecha: 18/08/2026
 Modulo: Equipo
 Descripcion:
 Recibe las peticiones HTTP, obtiene el grupo de datos
 desde el JWT, delega las operaciones al modelo y devuelve
 la respuesta al cliente.
+Soporta GETs globales para Administrador Caprocam (22776226).
 //////////////////////////////////////////////////////////
 */
 
@@ -28,14 +29,7 @@ import {
     EstadoEquipo
 } from "../dtos/equipo.dto.js";
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Servicios
-*/
-
+// Servicios
 import {
     isEmpty,
     isNumeroMayorCero,
@@ -47,76 +41,30 @@ import {
     isFechaValida
 } from "../services/equipo.service.js";
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Modelos
-*/
-
+// Modelos y Config
 import * as EquipoModel from "../models/equipo.model.js";
+import pool from "../config/database.js";
 
-/*
-//////////////////////////////////////////////////////////
-IMPORTS
-//////////////////////////////////////////////////////////
-
-Common
-*/
-
+// Common
 import { exito, error } from "../common/respuestaJson.js";
+import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
-
-Contiene funciones internas utilizadas por las funciones
-principales del controller.
 */
 
 function obtenerGrupoDatosUsuario(req, res) {
-    /*
-    Descripcion:
-    Obtiene y valida el grupo de datos incluido en el JWT.
-
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
-
-    Retorna:
-    - Numero del grupo de datos si es valido.
-    - null si el JWT no contiene un grupo valido.
-    */
-
-    if (!req.user) {
-        error(res, "No fue posible obtener el usuario autenticado.", null, 403);
+    const { grupoDatos } = obtenerContextoPeticion(req);
+    if (!isNumeroMayorCero(grupoDatos)) {
+        error(res, "La sesion no contiene un grupo de datos valido.", null, 403);
         return null;
     }
-
-    if (!isNumeroMayorCero(req.user.grupoDatos)) {
-        error(res, "El usuario no tiene un grupo de datos valido.", null, 403);
-        return null;
-    }
-
-    return Number(req.user.grupoDatos);
+    return Number(grupoDatos);
 }
 
 function validarCuerpo(body, res) {
-    /*
-    Descripcion:
-    Valida los campos del body antes de construir el DTO.
-
-    Parametros:
-    - body: Campos recibidos en el body de la peticion.
-    - res: Objeto response de Express.
-
-    Retorna:
-    - Respuesta de error si existen datos invalidos.
-    - null si todos los datos son validos.
-    */
-
     const errores = [];
 
     if (isEmpty(body.identificador)) {
@@ -136,15 +84,11 @@ function validarCuerpo(body, res) {
     }
 
     if (!isFechaValida(body.fechaInstalacion)) {
-        errores.push(
-            "El campo fechaInstalacion debe tener formato dd/mm/aaaa."
-        );
+        errores.push("El campo fechaInstalacion debe tener formato dd/mm/aaaa.");
     }
 
     if (!isTipoEquipo(body.tipoEquipo)) {
-        errores.push(
-            "Tipo invalido. Opciones: " + Object.values(TipoEquipo).join(", ")
-        );
+        errores.push("Tipo invalido. Opciones: " + Object.values(TipoEquipo).join(", "));
     }
 
     if (!isEstadoOperativoEquipo(body.estadoOperativo)) {
@@ -156,9 +100,7 @@ function validarCuerpo(body, res) {
 
     if (!isEmpty(body.estado)) {
         if (!isEstadoEquipo(body.estado)) {
-            errores.push(
-                "Estado invalido. Opciones: " + Object.values(EstadoEquipo).join(", ")
-            );
+            errores.push("Estado invalido. Opciones: " + Object.values(EstadoEquipo).join(", "));
         }
     }
 
@@ -169,15 +111,11 @@ function validarCuerpo(body, res) {
     }
 
     if (!isNumeroOpcionalMayorIgualCero(body.horasMantenimiento)) {
-        errores.push(
-            "El campo horasMantenimiento debe ser numerico y mayor o igual que cero."
-        );
+        errores.push("El campo horasMantenimiento debe ser numerico y mayor o igual que cero.");
     }
 
     if (!isNumeroOpcionalMayorIgualCero(body.horasActuales)) {
-        errores.push(
-            "El campo horasActuales debe ser numerico y mayor o igual que cero."
-        );
+        errores.push("El campo horasActuales debe ser numerico y mayor o igual que cero.");
     }
 
     if (errores.length > 0) {
@@ -188,24 +126,9 @@ function validarCuerpo(body, res) {
 }
 
 function validarIdParametro(id, res) {
-    /*
-    Descripcion:
-    Valida que el parametro id recibido por la URL sea
-    numerico y mayor que cero.
-
-    Parametros:
-    - id: ID recibido en req.params.
-    - res: Objeto response de Express.
-
-    Retorna:
-    - Respuesta de error si el id es invalido.
-    - null si el id es valido.
-    */
-
     if (!isIdValido(id)) {
         return error(res, "El id debe ser numerico y mayor que cero.", null, 400);
     }
-
     return null;
 }
 
@@ -213,32 +136,29 @@ function validarIdParametro(id, res) {
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
-
-Contiene las funciones exportables que manejan cada ruta
-del modulo de equipos.
 */
 
 export async function getEquipos(req, res) {
-    /*
-    Descripcion:
-    Obtiene los equipos activos que pertenecen al grupo
-    de datos del usuario autenticado.
-
-    Parametros:
-    - req: Objeto request de Express.
-    - res: Objeto response de Express.
-
-    Retorna:
-    - 200 con lista de equipos.
-    - 403 si el usuario no tiene grupo de datos valido.
-    */
-
     try {
-        const grupoDatos = obtenerGrupoDatosUsuario(req, res);
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
 
-        if (grupoDatos === null) {
-            return;
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT id, uuid, grupo_datos AS grupoDatos, identificador,
+                        nombre_equipo AS nombreEquipo, descripcion,
+                        tipo_equipo AS tipoEquipo, fecha_instalacion AS fechaInstalacion,
+                        funcion_equipo AS funcionEquipo, estanque_id AS estanqueId,
+                        horas_mantenimiento AS horasMantenimiento,
+                        horas_actuales AS horasActuales,
+                        estado_operativo AS estadoOperativo, estado, activo
+                 FROM equipos WHERE activo = TRUE AND deleted_at IS NULL`
+            );
+            return exito(res, "Equipos obtenidos correctamente.", rows);
         }
+
+        const grupoDatos = obtenerGrupoDatosUsuario(req, res);
+        if (grupoDatos === null) return;
 
         const data = await EquipoModel.findAll({
             grupoDatos,
@@ -252,25 +172,29 @@ export async function getEquipos(req, res) {
 }
 
 export async function getEquipoById(req, res) {
-    /*
-    Descripcion:
-    Obtiene un equipo por su ID dentro del grupo de datos
-    del usuario autenticado.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id).
-    - res: Objeto response de Express.
-
-    Retorna:
-    - 200 con el equipo encontrado.
-    - 400 si el id es invalido.
-    - 403 si el usuario no tiene grupo de datos valido.
-    - 404 si no existe o pertenece a otro grupo.
-    */
-
     try {
         const idError = validarIdParametro(req.params.id, res);
         if (idError) return idError;
+
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT id, uuid, grupo_datos AS grupoDatos, identificador,
+                        nombre_equipo AS nombreEquipo, descripcion,
+                        tipo_equipo AS tipoEquipo, fecha_instalacion AS fechaInstalacion,
+                        funcion_equipo AS funcionEquipo, estanque_id AS estanqueId,
+                        horas_mantenimiento AS horasMantenimiento,
+                        horas_actuales AS horasActuales,
+                        estado_operativo AS estadoOperativo, estado, activo
+                 FROM equipos WHERE id = ? AND activo = TRUE AND deleted_at IS NULL`,
+                [req.params.id]
+            );
+            if (rows.length === 0)
+                return error(res, "Equipo no encontrado.", null, 404);
+            return exito(res, "Equipo obtenido correctamente.", rows[0]);
+        }
 
         const grupoDatos = obtenerGrupoDatosUsuario(req, res);
         if (grupoDatos === null) return;
@@ -288,22 +212,6 @@ export async function getEquipoById(req, res) {
 }
 
 export async function createEquipo(req, res) {
-    /*
-    Descripcion:
-    Registra un nuevo equipo dentro del grupo de datos
-    del usuario autenticado.
-
-    Parametros:
-    - req: Objeto request de Express (req.body).
-    - res: Objeto response de Express.
-
-    Retorna:
-    - 201 con el equipo creado.
-    - 403 si el usuario no tiene grupo de datos valido.
-    - 409 si el identificador ya existe en el grupo.
-    - 422 si algun campo es invalido.
-    */
-
     try {
         const grupoDatos = obtenerGrupoDatosUsuario(req, res);
         if (grupoDatos === null) return;
@@ -318,19 +226,10 @@ export async function createEquipo(req, res) {
         );
 
         if (existente) {
-            return error(
-                res,
-                "Ya existe un equipo con ese identificador.",
-                null,
-                409
-            );
+            return error(res, "Ya existe un equipo con ese identificador.", null, 409);
         }
 
-        const dto = new EquipoDTO({
-            ...req.body,
-            grupoDatos
-        });
-
+        const dto = new EquipoDTO({ ...req.body, grupoDatos });
         const nuevo = await EquipoModel.create(dto);
 
         return exito(res, "Equipo registrado correctamente.", nuevo, 201);
@@ -340,24 +239,6 @@ export async function createEquipo(req, res) {
 }
 
 export async function updateEquipo(req, res) {
-    /*
-    Descripcion:
-    Actualiza un equipo existente dentro del grupo de datos
-    del usuario autenticado.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id, req.body).
-    - res: Objeto response de Express.
-
-    Retorna:
-    - 200 con el equipo actualizado.
-    - 400 si el id es invalido.
-    - 403 si el usuario no tiene grupo de datos valido.
-    - 404 si no existe o pertenece a otro grupo.
-    - 409 si el identificador ya pertenece a otro equipo.
-    - 422 si algun campo es invalido.
-    */
-
     try {
         const idError = validarIdParametro(req.params.id, res);
         if (idError) return idError;
@@ -375,19 +256,10 @@ export async function updateEquipo(req, res) {
         );
 
         if (existente) {
-            return error(
-                res,
-                "Ya existe un equipo con ese identificador.",
-                null,
-                409
-            );
+            return error(res, "Ya existe un equipo con ese identificador.", null, 409);
         }
 
-        const dto = new EquipoDTO({
-            ...req.body,
-            grupoDatos
-        });
-
+        const dto = new EquipoDTO({ ...req.body, grupoDatos });
         const actualizado = await EquipoModel.update(req.params.id, dto, grupoDatos);
 
         if (!actualizado) {
@@ -401,22 +273,6 @@ export async function updateEquipo(req, res) {
 }
 
 export async function deleteEquipo(req, res) {
-    /*
-    Descripcion:
-    Elimina un equipo por su ID (borrado logico) dentro
-    del grupo de datos del usuario autenticado.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id).
-    - res: Objeto response de Express.
-
-    Retorna:
-    - 200 con el equipo eliminado.
-    - 400 si el id es invalido.
-    - 403 si el usuario no tiene grupo de datos valido.
-    - 404 si no existe o pertenece a otro grupo.
-    */
-
     try {
         const idError = validarIdParametro(req.params.id, res);
         if (idError) return idError;

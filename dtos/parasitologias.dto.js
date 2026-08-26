@@ -33,7 +33,7 @@ export const ParasitoParasitologia = Object.freeze({
 
 /*
 Descripcion:
-Define los grados de infeccion calculados.
+Define los grados de infeccion permitidos por el modulo.
 */
 
 export const GradoInfeccion = Object.freeze({
@@ -55,11 +55,15 @@ Normaliza la estructura de un registro de parasitologia.
 Instancia normalizada del DTO.
 
 Parametros:
+
 - La auditoria utiliza creadoPorUsuarioId y
-- creadoPorColaboradorId.
+  creadoPorColaboradorId.
 - No utiliza colaboradorId.
+- El grado de infeccion es obligatorio y se recibe
+  seleccionado por el usuario.
 
 Retorna:
+
 - grupoDatos: Grupo obtenido desde el JWT.
 - fincaId o idFinca: Identificador de la finca.
 - estanqueId o idEstanque: Identificador del estanque.
@@ -82,9 +86,6 @@ export class ParasitologiaDTO {
         fechaReporte,
         responsable,
         parasito,
-        camaronesMuestreados,
-        camaronesInfectados,
-        porcentajeInfeccion,
         gradoInfeccion,
         observaciones,
         activo,
@@ -95,79 +96,43 @@ export class ParasitologiaDTO {
     }) {
         this.id = id;
         this.uuid = uuid;
+
         this.grupoDatos = Number(grupoDatos);
 
-        if (
+        this.fincaId =
             fincaId !== undefined &&
             fincaId !== null &&
             String(fincaId).trim() !== ""
-        ) {
-            this.fincaId = Number(fincaId);
-        } else {
-            this.fincaId = Number(idFinca);
-        }
+                ? Number(fincaId)
+                : Number(idFinca);
 
-        if (
+        this.estanqueId =
             estanqueId !== undefined &&
             estanqueId !== null &&
             String(estanqueId).trim() !== ""
-        ) {
-            this.estanqueId = Number(estanqueId);
-        } else {
-            this.estanqueId = Number(idEstanque);
-        }
+                ? Number(estanqueId)
+                : Number(idEstanque);
 
-        this.creadoPorUsuarioId = normalizarNumeroOpcional(
-            creadoPorUsuarioId
-        );
+        this.creadoPorUsuarioId = normalizarNumeroOpcional(creadoPorUsuarioId);
+        this.creadoPorColaboradorId = normalizarNumeroOpcional(creadoPorColaboradorId);
 
-        this.creadoPorColaboradorId =
-            normalizarNumeroOpcional(
-                creadoPorColaboradorId
-            );
-
-        if (
+        this.tipoRegistro =
             tipoRegistro === undefined ||
             tipoRegistro === null ||
             String(tipoRegistro).trim() === ""
-        ) {
-            this.tipoRegistro = "parasitologia";
-        } else {
-            this.tipoRegistro = normalizarTexto(
-                tipoRegistro
-            );
-        }
+                ? "parasitologia"
+                : normalizarTexto(tipoRegistro);
 
         this.fechaReporte = normalizarTexto(fechaReporte);
-        this.responsable = normalizarTextoOpcional(
-            responsable
-        );
+        this.responsable = normalizarTextoOpcional(responsable);
         this.parasito = normalizarTexto(parasito);
-        this.camaronesMuestreados = Number(
-            camaronesMuestreados
-        );
-        this.camaronesInfectados = Number(
-            camaronesInfectados
-        );
-        this.porcentajeInfeccion =
-            normalizarNumeroOpcional(
-                porcentajeInfeccion
-            );
-        this.gradoInfeccion = normalizarTextoOpcional(
-            gradoInfeccion
-        );
-        this.observaciones = normalizarTextoOpcional(
-            observaciones
-        );
+        this.gradoInfeccion = normalizarTexto(gradoInfeccion).toLowerCase();
+        this.observaciones = normalizarTextoOpcional(observaciones);
 
-        if (
-            activo === undefined ||
-            activo === null
-        ) {
-            this.activo = true;
-        } else {
-            this.activo = normalizarBooleano(activo);
-        }
+        this.activo =
+            activo === undefined || activo === null
+                ? true
+                : normalizarBooleano(activo);
 
         this.fechaCreacion = fechaCreacion;
         this.fechaActualizacion = fechaActualizacion;
@@ -181,9 +146,11 @@ Descripcion:
 Convierte un valor requerido a texto sin espacios externos.
 
 Parametros:
+
 - valor: Valor recibido.
 
 Retorna:
+
 - Texto normalizado.
 */
 
@@ -196,9 +163,11 @@ Descripcion:
 Normaliza un texto opcional.
 
 Parametros:
+
 - valor: Valor recibido.
 
 Retorna:
+
 - Texto normalizado o null.
 */
 
@@ -219,9 +188,11 @@ Descripcion:
 Normaliza un numero opcional.
 
 Parametros:
+
 - valor: Valor recibido.
 
 Retorna:
+
 - Numero o null.
 */
 
@@ -242,23 +213,21 @@ Descripcion:
 Convierte distintas representaciones afirmativas a booleano.
 
 Parametros:
+
 - valor: Valor recibido.
 
 Retorna:
+
 - true o false.
 */
 
 function normalizarBooleano(valor) {
-    if (
+    return (
         valor === true ||
         valor === "true" ||
         valor === "Si" ||
         valor === "si" ||
         valor === 1 ||
         valor === "1"
-    ) {
-        return true;
-    }
-
-    return false;
+    );
 }

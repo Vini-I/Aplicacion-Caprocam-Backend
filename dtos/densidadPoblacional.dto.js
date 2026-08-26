@@ -14,6 +14,16 @@ al modelo o devolverlos como respuesta.
 
 /*
 //////////////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////////////
+
+Servicios (formulas del muestreo con atarraya)
+*/
+
+import { calcularResultados, normalizarTiros } from "../services/densidadPoblacional.service.js";
+
+/*
+//////////////////////////////////////////////////////////
 DTO
 //////////////////////////////////////////////////////////
 
@@ -32,10 +42,31 @@ equivocado, o atribuyendo el registro a otro usuario/colaborador
 que no lo creo. Por eso el constructor ya ni siquiera destructura
 esos campos del body.
 
-idColaborador (quien realizo el conteo/medicion, distinto de quien
-autentico la peticion) SI se acepta del body, de forma opcional:
-si no viene, el model asume por defecto el colaborador que
-autentico la peticion (cuando fue registrado desde la APK).
+IMPORTANTE (valores calculados):
+El DTO NO acepta del body los valores que son producto de una
+formula: totalCamaronesMuestra, tirosAtarraya, areaMuestreada,
+promedioPorTiro, densidad, poblacionEstimada y sobrevivencia. Todos
+se derivan aqui del detalle de tiros usando calcularResultados() del
+service.
+
+sobrevivencia dejo de ser un campo digitado: aunque el cliente lo
+mande en el body, se ignora. Es un dato oculto que se calcula solo
+(poblacion estimada del conteo actual contra la poblacion sembrada
+originalmente) y no se le pide al usuario ni se le muestra en el
+formulario.
+
+Antes el frontend mandaba "numeroCamarones", "tirosAtarraya",
+"promedioPorTiro" y "densidad" ya calculados y el backend los
+guardaba tal cual. Eso permitia guardar un promedio o una densidad
+que no correspondian al conteo real (por error de la app, por una
+version vieja del cliente, o por una peticion armada a mano). Ahora
+el detalle tiro por tiro es el unico dato de entrada y todo lo
+demas se calcula del lado del servidor.
+
+El campo idColaborador desaparecio: la tabla densidad_poblacional
+ya no tiene la columna colaborador_id. Quien hizo el registro queda
+identificado por creado_por_usuario_id / creado_por_colaborador_id,
+que salen del JWT.
 */
 
 export class DensidadPoblacionalDTO {
@@ -45,7 +76,8 @@ export class DensidadPoblacionalDTO {
         Construye un objeto DensidadPoblacionalDTO con los datos
         recibidos en el body de la peticion, mas el grupoDatos y
         creadoPorUsuarioId/creadoPorColaboradorId reales del usuario
-        o colaborador autenticado.
+        o colaborador autenticado, y con todos los valores derivados
+        ya calculados.
 
         Parametros:
         - body: Campos recibidos en el body de la peticion (req.body).
@@ -53,22 +85,14 @@ export class DensidadPoblacionalDTO {
             - uuid: Identificador global usado para futura sincronizacion offline.
             - idFinca / fincaId / finca: Identificador de la finca (se aceptan alias).
             - idEstanque / estanqueId / estanque: Identificador del estanque (se aceptan alias).
-            - idColaborador / colaboradorId: Colaborador que realizo el conteo (opcional; se aceptan alias).
             - fecha: Fecha del conteo.
-            - cantidadSiembra: Cantidad sembrada.
-            - areaEstanque: Area del estanque.
-            - numeroCamarones: Total de camarones contados.
-            - tirosAtarraya: Cantidad de tiros de atarraya.
-            - areaAtarraya: Area cubierta por la atarraya.
-            - promedioPorTiro: Promedio de camarones por tiro.
+            - cantidadSiembra: Siembra de referencia, en larvas por m2.
+            - areaEstanque: Area del estanque en HECTAREAS.
+            - areaAtarraya: Area que cubre cada tiro de atarraya, en m2.
+            - tiros / detalleTiros: Detalle de camarones contados por tiro.
             - sobrevivencia: Porcentaje de sobrevivencia.
-            - densidad: Densidad poblacional calculada.
             - notasConteo: Observaciones del conteo.
             - activo: Estado logico del registro.
-            - fechaCreacion: Fecha de creacion del registro.
-            - fechaActualizacion: Fecha de ultima actualizacion.
-            - deletedAt: Fecha de borrado logico.
-            - version: Version del registro para control de cambios.
         - contexto: Datos de confianza que arma el controller a partir
           del JWT (via obtenerContextoPeticion), nunca del body.
             - grupoDatos: Grupo de datos del usuario/colaborador autenticado.
@@ -76,7 +100,7 @@ export class DensidadPoblacionalDTO {
             - creadoPorColaboradorId: Id del colaborador APK autenticado (null si fue un usuario web).
 
         Retorna:
-        - Objeto DensidadPoblacionalDTO con campos normalizados.
+        - Objeto DensidadPoblacionalDTO con campos normalizados y calculados.
         */
 
         const {
@@ -88,17 +112,10 @@ export class DensidadPoblacionalDTO {
             idEstanque,
             estanqueId,
             estanque,
-            idColaborador,
-            colaboradorId,
             fecha,
             cantidadSiembra,
             areaEstanque,
-            numeroCamarones,
-            tirosAtarraya,
             areaAtarraya,
-            promedioPorTiro,
-            sobrevivencia,
-            densidad,
             notasConteo,
             activo,
             fechaCreacion,
@@ -129,12 +146,6 @@ export class DensidadPoblacionalDTO {
         this.creadoPorColaboradorId = contexto.creadoPorColaboradorId ?? null;
 
         /*
-        idColaborador (quien realizo el conteo) SI se acepta del
-        body, de forma opcional y con alias.
-        */
-        this.idColaborador = normalizarNumeroOpcional(idColaborador !== undefined ? idColaborador : colaboradorId);
-
-        /*
         Se permite recibir idFinca, fincaId o finca para mantener
         compatibilidad con diferentes nombres enviados desde el frontend.
         */
@@ -161,13 +172,38 @@ export class DensidadPoblacionalDTO {
         this.fecha = normalizarTextoOpcional(fecha);
         this.cantidadSiembra = normalizarNumeroOpcional(cantidadSiembra);
         this.areaEstanque = normalizarNumeroOpcional(areaEstanque);
-        this.numeroCamarones = normalizarNumeroOpcional(numeroCamarones);
-        this.tirosAtarraya = normalizarNumeroOpcional(tirosAtarraya);
         this.areaAtarraya = normalizarNumeroOpcional(areaAtarraya);
-        this.promedioPorTiro = normalizarNumeroOpcional(promedioPorTiro);
-        this.sobrevivencia = normalizarNumeroOpcional(sobrevivencia);
-        this.densidad = normalizarNumeroOpcional(densidad);
         this.notasConteo = normalizarTextoOpcional(notasConteo);
+
+        /*
+        Detalle tiro por tiro. Es el unico dato de conteo que se
+        acepta del cliente; el model lo guarda en la tabla
+        densidad_detalle_tiros.
+        */
+        const tiros = normalizarTiros(body) || [];
+
+        this.tiros = tiros.map((tiro) => ({
+            numeroTiro: tiro.numeroTiro,
+            cantidadCamarones: Number(tiro.cantidadCamarones)
+        }));
+
+        /*
+        Valores derivados. Se calculan aqui, nunca se leen del body.
+        */
+        const resultados = calcularResultados({
+            tiros: this.tiros,
+            areaAtarraya: this.areaAtarraya,
+            areaEstanque: this.areaEstanque,
+            cantidadSiembra: this.cantidadSiembra
+        });
+
+        this.tirosAtarraya = resultados.tirosAtarraya;
+        this.totalCamaronesMuestra = resultados.totalCamaronesMuestra;
+        this.areaMuestreada = resultados.areaMuestreada;
+        this.promedioPorTiro = resultados.promedioPorTiro;
+        this.densidad = resultados.densidad;
+        this.poblacionEstimada = resultados.poblacionEstimada;
+        this.sobrevivencia = resultados.sobrevivencia;
 
         /*
         Si activo no viene definido, el registro se considera activo
@@ -198,11 +234,11 @@ Estas funciones no consultan base de datos.
 function normalizarNumeroObligatorio(valor) {
     /*
     Descripcion:
-    Normaliza un campo numerico que es obligatorio (grupoDatos,
-    usuarioId). A diferencia de normalizarNumeroOpcional, aqui un
-    valor vacio o invalido se deja explicitamente en null para que
-    el llamador (model) pueda rechazar la operacion en vez de
-    inventar un valor por defecto.
+    Normaliza un campo numerico que es obligatorio (grupoDatos).
+    A diferencia de normalizarNumeroOpcional, aqui un valor vacio o
+    invalido se deja explicitamente en null para que el llamador
+    (model) pueda rechazar la operacion en vez de inventar un valor
+    por defecto.
 
     Parametros:
     - valor: Valor recibido.
@@ -279,7 +315,13 @@ function normalizarNumeroOpcional(valor) {
         return null;
     }
 
-    return Number(valor);
+    const numero = Number(valor);
+
+    if (Number.isNaN(numero)) {
+        return null;
+    }
+
+    return numero;
 }
 
 function normalizarBooleano(valor) {

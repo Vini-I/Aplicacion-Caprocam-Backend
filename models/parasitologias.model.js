@@ -45,9 +45,7 @@ export async function findAll(filtros) {
         AND activo = TRUE
     `;
 
-    const params = [
-        filtros.grupoDatos
-    ];
+    const params = [filtros.grupoDatos];
 
     if (filtros.fincaId) {
         sql = sql + " AND finca_id = ?";
@@ -66,20 +64,12 @@ export async function findAll(filtros) {
 
     if (filtros.fechaReporte) {
         sql = sql + " AND fecha_reporte = ?";
-        params.push(
-            normalizarFechaMysql(
-                filtros.fechaReporte
-            )
-        );
+        params.push(normalizarFechaMysql(filtros.fechaReporte));
     }
 
-    sql = sql +
-        " ORDER BY fecha_reporte DESC, id DESC";
+    sql = sql + " ORDER BY fecha_reporte DESC, id DESC";
 
-    const [rows] = await pool.execute(
-        sql,
-        params
-    );
+    const [rows] = await pool.execute(sql, params);
 
     return mapearLista(rows);
 }
@@ -92,10 +82,7 @@ Retorna:
 - Registro mapeado o null.
 */
 
-export async function findById(
-    id,
-    grupoDatos
-) {
+export async function findById(id, grupoDatos) {
     const sql =
         seleccionarCampos() +
         ` WHERE id = ?
@@ -104,13 +91,7 @@ export async function findById(
         AND activo = TRUE
         LIMIT 1`;
 
-    const [rows] = await pool.execute(
-        sql,
-        [
-            id,
-            grupoDatos
-        ]
-    );
+    const [rows] = await pool.execute(sql, [id, grupoDatos]);
 
     if (rows.length === 0) {
         return null;
@@ -165,21 +146,17 @@ export async function fincaEstanquePertenecenGrupo(
 Descripcion:
 Inserta una parasitologia con auditoria dual.
 
-Registro creado.
-
 Parametros:
 - No utiliza colaborador_id.
 - El creador se guarda solo en creado_por_usuario_id o
-- creado_por_colaborador_id.
+  creado_por_colaborador_id.
 
 Retorna:
-- dto: Datos normalizados por ParasitologiaDTO.
+- Registro creado.
 */
 
 export async function create(dto) {
-    const fechaReporte = normalizarFechaMysql(
-        dto.fechaReporte
-    );
+    const fechaReporte = normalizarFechaMysql(dto.fechaReporte);
 
     const [result] = await pool.execute(
         `
@@ -193,13 +170,10 @@ export async function create(dto) {
             fecha_reporte,
             responsable,
             parasito,
-            camarones_muestreados,
-            camarones_infectados,
-            porcentaje_infeccion,
             grado_infeccion,
             observaciones
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
             dto.grupoDatos,
@@ -211,38 +185,29 @@ export async function create(dto) {
             fechaReporte,
             dto.responsable,
             dto.parasito,
-            dto.camaronesMuestreados,
-            dto.camaronesInfectados,
-            dto.porcentajeInfeccion,
             dto.gradoInfeccion,
             dto.observaciones
         ]
     );
 
-    return findById(
-        result.insertId,
-        dto.grupoDatos
-    );
+    return findById(result.insertId, dto.grupoDatos);
 }
 
 /*
 Descripcion:
 Actualiza los campos funcionales de la parasitologia.
 
-Registro actualizado o null.
-
 Parametros:
 - El UPDATE no modifica los campos de auditoria.
+- El responsable y creador original permanecen
+  sin modificaciones.
+
+Retorna:
+- Registro actualizado o null.
 */
 
-export async function update(
-    id,
-    dto,
-    grupoDatos
-) {
-    const fechaReporte = normalizarFechaMysql(
-        dto.fechaReporte
-    );
+export async function update(id, dto, grupoDatos) {
+    const fechaReporte = normalizarFechaMysql(dto.fechaReporte);
 
     const [result] = await pool.execute(
         `
@@ -252,9 +217,6 @@ export async function update(
             estanque_id = ?,
             fecha_reporte = ?,
             parasito = ?,
-            camarones_muestreados = ?,
-            camarones_infectados = ?,
-            porcentaje_infeccion = ?,
             grado_infeccion = ?,
             observaciones = ?,
             version = version + 1
@@ -268,9 +230,6 @@ export async function update(
             dto.estanqueId,
             fechaReporte,
             dto.parasito,
-            dto.camaronesMuestreados,
-            dto.camaronesInfectados,
-            dto.porcentajeInfeccion,
             dto.gradoInfeccion,
             dto.observaciones,
             id,
@@ -282,10 +241,7 @@ export async function update(
         return null;
     }
 
-    return findById(
-        id,
-        grupoDatos
-    );
+    return findById(id, grupoDatos);
 }
 
 /*
@@ -296,14 +252,8 @@ Retorna:
 - Registro eliminado logicamente o null.
 */
 
-export async function remove(
-    id,
-    grupoDatos
-) {
-    const actual = await findById(
-        id,
-        grupoDatos
-    );
+export async function remove(id, grupoDatos) {
+    const actual = await findById(id, grupoDatos);
 
     if (!actual) {
         return null;
@@ -358,9 +308,6 @@ function seleccionarCampos() {
             fecha_reporte,
             responsable,
             parasito,
-            camarones_muestreados,
-            camarones_infectados,
-            porcentaje_infeccion,
             grado_infeccion,
             observaciones,
             activo,
@@ -386,14 +333,8 @@ Retorna:
 function mapearLista(rows) {
     const resultado = [];
 
-    for (
-        let i = 0;
-        i < rows.length;
-        i++
-    ) {
-        resultado.push(
-            mapearFila(rows[i])
-        );
+    for (let i = 0; i < rows.length; i++) {
+        resultado.push(mapearFila(rows[i]));
     }
 
     return resultado;
@@ -417,40 +358,19 @@ function mapearFila(row) {
         grupoDatos: row.grupo_datos,
         fincaId: row.finca_id,
         estanqueId: row.estanque_id,
-        creadoPorUsuarioId:
-            row.creado_por_usuario_id,
-        creadoPorColaboradorId:
-            row.creado_por_colaborador_id,
+        creadoPorUsuarioId: row.creado_por_usuario_id,
+        creadoPorColaboradorId: row.creado_por_colaborador_id,
         tipoRegistro: row.tipo_registro,
-        fechaReporte: formatearFecha(
-            row.fecha_reporte
-        ),
+        fechaReporte: formatearFecha(row.fecha_reporte),
         responsable: row.responsable,
         parasito: row.parasito,
-        camaronesMuestreados: Number(
-            row.camarones_muestreados
-        ),
-        camaronesInfectados: Number(
-            row.camarones_infectados
-        ),
-        porcentajeInfeccion: convertirNumero(
-            row.porcentaje_infeccion
-        ),
-        gradoInfeccion:
-            row.grado_infeccion,
-        observaciones:
-            row.observaciones,
-        activo:
-            row.activo === 1 ||
-            row.activo === true,
-        fechaCreacion:
-            row.fecha_creacion,
-        fechaActualizacion:
-            row.fecha_actualizacion,
-        deletedAt:
-            row.deleted_at,
-        version:
-            row.version
+        gradoInfeccion: row.grado_infeccion,
+        observaciones: row.observaciones,
+        activo: row.activo === 1 || row.activo === true,
+        fechaCreacion: row.fecha_creacion,
+        fechaActualizacion: row.fecha_actualizacion,
+        deletedAt: row.deleted_at,
+        version: row.version
     };
 }
 
@@ -466,11 +386,15 @@ Retorna:
 */
 
 function normalizarFechaMysql(valor) {
+    if (
+        valor === undefined ||
+        valor === null
+    ) {
+        return null;
+    }
+
     if (valor instanceof Date) {
-        return valor.toISOString().slice(
-            0,
-            10
-        );
+        return valor.toISOString().slice(0, 10);
     }
 
     const texto = String(valor).trim();
@@ -479,23 +403,10 @@ function normalizarFechaMysql(valor) {
         const partes = texto.split("/");
 
         if (partes.length === 3) {
-            const dia = partes[0].padStart(
-                2,
-                "0"
-            );
+            const dia = partes[0].padStart(2, "0");
+            const mes = partes[1].padStart(2, "0");
 
-            const mes = partes[1].padStart(
-                2,
-                "0"
-            );
-
-            return (
-                partes[2] +
-                "-" +
-                mes +
-                "-" +
-                dia
-            );
+            return partes[2] + "-" + mes + "-" + dia;
         }
     }
 
@@ -522,36 +433,8 @@ function formatearFecha(valor) {
     }
 
     if (valor instanceof Date) {
-        return valor.toISOString().slice(
-            0,
-            10
-        );
+        return valor.toISOString().slice(0, 10);
     }
 
-    return String(valor).slice(
-        0,
-        10
-    );
-}
-
-/*
-Descripcion:
-Convierte valores numericos provenientes de MySQL.
-
-Parametros:
-- valor: Valor recibido.
-
-Retorna:
-- Numero o null.
-*/
-
-function convertirNumero(valor) {
-    if (
-        valor === undefined ||
-        valor === null
-    ) {
-        return null;
-    }
-
-    return Number(valor);
+    return String(valor).slice(0, 10);
 }

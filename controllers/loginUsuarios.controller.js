@@ -169,11 +169,13 @@ export async function login(req, res) {
 
         resetearIntentosLogin(identificador);
 
+        const esCaprocam = Number(usuarioEncontrado.grupoDatos) === 22776226;
+        
         const payload = {
             id:           usuarioEncontrado.id,
             grupoDatos:   usuarioEncontrado.grupoDatos,
             nombre:       usuarioEncontrado.nombre,
-            accesoGlobal: Boolean(usuarioEncontrado.accesoGlobal),
+            accesoGlobal: esCaprocam, // true si es 22776226, false para fincas normales
             esColaborador: false,
         };
 

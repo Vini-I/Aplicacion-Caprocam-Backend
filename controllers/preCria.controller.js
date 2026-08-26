@@ -3,19 +3,21 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: preCria.controller.js
-Autor: Joan Campos-Oscar Mario
-Fecha: 4/08/2026
+Autor: Joan Campos-Oscar Mario / Marco Vásquez
+Fecha: 18/08/2026
 Modulo: Pre-cria
 Descripcion:
 Maneja las peticiones HTTP y la logica de pre-cria.
+Soporta GETs globales para Administrador Caprocam (22776226).
 //////////////////////////////////////////////////////////
 */
- 
+
 /*
 //////////////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////////////
 */
+
 import { PrecriaDTO, EstadoPrecria } from "../dtos/preCria.dto.js";
 import { LoteLarvaDTO } from "../dtos/loteLarva.dto.js";
 import {
@@ -29,23 +31,19 @@ import {
 import { isCodigoLarvaValido } from "../services/loteLarva.service.js";
 import * as precriaModel from "../models/preCria.model.js";
 import * as loteLarvaModel from "../models/loteLarvas.model.js";
+import pool from "../config/database.js";
 import { exito, error } from "../common/respuestaJson.js";
 import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
- 
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES SECUNDARIAS
 //////////////////////////////////////////////////////////
 */
- 
+
 function validarCuerpo(body, res) {
-    /*
-    Descripcion:
-    Valida que el cuerpo de la peticion contenga los campos
-    requeridos y con el formato correcto para una pre-cria.
-    */
     const errores = [];
- 
+
     if (!isEnteroPositivo(body.lote_larva_id ?? body.loteLarvaId)) {
         errores.push("El campo lote_larva_id debe ser un entero positivo.");
     }
@@ -81,39 +79,29 @@ function validarCuerpo(body, res) {
                 "nace 'Activa'; para finalizarla usa POST /precrias/:id/finalizar."
         );
     }
- 
+
     if (errores.length > 0) {
         return error(res, "Datos invalidos para la pre-cria.", errores, 422);
     }
     return null;
 }
- 
+
 async function validarReferencias(body, res, grupoDatos, opciones = {}) {
-    /*
-    Descripcion:
-    Verifica que el lote de larva, la finca y el estanque
-    indicados en el body existan y sean validos en la base
-    de datos para el grupo de datos actual.
-    Parametros:
-    - opciones.precriaIdActual: id de la pre-cria que se esta
-      actualizando (para excluirla de la validacion de "estanque
-      con pre-cria activa"). null cuando se esta creando.
-    */
     const { precriaIdActual = null } = opciones;
     const loteId  = body.lote_larva_id ?? body.loteLarvaId ?? body.id_lote_larva;
     const fincaId = body.finca_id ?? body.fincaId ?? body.id_finca;
     const estanqueId = body.estanque_id ?? body.estanqueId;
- 
+
     const lote = await loteLarvaModel.findById(loteId, grupoDatos);
     if (!lote) {
         return error(res, "El lote de larva indicado no existe.", null, 400);
     }
- 
+
     const fincaExiste = await precriaModel.verificarFincaExiste(fincaId, grupoDatos);
     if (!fincaExiste) {
         return error(res, "La finca indicada no existe.", null, 400);
     }
- 
+
     const estanqueExiste = await precriaModel.verificarEstanqueExiste(
         estanqueId, fincaId, grupoDatos
     );
@@ -122,15 +110,14 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
             res, "El estanque indicado no existe o no pertenece a la finca.", null, 400
         );
     }
- 
-    // Un estanque solo puede tener una pre-cria Activa a la vez.
+
     const precriaActivaExistente = await precriaModel.findActivaByEstanque(
         estanqueId, grupoDatos, precriaIdActual
     );
     if (precriaActivaExistente) {
         return error(res, "El estanque indicado ya tiene una pre-cria activa.", null, 409);
     }
- 
+
     const cantidadInicialValor = body.cantidad_inicial ?? body.cantidadInicial;
     if (!isEmpty(cantidadInicialValor) && Number(cantidadInicialValor) > lote.cantidad_inicial) {
         return error(
@@ -140,21 +127,13 @@ async function validarReferencias(body, res, grupoDatos, opciones = {}) {
             400
         );
     }
- 
+
     return null;
 }
- 
+
 function validarCuerpoLoteYPrecria(body, res) {
-    /*
-    Descripcion:
-    Valida el body combinado del endpoint POST /precrias/con-lote,
-    que crea un lote de larva NUEVO junto con la pre-cria que lo
-    consume. Valida tanto los campos del lote como los de la
-    pre-cria (sin lote_larva_id, porque el lote todavia no existe).
-    */
     const errores = [];
- 
-    // --- Campos del lote ---
+
     if (isEmpty(body.codigo_lote ?? body.codigoLote)) {
         errores.push("El campo codigo_lote es requerido.");
     } else if (!isCodigoLarvaValido(body.codigo_lote ?? body.codigoLote)) {
@@ -183,8 +162,7 @@ function validarCuerpoLoteYPrecria(body, res) {
     if (!isEmpty(procedenciaIdValor) && !isEnteroPositivo(procedenciaIdValor)) {
         errores.push("El procedencia_id debe ser un entero positivo.");
     }
- 
-    // --- Campos de la pre-cria (sin lote_larva_id: el lote es nuevo) ---
+
     if (!isEnteroPositivo(body.finca_id ?? body.fincaId)) {
         errores.push("El campo finca_id debe ser un entero positivo.");
     }
@@ -211,36 +189,32 @@ function validarCuerpoLoteYPrecria(body, res) {
     ) {
         errores.push("El campo duracion_dias debe ser un entero positivo.");
     }
- 
+
     if (errores.length > 0) {
         return error(res, "Datos invalidos para crear el lote y la pre-cria.", errores, 422);
     }
     return null;
 }
- 
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
 //////////////////////////////////////////////////////////
 */
- 
+
 export async function listarPrecrias(req, res) {
-    /*
-    Descripcion:
-    Obtiene un listado completo de todos los registros activos del modulo preCria.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
- 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
- 
-/*
-    Descripcion:
-    Obtiene todas las pre-crias activas del grupo de datos.
-    */
     try {
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT pc.*, pc.grupo_datos AS grupoDatos FROM pre_crias pc
+                 WHERE pc.activo = TRUE AND pc.deleted_at IS NULL`
+            );
+            return exito(res, "Pre-crias obtenidas correctamente.", rows);
+        }
+
         const { grupoDatos } = obtenerContextoPeticion(req);
         const estadoFiltro = req.query.estado || null;
         if (estadoFiltro && !isEstadoValido(estadoFiltro)) {
@@ -252,24 +226,23 @@ export async function listarPrecrias(req, res) {
         return error(res, "Error al obtener las pre-crias.", err, 500);
     }
 }
- 
+
 export async function obtenerPrecria(req, res) {
-    /*
-    Descripcion:
-    Busca y retorna un registro especifico de preCria mediante su identificador unico.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
- 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
- 
-/*
-    Descripcion:
-    Obtiene una pre-cria activa por su ID.
-    */
     try {
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT pc.*, pc.grupo_datos AS grupoDatos FROM pre_crias pc
+                 WHERE pc.id = ? AND pc.activo = TRUE AND pc.deleted_at IS NULL`,
+                [req.params.id]
+            );
+            if (rows.length === 0)
+                return error(res, "Pre-cria no encontrada.", null, 404);
+            return exito(res, "Pre-cria obtenida correctamente.", rows[0]);
+        }
+
         const { grupoDatos } = obtenerContextoPeticion(req);
         const { id } = req.params;
         const pc = await precriaModel.findById(id, grupoDatos);
@@ -279,33 +252,17 @@ export async function obtenerPrecria(req, res) {
         return error(res, "Error al obtener la pre-cria.", err, 500);
     }
 }
- 
+
 export async function crearPrecria(req, res) {
-    /*
-    Descripcion:
-    Registra una nueva entidad de preCria en la base de datos, estructurando la informacion proveniente del cliente.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
- 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
- 
-/*
-    Descripcion:
-    Crea una nueva pre-cria validando que el lote, finca
-    y estanque existan. Transiciona el lote a estado 'En PreCria'.
-    */
     const errBody = validarCuerpo(req.body, res);
     if (errBody) return errBody;
- 
+
     try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
             obtenerContextoPeticion(req);
         const errRef = await validarReferencias(req.body, res, grupoDatos);
         if (errRef) return errRef;
- 
+
         const dto = new PrecriaDTO({
             loteLarvaId: req.body.lote_larva_id ?? req.body.loteLarvaId,
             fincaId: req.body.finca_id ?? req.body.fincaId,
@@ -324,37 +281,15 @@ export async function crearPrecria(req, res) {
         return error(res, "Error al crear la pre-cria.", err, 500);
     }
 }
- 
+
 export async function crearPrecriaConLote(req, res) {
-    /*
-    Descripcion:
-    Crea, en una unica operacion atomica, un lote de larva NUEVO
-    junto con la pre-cria que lo consume. Reemplaza el flujo del
-    frontend que hacia 2 peticiones separadas (POST /lotes-larva
-    y luego POST /precrias), flujo que dejaba un "lote huerfano"
-    en la base de datos cuando la segunda peticion fallaba.
- 
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
- 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers
-      exito() o error(), con { lote, precria } en la data si todo
-      salio bien (201), o un error sin dejar ningun rastro en la
-      base de datos si algo fallo.
-    */
     const errBody = validarCuerpoLoteYPrecria(req.body, res);
     if (errBody) return errBody;
- 
+
     try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
             obtenerContextoPeticion(req);
- 
-        // --- Validaciones previas (fuera de la transaccion, para dar
-        // mensajes de error claros). La validacion definitiva ocurre
-        // dentro de precriaModel.createConLote(). ---
- 
+
         const codigoLoteFinal = req.body.codigo_lote ?? req.body.codigoLote;
         const proveedorIdFinal = req.body.proveedor_id ?? req.body.proveedorId;
         const laboratorioIdFinal = req.body.laboratorio_id ?? req.body.laboratorioId;
@@ -366,25 +301,25 @@ export async function crearPrecriaConLote(req, res) {
         if (existente) {
             return error(res, "Ya existe un lote con ese codigo.", null, 409);
         }
- 
+
         if (!isEmpty(proveedorIdFinal)) {
             const existe = await loteLarvaModel.verificarProveedorExiste(proveedorIdFinal, grupoDatos);
             if (!existe) return error(res, "El proveedor indicado no existe.", null, 400);
         }
- 
+
         if (!isEmpty(laboratorioIdFinal)) {
             const existe = await loteLarvaModel.verificarLaboratorioExiste(laboratorioIdFinal, grupoDatos);
             if (!existe) return error(res, "El laboratorio indicado no existe.", null, 400);
         }
- 
+
         if (!isEmpty(procedenciaIdFinal)) {
             const existe = await loteLarvaModel.verificarProcedenciaExiste(procedenciaIdFinal, grupoDatos);
             if (!existe) return error(res, "La procedencia indicada no existe.", null, 400);
         }
- 
+
         const fincaExiste = await precriaModel.verificarFincaExiste(fincaIdFinal, grupoDatos);
         if (!fincaExiste) return error(res, "La finca indicada no existe.", null, 400);
- 
+
         const estanqueExiste = await precriaModel.verificarEstanqueExiste(
             estanqueIdFinal, fincaIdFinal, grupoDatos
         );
@@ -393,8 +328,7 @@ export async function crearPrecriaConLote(req, res) {
                 res, "El estanque indicado no existe o no pertenece a la finca.", null, 400
             );
         }
- 
-        // Un estanque solo puede tener una pre-cria Activa a la vez.
+
         const precriaActivaExistente = await precriaModel.findActivaByEstanque(
             estanqueIdFinal, grupoDatos
         );
@@ -402,7 +336,7 @@ export async function crearPrecriaConLote(req, res) {
             return error(res, "El estanque indicado ya tiene una pre-cria activa.", null, 409);
         }
 
-         const dtoLote = new LoteLarvaDTO({
+        const dtoLote = new LoteLarvaDTO({
             codigoLote: codigoLoteFinal,
             proveedorId: proveedorIdFinal,
             laboratorioId: laboratorioIdFinal,
@@ -417,7 +351,7 @@ export async function crearPrecriaConLote(req, res) {
         });
 
         const dtoPrecria = new PrecriaDTO({
-            loteLarvaId: 0, // placeholder: el modelo lo sobreescribe con el id del lote recien creado
+            loteLarvaId: 0,
             fincaId: fincaIdFinal,
             estanqueId: estanqueIdFinal,
             cantidadInicial: req.body.cantidad_inicial ?? req.body.cantidadInicial,
@@ -428,7 +362,7 @@ export async function crearPrecriaConLote(req, res) {
             creadoPorUsuarioId,
             creadoPorColaboradorId,
         });
- 
+
         const { lote, precria } = await precriaModel.createConLote(dtoLote, dtoPrecria, grupoDatos);
         return exito(res, "Lote y pre-cria creados correctamente.", { lote, precria }, 201);
     } catch (err) {
@@ -441,32 +375,17 @@ export async function crearPrecriaConLote(req, res) {
         return error(res, "Error al crear el lote y la pre-cria.", err, 500);
     }
 }
- 
+
 export async function actualizarPrecria(req, res) {
-    /*
-    Descripcion:
-    Actualiza parcialmente los datos de un registro existente de preCria, verificando primero su existencia y gestionando conflictos de unicidad.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
- 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
- 
-/*
-    Descripcion:
-    Actualiza una pre-cria existente validando referencias.
-    */
     const { id } = req.params;
     const errBody = validarCuerpo(req.body, res);
     if (errBody) return errBody;
- 
+
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const actual = await precriaModel.findById(id, grupoDatos);
         if (!actual) return error(res, "Pre-cria no encontrada.", null, 404);
- 
+
         if (normalizarEstado(actual.estado) === EstadoPrecria.FINALIZADA) {
             return error(
                 res,
@@ -475,11 +394,11 @@ export async function actualizarPrecria(req, res) {
                 409
             );
         }
- 
+
         const errRef = await validarReferencias(req.body, res, grupoDatos, { precriaIdActual: id });
         if (errRef) return errRef;
- 
-            const dto = new PrecriaDTO({
+
+        const dto = new PrecriaDTO({
             loteLarvaId: req.body.lote_larva_id ?? req.body.loteLarvaId,
             fincaId: req.body.finca_id ?? req.body.fincaId,
             estanqueId: req.body.estanque_id ?? req.body.estanqueId,
@@ -501,37 +420,20 @@ export async function actualizarPrecria(req, res) {
         return error(res, "Error al actualizar la pre-cria.", err, 500);
     }
 }
- 
+
 export async function finalizarPrecria(req, res) {
-    /*
-    Descripcion:
-    Gestiona logica de negocio para la operacion 'finalizarPrecria' en el modulo preCria.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
- 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
- 
-/*
-    Descripcion:
-    Finaliza una pre-cria en estado Activa. Valida que la fecha
-    de fin sea mayor o igual a la de inicio, y que la cantidad
-    final no supere la inicial. Calcula los dias de duracion.
-    */
     const { id } = req.params;
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const pc = await precriaModel.findById(id, grupoDatos);
         if (!pc) return error(res, "Pre-cria no encontrada.", null, 404);
- 
+
         if (normalizarEstado(pc.estado) !== EstadoPrecria.ACTIVA) {
             return error(
                 res, "La pre-cria ya no se encuentra en estado Activa.", null, 400
             );
         }
- 
+
         const { fecha_fin, cantidad_final, pl_final } = req.body;
         const errores = [];
         if (!isFechaValida(fecha_fin)) errores.push("fecha_fin debe ser una fecha valida.");
@@ -540,7 +442,7 @@ export async function finalizarPrecria(req, res) {
         if (errores.length > 0) {
             return error(res, "Datos invalidos para finalizar pre-cria.", errores, 422);
         }
- 
+
         if (!compararFechas(pc.fecha_inicio, fecha_fin)) {
             return error(res, "fecha_fin no puede ser menor que fecha_inicio.", null, 400);
         }
@@ -549,11 +451,11 @@ export async function finalizarPrecria(req, res) {
                 res, "cantidad_final no puede ser mayor que cantidad_inicial.", null, 400
             );
         }
- 
+
         const d1 = new Date(pc.fecha_inicio);
         const d2 = new Date(fecha_fin);
         const duracion_dias = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
- 
+
         const actualizado = await precriaModel.update(id, grupoDatos, {
             estado: EstadoPrecria.FINALIZADA,
             fecha_fin,
@@ -566,23 +468,8 @@ export async function finalizarPrecria(req, res) {
         return error(res, "Error al finalizar la pre-cria.", err, 500);
     }
 }
- 
+
 export async function eliminarPrecria(req, res) {
-    /*
-    Descripcion:
-    Realiza un borrado logico (soft-delete) sobre un registro de preCria, marcandolo como inactivo (activo = FALSE) y dejando rastro en deleted_at.
-    Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
- 
-    Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
-    */
- 
-/*
-    Descripcion:
-    Realiza el borrado logico de una pre-cria.
-    */
     const { id } = req.params;
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
