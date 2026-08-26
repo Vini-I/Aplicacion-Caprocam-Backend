@@ -231,3 +231,21 @@ export async function remove(id, grupoDatos) {
 
     return { ...proveedor, activo: false };
 }
+
+export async function tieneInventarioAsociado(id, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica si el proveedor esta asociado a algun registro de inventario activo.
+    */
+    const sql = `
+        SELECT id
+        FROM   inventario
+        WHERE  proveedor_id = ?
+        AND    grupo_datos = ?
+        AND    activo = TRUE
+        AND    deleted_at IS NULL
+        LIMIT  1
+    `;
+    const [rows] = await pool.execute(sql, [Number(id), grupoDatos]);
+    return rows.length > 0;
+}

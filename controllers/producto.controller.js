@@ -3,12 +3,13 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: producto.controller.js
-Autor: Jose Espinoza
-Fecha: 26/07/2026
+Autor: Jose Espinoza / Marco Vásquez
+Fecha: 18/08/2026
 Modulo: Productos
 Descripcion:
-Recibe las peticiones HTTP de productos, delega al modelo
-y devuelve la respuesta al cliente soportando contexto dual.
+Recibe las peticiones HTTP de productos, delega al modelo.
+Soporta GETs globales para Administrador Caprocam (22776226).
+Aplica captura de errores por duplicados y validación de fechas.
 //////////////////////////////////////////////////////////
 */
 
@@ -22,34 +23,11 @@ Modelos y DTOs
 
 import * as ProductoModel from '../models/producto.model.js';
 import { ProductoDTO } from '../dtos/producto.dto.js';
+import pool from '../config/database.js';
 
 // Common
 import { exito, error } from '../common/respuestaJson.js';
-
-/*
-//////////////////////////////////////////////////////////
-FUNCIONES SECUNDARIAS
-//////////////////////////////////////////////////////////
-*/
-
-function obtenerContextoPeticion(req) {
-    /*
-    Descripcion:
-    Extrae grupoDatos e identificadores de auditoria independientemente
-    de si la peticion proviene de un Usuario Web o Colaborador Mobil.
-
-    Parametros:
-    - req: Objeto request de Express.
-
-    Retorna:
-    - Objeto con { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId }
-    */
-    const grupoDatos = req.user?.grupoDatos || req.colaborador?.grupoDatos;
-    const creadoPorUsuarioId = req.user?.id || null;
-    const creadoPorColaboradorId = req.colaborador?.id || null;
-
-    return { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId };
-}
+import { obtenerContextoPeticion } from '../common/contextoPeticion.js';
 
 /*
 //////////////////////////////////////////////////////////
@@ -58,18 +36,20 @@ FUNCIONES PRINCIPALES
 */
 
 export async function getProductos(req, res) {
-    /*
-    Descripcion:
-    Obtiene todos los productos del grupo.
-
-    Parametros:
-    - req: Objeto request de Express
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con lista de productos
-    */
     try {
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT id, uuid, grupo_datos AS grupoDatos, nombre, descripcion,
+                        unidad_medida AS unidadMedida, precio_unidad AS precioUnidad,
+                        activo
+                 FROM productos WHERE activo = TRUE AND deleted_at IS NULL`
+            );
+            return exito(res, 'Productos obtenidos correctamente.', rows);
+        }
+
         const { grupoDatos } = obtenerContextoPeticion(req);
         const data = await ProductoModel.findAll(grupoDatos);
         return exito(res, 'Productos obtenidos correctamente.', data);
@@ -79,19 +59,23 @@ export async function getProductos(req, res) {
 }
 
 export async function getProductoById(req, res) {
-    /*
-    Descripcion:
-    Obtiene un producto por su ID.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con el producto encontrado
-    - 404 si no existe
-    */
     try {
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT id, uuid, grupo_datos AS grupoDatos, nombre, descripcion,
+                        unidad_medida AS unidadMedida, precio_unidad AS precioUnidad,
+                        activo
+                 FROM productos WHERE id = ? AND activo = TRUE AND deleted_at IS NULL`,
+                [req.params.id]
+            );
+            if (rows.length === 0)
+                return error(res, 'Producto no encontrado.', null, 404);
+            return exito(res, 'Producto obtenido correctamente.', rows[0]);
+        }
+
         const { grupoDatos } = obtenerContextoPeticion(req);
         const producto = await ProductoModel.findById(req.params.id, grupoDatos);
 
@@ -105,19 +89,10 @@ export async function getProductoById(req, res) {
 }
 
 export async function createProducto(req, res) {
-    /*
-    Descripcion:
-    Crea un nuevo producto capturando auditoria de sesion.
-
-    Parametros:
-    - req: Objeto request de Express (req.body)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 201 con el producto creado
-    */
     try {
-        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } = obtenerContextoPeticion(req);
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
+
         const dto = new ProductoDTO({
             ...req.body,
             grupoDatos,
@@ -128,29 +103,23 @@ export async function createProducto(req, res) {
 
         return exito(res, 'Producto creado correctamente.', nuevo, 201);
     } catch (err) {
-        return error(res, 'Error al crear producto.', err);
+        if (err.code === 'ER_DUP_ENTRY' || err.message?.includes('ER_DUP_ENTRY')) {
+            return error(res, 'Ya existe un producto registrado con este código.', null, 400);
+        }
+        if (err.message?.includes('fecha')) {
+            return error(res, err.message, null, 400);
+        }
+        return error(res, err.message || 'Error al crear producto.', err);
     }
 }
 
 export async function updateProducto(req, res) {
-    /*
-    Descripcion:
-    Actualiza un producto existente por su ID.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id, req.body)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con el producto actualizado
-    - 404 si no existe
-    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const dto = new ProductoDTO({ ...req.body, grupoDatos });
         const actualizado = await ProductoModel.update(
-            req.params.id, 
-            dto, 
+            req.params.id,
+            dto,
             grupoDatos
         );
 
@@ -159,23 +128,17 @@ export async function updateProducto(req, res) {
 
         return exito(res, 'Producto actualizado correctamente.', actualizado);
     } catch (err) {
-        return error(res, 'Error al actualizar producto.', err);
+        if (err.code === 'ER_DUP_ENTRY' || err.message?.includes('ER_DUP_ENTRY')) {
+            return error(res, 'Ya existe un producto registrado con este código.', null, 400);
+        }
+        if (err.message?.includes('fecha')) {
+            return error(res, err.message, null, 400);
+        }
+        return error(res, err.message || 'Error al actualizar producto.', err);
     }
 }
 
 export async function deleteProducto(req, res) {
-    /*
-    Descripcion:
-    Borrado logico de un producto por su ID.
-
-    Parametros:
-    - req: Objeto request de Express (req.params.id)
-    - res: Objeto response de Express
-
-    Retorna:
-    - 200 con el producto desactivado
-    - 404 si no existe
-    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const eliminado = await ProductoModel.remove(req.params.id, grupoDatos);

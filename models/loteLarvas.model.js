@@ -417,3 +417,27 @@ export async function verificarProcedenciaExiste(procedenciaId, grupoDatos) {
     `, [Number(procedenciaId), grupoDatos]);
     return rows.length > 0;
 }
+
+export async function esLoteHeredado(loteLarvaId, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica si un lote de larva es "heredado", es decir, si existe una
+    Siembra que provino de una Pre-Cria (precria_id no nulo) y que usa
+    este mismo lote. En ese caso, sus datos de origen deben quedar fijos
+    porque son compartidos entre la Pre-Cria y la Siembra derivada.
+    Parametros:
+    - loteLarvaId: Identificador del lote de larva a verificar.
+    - grupoDatos: Entero que identifica el tenant (grupo de datos) del usuario actual, usado para segmentar la informacion.
+
+    Retorna:
+    - Booleano indicando si el lote es heredado (true) o no (false).
+    */
+    const [rows] = await pool.execute(`
+        SELECT id
+        FROM   siembras
+        WHERE  lote_larva_id = ? AND grupo_datos = ? AND precria_id IS NOT NULL
+               AND activo = TRUE AND deleted_at IS NULL
+        LIMIT  1
+    `, [loteLarvaId, grupoDatos]);
+    return rows.length > 0;
+}

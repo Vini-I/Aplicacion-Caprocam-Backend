@@ -3,32 +3,43 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: laboratorio.controller.js
-Autor: Oscar Mario-Joan Campos
-Fecha: 4/08/2026
+Autor: Oscar Mario-Joan Campos / Marco Vásquez / Joan Campos
+Fecha: 25/08/2026
 Modulo: Laboratorio
-Descripcion:
-Controlador HTTP para el modulo de laboratorio.
 //////////////////////////////////////////////////////////
 */
 
 import { LaboratorioDTO } from "../dtos/laboratorio.dto.js";
 import * as LaboratorioModel from "../models/laboratorio.model.js";
+import pool from "../config/database.js";
 import { exito, error } from "../common/respuestaJson.js";
 import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 export async function getLaboratorios(req, res) {
     /*
     Descripcion:
-    Obtiene un listado completo de todos los registros activos del modulo laboratorio.
+    Maneja la peticion GET para obtener todos los laboratorios.
+    
     Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
 
     Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    - Lista de laboratorios.
     */
     try {
-       const { grupoDatos } = obtenerContextoPeticion(req);
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT id, uuid, grupo_datos AS grupoDatos, nombre, descripcion, activo
+                 FROM laboratorios WHERE activo = TRUE AND deleted_at IS NULL`
+            );
+            return exito(res, "Laboratorios obtenidos correctamente.", rows);
+        }
+
+        const { grupoDatos } = obtenerContextoPeticion(req);
         const lista = await LaboratorioModel.findAll(grupoDatos);
         return exito(res, "Laboratorios obtenidos correctamente.", lista);
     } catch (err) {
@@ -39,15 +50,30 @@ export async function getLaboratorios(req, res) {
 export async function getLaboratorioById(req, res) {
     /*
     Descripcion:
-    Busca y retorna un registro especifico de laboratorio mediante su identificador unico.
+    Maneja la peticion GET para obtener un laboratorio por ID.
+    
     Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
 
     Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    - Laboratorio solicitado.
     */
     try {
+        const user = req.user ?? null;
+        const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
+
+        if (esGlobal && !req.query.grupoDatos) {
+            const [rows] = await pool.query(
+                `SELECT id, uuid, grupo_datos AS grupoDatos, nombre, descripcion, activo
+                 FROM laboratorios WHERE id = ? AND activo = TRUE AND deleted_at IS NULL`,
+                [req.params.id]
+            );
+            if (rows.length === 0)
+                return error(res, "Laboratorio no encontrado.", null, 404);
+            return exito(res, "Laboratorio obtenido correctamente.", rows[0]);
+        }
+
         const { grupoDatos } = obtenerContextoPeticion(req);
         const item = await LaboratorioModel.findById(req.params.id, grupoDatos);
         if (!item) return error(res, "Laboratorio no encontrado.", null, 404);
@@ -60,18 +86,19 @@ export async function getLaboratorioById(req, res) {
 export async function createLaboratorio(req, res) {
     /*
     Descripcion:
-    Registra una nueva entidad de laboratorio en la base de datos, estructurando la informacion proveniente del cliente.
+    Maneja la peticion POST para crear un laboratorio.
+    
     Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
 
     Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    - Laboratorio creado.
     */
     try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
-        obtenerContextoPeticion(req);
-        
+            obtenerContextoPeticion(req);
+
         const dto = new LaboratorioDTO({
             nombre: req.body.nombre,
             descripcion: req.body.descripcion,
@@ -79,7 +106,7 @@ export async function createLaboratorio(req, res) {
             creadoPorUsuarioId,
             creadoPorColaboradorId
         });
-        
+
         const creado = await LaboratorioModel.create(dto, grupoDatos);
         return exito(res, "Laboratorio creado correctamente.", creado, 201);
     } catch (err) {
@@ -90,17 +117,18 @@ export async function createLaboratorio(req, res) {
 export async function updateLaboratorio(req, res) {
     /*
     Descripcion:
-    Actualiza parcialmente los datos de un registro existente de laboratorio, verificando primero su existencia y gestionando conflictos de unicidad.
+    Maneja la peticion PUT para actualizar un laboratorio.
+    
     Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
 
     Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    - Laboratorio actualizado.
     */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
-        
+
         const dto = new LaboratorioDTO({
             nombre: req.body.nombre,
             descripcion: req.body.descripcion,
@@ -120,16 +148,24 @@ export async function updateLaboratorio(req, res) {
 export async function deleteLaboratorio(req, res) {
     /*
     Descripcion:
-    Realiza un borrado logico (soft-delete) sobre un registro de laboratorio, marcandolo como inactivo (activo = FALSE) y dejando rastro en deleted_at.
+    Maneja la peticion DELETE para borrar (logico) un laboratorio.
+    Valida previamente que no este asignado a lotes de larva.
+    
     Parametros:
-    - req: Objeto Request de Express (contiene body, params y user autenticado).
-    - res: Objeto Response de Express para envio estructurado de JSON.
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
 
     Retorna:
-    - Resuelve la peticion HTTP enviando un JSON usando los helpers exito() o error() con el status code correspondiente (200, 201, 400, 404, 500).
+    - Confirmacion de eliminacion o error 409 si esta en uso.
     */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
+        
+        const enUso = await LaboratorioModel.estaEnUso(req.params.id, grupoDatos);
+        if (enUso) {
+            return error(res, "No se puede eliminar este laboratorio porque está asignado a uno o más lotes de larva.", null, 409);
+        }
+
         const eliminado = await LaboratorioModel.remove(req.params.id, grupoDatos);
         if (!eliminado) return error(res, "Laboratorio no encontrado.", null, 404);
         return exito(res, "Laboratorio eliminado correctamente.", null);

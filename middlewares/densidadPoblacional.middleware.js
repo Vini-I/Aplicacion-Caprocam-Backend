@@ -36,13 +36,14 @@ const camposRequeridos = [
 
 /*
 Grupos de alias aceptados para los campos que el frontend
-puede enviar con distintos nombres (idFinca/fincaId/finca
-y idEstanque/estanqueId/estanque).
+puede enviar con distintos nombres (idFinca/fincaId/finca,
+idEstanque/estanqueId/estanque y tiros/detalleTiros).
 */
 
 const gruposAlias = [
     { nombre: "idFinca", alias: ["idFinca", "fincaId", "finca"] },
-    { nombre: "idEstanque", alias: ["idEstanque", "estanqueId", "estanque"] }
+    { nombre: "idEstanque", alias: ["idEstanque", "estanqueId", "estanque"] },
+    { nombre: "tiros", alias: ["tiros", "detalleTiros"] }
 ];
 
 /*
