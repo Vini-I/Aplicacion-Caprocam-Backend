@@ -38,6 +38,7 @@ import {
 // Modelos y Config
 import * as EstanqueModel from "../models/estanques.model.js";
 import * as EquipoModel from "../models/equipo.model.js";
+import * as SiembraModel from "../models/siembra.model.js";
 import pool from "../config/database.js";
 
 // Common
@@ -352,6 +353,20 @@ export async function deleteEstanque(req, res) {
 
         const grupoDatos = obtenerGrupoDatosPeticion(req, res);
         if (grupoDatos === null) return;
+
+        const siembraActiva = await SiembraModel.findActivaByEstanque(
+            req.params.id,
+            grupoDatos
+        );
+
+        if (siembraActiva) {
+            return error(
+                res,
+                "No se puede eliminar el estanque porque tiene una siembra activa.",
+                null,
+                409
+            );
+        }
 
         const eliminado = await EstanqueModel.remove(req.params.id, grupoDatos);
 
