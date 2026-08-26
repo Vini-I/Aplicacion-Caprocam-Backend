@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS equipos (
     horas_actuales DECIMAL(10,2) NOT NULL DEFAULT 0,
     estado_operativo ENUM('Activo', 'Inactivo', 'Mantenimiento') NOT NULL,
     estado ENUM('Encendido', 'Apagado') NOT NULL,
+    fecha_ultimo_encendido DATETIME NULL DEFAULT NULL,
     creado_por_usuario_id INT NULL,
     creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
