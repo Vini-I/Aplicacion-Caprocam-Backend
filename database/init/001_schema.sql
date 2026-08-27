@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS equipos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE DEFAULT (UUID()),
     grupo_datos INT NOT NULL,
-    identificador VARCHAR(5) NOT NULL,
+    identificador VARCHAR(50) NOT NULL,
     nombre_equipo VARCHAR(100) NOT NULL,
     descripcion TEXT NOT NULL,
     tipo_equipo ENUM(
@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS equipos (
     horas_actuales DECIMAL(10,2) NOT NULL DEFAULT 0,
     estado_operativo ENUM('Activo', 'Inactivo', 'Mantenimiento') NOT NULL,
     estado ENUM('Encendido', 'Apagado') NOT NULL,
+    fecha_ultimo_encendido DATETIME NULL DEFAULT NULL,
     creado_por_usuario_id INT NULL,
     creado_por_colaborador_id INT NULL,
     activo BOOLEAN NOT NULL DEFAULT TRUE,

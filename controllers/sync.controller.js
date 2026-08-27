@@ -78,14 +78,17 @@ function tieneValor(valor) {
 }
 
 function normalizarFecha(valor) {
-  if (!tieneValor(valor)) {
-    return null;
-  }
+  if (!tieneValor(valor)) return null;
 
   const texto = String(valor).trim();
 
+  if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(texto)) {
+    const [dia, mes, anio] = texto.split(/[\/-]/);
+    return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+  }
+
   if (/^\d{4}-\d{2}-\d{2}/.test(texto)) {
-    return texto.slice(0, 10);
+    return texto.substring(0, 10);
   }
 
   return texto;
@@ -505,6 +508,122 @@ function normalizarEtiquetaSync(valor) {
   return texto;
 }
 
+function normalizarTipoMovimientoInventario(valor) {
+  const texto = normalizarTexto(valor);
+
+  if (texto === "entrada" || texto === "ingreso" || texto === "aumento") {
+    return "Entrada";
+  }
+
+  if (texto === "salida" || texto === "egreso" || texto === "descuento") {
+    return "Salida";
+  }
+
+  if (texto === "ajuste") {
+    return "Ajuste";
+  }
+
+  return valor ?? null;
+}
+
+async function actualizarStockPorMovimiento(connection, {
+  grupoDatos,
+  inventarioId,
+  tipoMovimiento,
+  cantidad,
+}) {
+  if (!inventarioId || Number.isNaN(Number(cantidad))) {
+    return;
+  }
+
+  if (tipoMovimiento === "Entrada") {
+    await connection.execute(
+      `UPDATE inventario
+       SET cantidad = cantidad + ?,
+           version = version + 1
+       WHERE id = ?
+       AND grupo_datos = ?
+       AND deleted_at IS NULL`,
+      [cantidad, inventarioId, grupoDatos]
+    );
+  }
+
+  if (tipoMovimiento === "Salida") {
+    await connection.execute(
+      `UPDATE inventario
+       SET cantidad = cantidad - ?,
+           version = version + 1
+       WHERE id = ?
+       AND grupo_datos = ?
+       AND deleted_at IS NULL`,
+      [cantidad, inventarioId, grupoDatos]
+    );
+  }
+
+  if (tipoMovimiento === "Ajuste") {
+    await connection.execute(
+      `UPDATE inventario
+       SET cantidad = ?,
+           version = version + 1
+       WHERE id = ?
+       AND grupo_datos = ?
+       AND deleted_at IS NULL`,
+      [cantidad, inventarioId, grupoDatos]
+    );
+  }
+}
+
+/*
+//////////////////////////////////////////////////////////
+DESCARGAS DIRECTAS PARA SYNC
+//////////////////////////////////////////////////////////
+*/
+
+async function obtenerMantenimientosSync(grupoDatos) {
+  const [filas] = await pool.execute(
+    `SELECT *
+     FROM mantenimiento_equipo
+     WHERE grupo_datos = ?
+     AND activo = TRUE
+     AND deleted_at IS NULL`,
+    [grupoDatos]
+  );
+
+  return filas;
+}
+
+async function obtenerMantenimientoTareasSync(grupoDatos) {
+  const [filas] = await pool.execute(
+    `SELECT tarea.*
+     FROM mantenimiento_equipo_tareas tarea
+     INNER JOIN mantenimiento_equipo mantenimiento
+     ON mantenimiento.id = tarea.mantenimiento_equipo_id
+     WHERE mantenimiento.grupo_datos = ?
+     AND tarea.activo = TRUE
+     AND tarea.deleted_at IS NULL
+     AND mantenimiento.deleted_at IS NULL`,
+    [grupoDatos]
+  );
+
+  return filas;
+}
+
+async function obtenerMantenimientoProductosSync(grupoDatos) {
+  const [filas] = await pool.execute(
+    `SELECT producto.*
+     FROM mantenimiento_equipo_productos producto
+     INNER JOIN mantenimiento_equipo mantenimiento
+     ON mantenimiento.id = producto.mantenimiento_equipo_id
+     WHERE mantenimiento.grupo_datos = ?
+     AND producto.activo = TRUE
+     AND producto.deleted_at IS NULL
+     AND mantenimiento.deleted_at IS NULL`,
+    [grupoDatos]
+  );
+
+  return filas;
+}
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
@@ -572,6 +691,9 @@ export async function descargarCatalogos(req, res) {
       inventario,
       equipos,
       tareas,
+      mantenimientos,
+      mantenimientoTareas,
+      mantenimientoProductos,
       laboratorios,
       procedencias,
       proveedoresLarva,
@@ -587,6 +709,9 @@ export async function descargarCatalogos(req, res) {
       InventarioModel.findAll(grupoDatos),
       EquipoModel.findAll({ grupoDatos }),
       TareaModel.findAll(grupoDatos),
+      obtenerMantenimientosSync(grupoDatos),
+      obtenerMantenimientoTareasSync(grupoDatos),
+      obtenerMantenimientoProductosSync(grupoDatos),
       LaboratorioModel.findAll(grupoDatos),
       ProcedenciaModel.findAll(grupoDatos),
       ProveedorLarvaModel.findAll(grupoDatos),
@@ -607,6 +732,9 @@ export async function descargarCatalogos(req, res) {
         inventario,
         equipos,
         tareas,
+        mantenimientos,
+        mantenimientoTareas,
+        mantenimientoProductos,
         laboratorios,
         procedencias,
         proveedoresLarva,
@@ -637,6 +765,99 @@ export async function subirCambios(req, res) {
     await connection.beginTransaction();
 
     const resultado = {};
+
+    if (cambios.equipos) {
+      resultado.equipos = {
+        creados: [],
+        actualizados: 0,
+        eliminados: 0,
+      };
+
+      const { crear = [], actualizar = [], eliminar = [] } = cambios.equipos;
+
+      for (const r of crear) {
+        const identificador = r.identificador ?? null;
+
+        const existente = await buscarRegistroSync(connection, "equipos", {
+          grupo_datos: grupoDatos,
+          identificador,
+        });
+
+        if (existente) {
+          resultado.equipos.creados.push({
+            idLocal: r.idLocal ?? r.id ?? null,
+            idServidor: existente.id,
+          });
+
+          continue;
+        }
+
+        const insertado = await insertarRegistroSync(connection, "equipos", {
+          grupo_datos: grupoDatos,
+          identificador,
+          nombre_equipo: r.nombreEquipo ?? r.nombre_equipo ?? null,
+          descripcion: r.descripcion ?? null,
+          tipo_equipo: r.tipoEquipo ?? r.tipo_equipo ?? null,
+          fecha_instalacion: normalizarFecha(
+            r.fechaInstalacion ?? r.fecha_instalacion
+          ),
+          funcion_equipo: r.funcionEquipo ?? r.funcion_equipo ?? null,
+          estanque_id: r.estanqueId ?? r.estanque_id ?? null,
+          horas_mantenimiento:
+            r.horasMantenimiento ?? r.horas_mantenimiento ?? null,
+          horas_actuales: r.horasActuales ?? r.horas_actuales ?? 0,
+          estado_operativo:
+            r.estadoOperativo ?? r.estado_operativo ?? "Activo",
+          estado: r.estado ?? "Apagado",
+          fecha_ultimo_encendido:
+            r.fechaUltimoEncendido ?? r.fecha_ultimo_encendido ?? null,
+          creado_por_colaborador_id: creadoPorColaboradorId,
+        });
+
+        resultado.equipos.creados.push({
+          idLocal: r.idLocal ?? r.id ?? null,
+          idServidor: insertado.insertId,
+        });
+      }
+
+      for (const r of actualizar) {
+        const idReal = r.servidor_id ?? r.servidorId ?? r.id;
+
+        const actualizado = await actualizarRegistroSync(
+          connection,
+          "equipos",
+          {
+            identificador: r.identificador,
+            nombre_equipo: r.nombreEquipo ?? r.nombre_equipo,
+            descripcion: r.descripcion,
+            tipo_equipo: r.tipoEquipo ?? r.tipo_equipo,
+            fecha_instalacion: normalizarFecha(
+              r.fechaInstalacion ?? r.fecha_instalacion
+            ),
+            funcion_equipo: r.funcionEquipo ?? r.funcion_equipo,
+            estanque_id: r.estanqueId ?? r.estanque_id,
+            horas_mantenimiento:
+              r.horasMantenimiento ?? r.horas_mantenimiento,
+            horas_actuales: r.horasActuales ?? r.horas_actuales,
+            estado_operativo: r.estadoOperativo ?? r.estado_operativo,
+            estado: r.estado,
+            fecha_ultimo_encendido:
+              r.fechaUltimoEncendido ?? r.fecha_ultimo_encendido,
+          },
+          {
+            id: idReal,
+            grupo_datos: grupoDatos,
+          }
+        );
+
+        resultado.equipos.actualizados += actualizado.affectedRows ?? 0;
+      }
+
+      for (const id of eliminar) {
+        await eliminarLogicoSync(connection, "equipos", id, grupoDatos);
+        resultado.equipos.eliminados++;
+      }
+    }
 
     if (cambios.alimentacion) {
       resultado.alimentacion = {
@@ -1240,7 +1461,10 @@ export async function subirCambios(req, res) {
           dias: r.dias ?? null,
           pl: r.pl ?? null,
           tipo_movimiento: r.tipoMovimiento ?? r.tipo_movimiento ?? null,
-          creado_por_colaborador_id: creadoPorColaboradorId,
+          creado_por_colaborador_id:
+            r.creadoPorColaboradorId ??
+            r.creado_por_colaborador_id ??
+            creadoPorColaboradorId,
         });
 
         resultado.trazabilidad.creados.push({
@@ -1264,15 +1488,22 @@ export async function subirCambios(req, res) {
       const { crear = [], eliminar = [] } = cambios.movimientosInventario;
 
       for (const r of crear) {
+        const inventarioId = r.inventarioId ?? r.inventario_id ?? null;
+        const productoId = r.productoId ?? r.producto_id ?? null;
+        const tipoMovimiento = normalizarTipoMovimientoInventario(
+          r.tipoMovimiento ?? r.tipo_movimiento
+        );
+        const cantidad = Number(r.cantidad ?? 0);
+
         const insertado = await insertarRegistroSync(
           connection,
           "movimientos_inventario",
           {
             grupo_datos: grupoDatos,
-            inventario_id: r.inventarioId ?? r.inventario_id ?? null,
-            producto_id: r.productoId ?? r.producto_id ?? null,
-            tipo_movimiento: r.tipoMovimiento ?? r.tipo_movimiento ?? null,
-            cantidad: r.cantidad ?? null,
+            inventario_id: inventarioId,
+            producto_id: productoId,
+            tipo_movimiento: tipoMovimiento,
+            cantidad,
             observacion: r.observacion ?? null,
             fecha_movimiento:
               normalizarFecha(r.fechaMovimiento ?? r.fecha_movimiento) ??
@@ -1280,6 +1511,13 @@ export async function subirCambios(req, res) {
             creado_por_colaborador_id: creadoPorColaboradorId,
           }
         );
+
+        await actualizarStockPorMovimiento(connection, {
+          grupoDatos,
+          inventarioId,
+          tipoMovimiento,
+          cantidad,
+        });
 
         resultado.movimientosInventario.creados.push({
           idLocal: r.idLocal ?? r.id ?? null,
@@ -1336,20 +1574,16 @@ export async function subirCambios(req, res) {
           "mantenimiento_equipo",
           {
             grupo_datos: grupoDatos,
+            codigo_ticket: r.codigoTicket ?? r.codigo_ticket ?? null,
             equipo_id: r.equipoId ?? r.equipo_id ?? null,
-            codigo_ticket: codigoTicket,
-            fecha_mantenimiento: normalizarFecha(
-              r.fechaMantenimiento ?? r.fecha_mantenimiento
-            ),
+            fecha_mantenimiento: normalizarFecha(r.fechaMantenimiento ?? r.fecha_mantenimiento),
             titulo_ticket: r.tituloTicket ?? r.titulo_ticket ?? null,
-            descripcion_ticket:
-              r.descripcionTicket ?? r.descripcion_ticket ?? null,
-            tipo_personal: r.tipoPersonal ?? r.tipo_personal ?? null,
+            descripcion_ticket: r.descripcionTicket ?? r.descripcion_ticket ?? null,
+            tipo_personal: r.tipoPersonal ?? r.tipo_personal ?? "Interno",
             costo_mano_obra: r.costoManoObra ?? r.costo_mano_obra ?? 0,
             costo_productos: r.costoProductos ?? r.costo_productos ?? 0,
-            costo_total_estimado:
-              r.costoTotalEstimado ?? r.costo_total_estimado ?? 0,
-            estado_ticket: r.estadoTicket ?? r.estado_ticket ?? "En espera",
+            costo_total_estimado: r.costoTotalEstimado ?? r.costo_total_estimado ?? 0,
+            estado_ticket: r.estadoTicket ?? r.estado_ticket ?? "Pendiente",
             creado_por_colaborador_id: creadoPorColaboradorId,
           }
         );
@@ -1367,8 +1601,14 @@ export async function subirCambios(req, res) {
           connection,
           "mantenimiento_equipo",
           {
+            equipo_id: r.equipoId ?? r.equipo_id,
+            fecha_mantenimiento: normalizarFecha(r.fechaMantenimiento ?? r.fecha_mantenimiento),
             titulo_ticket: r.tituloTicket ?? r.titulo_ticket,
             descripcion_ticket: r.descripcionTicket ?? r.descripcion_ticket,
+            tipo_personal: r.tipoPersonal ?? r.tipo_personal,
+            costo_mano_obra: r.costoManoObra ?? r.costo_mano_obra,
+            costo_productos: r.costoProductos ?? r.costo_productos,
+            costo_total_estimado: r.costoTotalEstimado ?? r.costo_total_estimado,
             estado_ticket: r.estadoTicket ?? r.estado_ticket,
           },
           {
@@ -1438,6 +1678,7 @@ export async function subirCambios(req, res) {
             mantenimiento_equipo_id: mappedMantenimientoId,
             tarea_id: tareaId,
             estado_tarea: r.estadoTarea ?? r.estado_tarea ?? "Pendiente",
+            creado_por_colaborador_id: creadoPorColaboradorId,
           }
         );
 
@@ -1499,6 +1740,7 @@ export async function subirCambios(req, res) {
             cantidad: r.cantidad ?? null,
             costo_unitario: r.costoUnitario ?? r.costo_unitario ?? 0,
             subtotal: r.subtotal ?? 0,
+            creado_por_colaborador_id: creadoPorColaboradorId,
           }
         );
 

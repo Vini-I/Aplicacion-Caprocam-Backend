@@ -9,6 +9,7 @@ Modulo: Compradores
 Descripcion:
 Recibe las peticiones HTTP de compradores, delega al modelo.
 Soporta GETs globales ejecutando consulta directa para Caprocam.
+Maneja borrado lógico (Soft Delete) y respuestas de duplicados.
 //////////////////////////////////////////////////////////
 */
 
@@ -99,7 +100,7 @@ export async function createComprador(req, res) {
 
         return exito(res, 'Comprador creado correctamente.', nuevo, 201);
     } catch (err) {
-        return error(res, 'Error al crear comprador.', err);
+        return error(res, err.message || 'Error al crear comprador.', err, 400);
     }
 }
 
@@ -114,7 +115,7 @@ export async function updateComprador(req, res) {
 
         return exito(res, 'Comprador actualizado correctamente.', actualizado);
     } catch (err) {
-        return error(res, 'Error al actualizar comprador.', err);
+        return error(res, err.message || 'Error al actualizar comprador.', err, 400);
     }
 }
 
