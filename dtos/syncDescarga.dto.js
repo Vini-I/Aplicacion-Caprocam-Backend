@@ -38,6 +38,14 @@ export class DescargaCatalogosDTO {
     lotesLarva,
     precrias,
     siembras,
+    enfermedades,
+    parasitologias,
+    fisicoQuimica,
+    detalleFisicoQuimica,
+    crecimientos,
+    calculosCrecimiento,
+    usuarios,
+    trazabilidad,
     colaboradorId,
     grupoDatos,
   }) {
@@ -60,6 +68,14 @@ export class DescargaCatalogosDTO {
     this.lotesLarva = lotesLarva ?? [];
     this.precrias = precrias ?? [];
     this.siembras = siembras ?? [];
+    this.enfermedades = enfermedades ?? [];
+    this.parasitologias = parasitologias ?? [];
+    this.fisicoQuimica = fisicoQuimica ?? [];
+    this.detalleFisicoQuimica = detalleFisicoQuimica ?? [];
+    this.crecimientos = crecimientos ?? [];
+    this.calculosCrecimiento = calculosCrecimiento ?? [];
+    this.usuarios = usuarios ?? [];
+    this.trazabilidad = trazabilidad ?? [];
 
     this._meta = {
       grupoDatos,
@@ -83,6 +99,14 @@ export class DescargaCatalogosDTO {
         lotesLarva: this.lotesLarva.length,
         precrias: this.precrias.length,
         siembras: this.siembras.length,
+        enfermedades: this.enfermedades.length,
+        parasitologias: this.parasitologias.length,
+        fisicoQuimica: this.fisicoQuimica.length,
+        detalleFisicoQuimica: this.detalleFisicoQuimica.length,
+        crecimientos: this.crecimientos.length,
+        calculosCrecimiento: this.calculosCrecimiento.length,
+        usuarios: this.usuarios.length,
+        trazabilidad: this.trazabilidad.length,
       },
     };
   }
