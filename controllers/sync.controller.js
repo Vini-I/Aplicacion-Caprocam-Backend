@@ -45,6 +45,10 @@ import * as ProveedorLarvaModel from "../models/proveedorLarva.model.js";
 import * as LoteLarvaModel from "../models/loteLarvas.model.js";
 import * as PrecriaModel from "../models/preCria.model.js";
 import * as SiembraModel from "../models/siembra.model.js";
+import * as RaleoModel from "../models/raleo.model.js";
+import * as AlimentacionModel from "../models/alimentacion.model.js";
+import * as DensidadPoblacionalModel from "../models/densidadPoblacional.model.js";
+import * as FisicoQuimicaModel from "../models/fisicoQuimica.model.js";
 
 /*
 //////////////////////////////////////////////////////////
@@ -573,6 +577,103 @@ async function actualizarStockPorMovimiento(connection, {
   }
 }
 
+/**
+ * Descuenta stock de inventario y registra el movimiento de Salida
+ * para una alimentacion creada via sync desde movil.
+ *
+ * Replica registrarMovimiento() de alimentacion.model.js (usado por
+ * AlimentacionModel.create(), el camino de POST /alimentaciones
+ * normal), pero operando sobre la misma conexion/transaccion que ya
+ * tiene abierta subirCambios(): llamar a AlimentacionModel.create()
+ * directamente abriria su PROPIA conexion y transaccion, separada de
+ * la de todo el sync, rompiendo la atomicidad ("o se guarda todo el
+ * lote, o no se guarda nada").
+ *
+ * Antes, el bloque de subida de alimentacion hacia un INSERT crudo
+ * (insertarRegistroSync) sin pasar por aqui: el stock nunca se
+ * descontaba cuando la alimentacion venia sincronizada desde movil,
+ * aunque sí funcionaba bien creando el registro directo por HTTP.
+ *
+ * No lanza si no hay inventario para el producto: mismo criterio
+ * que create() (error 422), pero aqui se degrada a advertencia para
+ * no tumbar el resto del lote de sync por un producto sin stock
+ * configurado.
+ */
+async function descontarInventarioAlimentacionSync(connection, {
+  grupoDatos,
+  productoId,
+  cantidadKg,
+  creadoPorColaboradorId,
+  contextoObservacion,
+}) {
+  const productoIdNum = Number(productoId);
+  const cantidadNum = Number(cantidadKg);
+
+  if (!productoIdNum || Number.isNaN(cantidadNum) || cantidadNum <= 0) {
+    return;
+  }
+
+  const [filasInventario] = await connection.execute(
+    `SELECT id, cantidad
+     FROM inventario
+     WHERE producto_id = ?
+       AND grupo_datos = ?
+       AND activo = TRUE
+       AND deleted_at IS NULL
+     LIMIT 1
+     FOR UPDATE`,
+    [productoIdNum, grupoDatos]
+  );
+
+  if (!filasInventario.length) {
+    console.warn(
+      `[sync alimentacion] No existe inventario activo para producto_id ${productoIdNum} ` +
+      `(grupo ${grupoDatos}); no se descuenta stock para: ${contextoObservacion}.`
+    );
+    return;
+  }
+
+  const inventario = filasInventario[0];
+  const cantidadActual = Number(inventario.cantidad);
+  const cantidadNueva = cantidadActual - cantidadNum;
+
+  if (cantidadNueva < 0) {
+    console.warn(
+      `[sync alimentacion] Stock insuficiente para producto_id ${productoIdNum} ` +
+      `(disponible ${cantidadActual}, requerido ${cantidadNum}); no se descuenta stock para: ${contextoObservacion}.`
+    );
+    return;
+  }
+
+  await connection.execute(
+    `UPDATE inventario
+     SET cantidad = ?, version = version + 1
+     WHERE id = ?`,
+    [cantidadNueva, inventario.id]
+  );
+
+  await connection.execute(
+    `INSERT INTO movimientos_inventario (
+        grupo_datos,
+        inventario_id,
+        producto_id,
+        tipo_movimiento,
+        cantidad,
+        observacion,
+        creado_por_colaborador_id
+    )
+    VALUES (?, ?, ?, 'Salida', ?, ?, ?)`,
+    [
+      grupoDatos,
+      inventario.id,
+      productoIdNum,
+      cantidadNum,
+      `Salida automatica por registro de alimentacion sincronizado desde movil (${contextoObservacion}).`,
+      creadoPorColaboradorId ?? null,
+    ]
+  );
+}
+
 /*
 //////////////////////////////////////////////////////////
 DESCARGAS DIRECTAS PARA SYNC
@@ -618,6 +719,30 @@ async function obtenerMantenimientoProductosSync(grupoDatos) {
      AND producto.activo = TRUE
      AND producto.deleted_at IS NULL
      AND mantenimiento.deleted_at IS NULL`,
+    [grupoDatos]
+  );
+
+  return filas;
+}
+
+/**
+ * FisicoQuimicaModel.findAll() agrega las mediciones de cada
+ * lectura en campos fijos (ph, salinidad, temperatura,
+ * oxigenoDisuelto), pensado para la pantalla web. El movil
+ * necesita el detalle plano, una fila por medicion (igual que
+ * calculos_crecimiento para crecimientos), para poder guardarlo
+ * en su propia tabla relacionada fisico_quimico_detalle.
+ */
+async function obtenerDetalleFisicoQuimicaSync(grupoDatos) {
+  const [filas] = await pool.execute(
+    `SELECT detalle.*
+     FROM fisico_quimico_detalle detalle
+     INNER JOIN fisico_quimico lectura
+     ON lectura.id = detalle.lectura_id
+     WHERE lectura.grupo_datos = ?
+     AND detalle.activo = TRUE
+     AND detalle.deleted_at IS NULL
+     AND lectura.deleted_at IS NULL`,
     [grupoDatos]
   );
 
@@ -700,6 +825,11 @@ export async function descargarCatalogos(req, res) {
       lotesLarva,
       precrias,
       siembras,
+      raleos,
+      alimentacion,
+      densidadPoblacional,
+      fisicoQuimica,
+      detalleFisicoQuimica,
     ] = await Promise.all([
       FincaModel.findAll(grupoDatos),
       EstanquesModel.findAll({ grupoDatos }),
@@ -718,6 +848,11 @@ export async function descargarCatalogos(req, res) {
       LoteLarvaModel.findAll(grupoDatos),
       PrecriaModel.findAll(grupoDatos),
       SiembraModel.findAll(grupoDatos),
+      RaleoModel.findAll(grupoDatos),
+      AlimentacionModel.findAll({ grupoDatos }),
+      DensidadPoblacionalModel.findAll({ grupoDatos }),
+      FisicoQuimicaModel.findAll(grupoDatos),
+      obtenerDetalleFisicoQuimicaSync(grupoDatos),
     ]);
 
     return exito(
@@ -741,6 +876,11 @@ export async function descargarCatalogos(req, res) {
         lotesLarva,
         precrias,
         siembras,
+        raleos,
+        alimentacion,
+        densidadPoblacional,
+        fisicoQuimica,
+        detalleFisicoQuimica,
         colaboradorId,
         grupoDatos,
       })
@@ -869,12 +1009,24 @@ export async function subirCambios(req, res) {
       const { crear = [], actualizar = [], eliminar = [] } = cambios.alimentacion;
 
       for (const r of crear) {
+        const fincaIdCrear = r.fincaId ?? r.finca_id ?? null;
+        const estanqueIdCrear = r.estanqueId ?? r.estanque_id ?? null;
+        const productoIdCrear = r.productoId ?? r.producto_id ?? null;
+
+        await descontarInventarioAlimentacionSync(connection, {
+          grupoDatos,
+          productoId: productoIdCrear,
+          cantidadKg: r.cantidadKg ?? r.cantidad_kg ?? null,
+          creadoPorColaboradorId,
+          contextoObservacion: `finca ${fincaIdCrear}, estanque ${estanqueIdCrear}, fecha ${normalizarFecha(r.fecha)}`,
+        });
+
         const insertado = await insertarRegistroSync(connection, "alimentaciones", {
           grupo_datos: grupoDatos,
-          finca_id: r.fincaId ?? r.finca_id ?? null,
-          estanque_id: r.estanqueId ?? r.estanque_id ?? null,
+          finca_id: fincaIdCrear,
+          estanque_id: estanqueIdCrear,
           proveedor_id: r.proveedorId ?? r.proveedor_id ?? null,
-          producto_id: r.productoId ?? r.producto_id ?? null,
+          producto_id: productoIdCrear,
           fecha: normalizarFecha(r.fecha),
           hora: r.hora ?? null,
           metodo: r.metodo ?? null,
@@ -1048,7 +1200,7 @@ export async function subirCambios(req, res) {
         eliminados: 0,
       };
 
-      const { crear = [], eliminar = [] } = cambios.fisicoQuimica;
+      const { crear = [], actualizar = [], eliminar = [] } = cambios.fisicoQuimica;
 
       for (const r of crear) {
         const fincaId = r.fincaId ?? r.finca_id ?? null;
@@ -1083,6 +1235,28 @@ export async function subirCambios(req, res) {
           idLocal: r.idLocal ?? r.id ?? null,
           idServidor: insertado.insertId,
         });
+      }
+
+      for (const r of actualizar) {
+        const idReal = r.servidor_id ?? r.servidorId ?? r.id;
+
+        const actualizado = await actualizarRegistroSync(
+          connection,
+          "fisico_quimico",
+          {
+            finca_id: r.fincaId ?? r.finca_id,
+            estanque_id: r.estanqueId ?? r.estanque_id,
+            fecha_registro: normalizarFecha(
+              r.fechaRegistro ?? r.fecha_registro ?? r.fecha
+            ),
+          },
+          {
+            id: idReal,
+            grupo_datos: grupoDatos,
+          }
+        );
+
+        resultado.fisicoQuimica.actualizados += actualizado.affectedRows ?? 0;
       }
 
       for (const id of eliminar) {
@@ -1176,7 +1350,7 @@ export async function subirCambios(req, res) {
         eliminados: 0,
       };
 
-      const { crear = [], eliminar = [] } = cambios.densidadPoblacional;
+      const { crear = [], actualizar = [], eliminar = [] } = cambios.densidadPoblacional;
 
       for (const r of crear) {
         const insertado = await insertarRegistroSync(
@@ -1208,6 +1382,38 @@ export async function subirCambios(req, res) {
           idLocal: r.idLocal ?? r.id ?? null,
           idServidor: insertado.insertId,
         });
+      }
+
+      for (const r of actualizar) {
+        const idReal = r.servidor_id ?? r.servidorId ?? r.id;
+
+        const actualizado = await actualizarRegistroSync(
+          connection,
+          "densidad_poblacional",
+          {
+            finca_id: r.fincaId ?? r.finca_id,
+            estanque_id: r.estanqueId ?? r.estanque_id,
+            fecha: normalizarFecha(r.fecha),
+            cantidad_siembra: r.cantidadSiembra ?? r.cantidad_siembra,
+            area_estanque: r.areaEstanque ?? r.area_estanque,
+            total_camarones_muestra:
+              r.totalCamaronesMuestra ?? r.total_camarones_muestra,
+            tiros_atarraya: r.tirosAtarraya ?? r.tiros_atarraya,
+            area_atarraya: r.areaAtarraya ?? r.area_atarraya,
+            area_muestreada: r.areaMuestreada ?? r.area_muestreada,
+            promedio_por_tiro: r.promedioPorTiro ?? r.promedio_por_tiro,
+            poblacion_estimada: r.poblacionEstimada ?? r.poblacion_estimada,
+            sobrevivencia: r.sobrevivencia,
+            densidad: r.densidad,
+            notas_conteo: r.notasConteo ?? r.notas_conteo,
+          },
+          {
+            id: idReal,
+            grupo_datos: grupoDatos,
+          }
+        );
+
+        resultado.densidadPoblacional.actualizados += actualizado.affectedRows ?? 0;
       }
 
       for (const id of eliminar) {
@@ -1375,7 +1581,7 @@ export async function subirCambios(req, res) {
         eliminados: 0,
       };
 
-      const { crear = [], eliminar = [] } = cambios.raleos;
+      const { crear = [], actualizar = [], eliminar = [] } = cambios.raleos;
 
       for (const r of crear) {
         const insertado = await insertarRegistroSync(connection, "raleos", {
@@ -1396,6 +1602,32 @@ export async function subirCambios(req, res) {
           idLocal: r.idLocal ?? r.id ?? null,
           idServidor: insertado.insertId,
         });
+      }
+
+      for (const r of actualizar) {
+        const idReal = r.servidor_id ?? r.servidorId ?? r.id;
+
+        const actualizado = await actualizarRegistroSync(
+          connection,
+          "raleos",
+          {
+            finca_id: r.fincaId ?? r.finca_id,
+            estanque_id: r.estanqueId ?? r.estanque_id,
+            siembra_id: r.siembraId ?? r.siembra_id,
+            fecha: normalizarFecha(r.fecha),
+            porcentaje: r.porcentaje,
+            kg_retirados: r.kgRetirados ?? r.kg_retirados,
+            biomasa_restante: r.biomasaRestante ?? r.biomasa_restante,
+            biomasa_estimada: r.biomasaEstimada ?? r.biomasa_estimada,
+            observaciones: r.observaciones,
+          },
+          {
+            id: idReal,
+            grupo_datos: grupoDatos,
+          }
+        );
+
+        resultado.raleos.actualizados += actualizado.affectedRows ?? 0;
       }
 
       for (const id of eliminar) {

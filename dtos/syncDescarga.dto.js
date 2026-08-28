@@ -38,6 +38,11 @@ export class DescargaCatalogosDTO {
     lotesLarva,
     precrias,
     siembras,
+    raleos,
+    alimentacion,
+    densidadPoblacional,
+    fisicoQuimica,
+    detalleFisicoQuimica,
     colaboradorId,
     grupoDatos,
   }) {
@@ -61,6 +66,17 @@ export class DescargaCatalogosDTO {
     this.precrias = precrias ?? [];
     this.siembras = siembras ?? [];
 
+    // Se agregan aqui porque descargarCatalogos() nunca los incluia:
+    // Reporteria filtraba con IDs locales contra finca_id/estanque_id
+    // que, para registros creados en la web, nunca llegaban al
+    // movil (no habia forma de bajarlos), asi que la comparacion
+    // de IDs jamas podia coincidir.
+    this.raleos = raleos ?? [];
+    this.alimentacion = alimentacion ?? [];
+    this.densidadPoblacional = densidadPoblacional ?? [];
+    this.fisicoQuimica = fisicoQuimica ?? [];
+    this.detalleFisicoQuimica = detalleFisicoQuimica ?? [];
+
     this._meta = {
       grupoDatos,
       colaboradorId,
@@ -83,6 +99,11 @@ export class DescargaCatalogosDTO {
         lotesLarva: this.lotesLarva.length,
         precrias: this.precrias.length,
         siembras: this.siembras.length,
+        raleos: this.raleos.length,
+        alimentacion: this.alimentacion.length,
+        densidadPoblacional: this.densidadPoblacional.length,
+        fisicoQuimica: this.fisicoQuimica.length,
+        detalleFisicoQuimica: this.detalleFisicoQuimica.length,
       },
     };
   }
