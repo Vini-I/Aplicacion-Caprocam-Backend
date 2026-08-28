@@ -247,6 +247,124 @@ async function eliminarProductoMantenimiento(
   );
 }
 
+async function descontarProductoMantenimientoTerminado(
+  connection,
+  {
+    mantenimientoId,
+    productoId,
+    cantidad,
+    grupoDatos,
+    creadoPorColaboradorId,
+    insertarRegistroSync,
+  }
+) {
+  const cantidadUsada =
+    Number(cantidad);
+
+  if (
+    !mantenimientoId ||
+    !productoId ||
+    Number.isNaN(cantidadUsada) ||
+    cantidadUsada <= 0
+  ) {
+    return;
+  }
+
+  const [tickets] =
+    await connection.execute(
+      `SELECT
+          id,
+          codigo_ticket,
+          estado_ticket
+       FROM mantenimiento_equipo
+       WHERE id = ?
+       AND grupo_datos = ?
+       AND activo = TRUE
+       AND deleted_at IS NULL
+       LIMIT 1`,
+      [
+        mantenimientoId,
+        grupoDatos,
+      ]
+    );
+
+  if (
+    tickets.length === 0 ||
+    tickets[0].estado_ticket !==
+    "Terminado"
+  ) {
+    return;
+  }
+
+  const [inventarios] =
+    await connection.execute(
+      `SELECT
+          id,
+          cantidad
+       FROM inventario
+       WHERE producto_id = ?
+       AND grupo_datos = ?
+       AND activo = TRUE
+       AND deleted_at IS NULL
+       LIMIT 1`,
+      [
+        productoId,
+        grupoDatos,
+      ]
+    );
+
+  if (inventarios.length === 0) {
+    return;
+  }
+
+  const inventario =
+    inventarios[0];
+
+  await connection.execute(
+    `UPDATE inventario
+     SET
+       cantidad = cantidad - ?,
+       version = version + 1
+     WHERE id = ?
+     AND grupo_datos = ?
+     AND activo = TRUE
+     AND deleted_at IS NULL`,
+    [
+      cantidadUsada,
+      inventario.id,
+      grupoDatos,
+    ]
+  );
+
+  await insertarRegistroSync(
+    connection,
+    "movimientos_inventario",
+    {
+      grupo_datos:
+        grupoDatos,
+
+      inventario_id:
+        inventario.id,
+
+      producto_id:
+        productoId,
+
+      tipo_movimiento:
+        "Salida",
+
+      cantidad:
+        cantidadUsada,
+
+      observacion:
+        `Salida automatica por mantenimiento terminado #${tickets[0].codigo_ticket ??
+        mantenimientoId
+        }.`,
+
+      creado_por_colaborador_id:
+        creadoPorColaboradorId,
+    }
+  );
+}
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
@@ -284,6 +402,11 @@ export async function sincronizarMantenimiento({
     } = cambios.mantenimientos;
 
     for (const r of crear) {
+      const codigoTicket =
+        r.codigoTicket ??
+        r.codigo_ticket ??
+        `MOB-${grupoDatos}-${Date.now()}`;
+
       const equipoId =
         r.equipoId ??
         r.equipo_id ??
@@ -302,18 +425,16 @@ export async function sincronizarMantenimiento({
         );
       }
 
-      const codigoTicket =
-        r.codigoTicket ??
-        r.codigo_ticket ??
-        `MOB-${grupoDatos}-${Date.now()}`;
-
       const existente =
         await buscarRegistroSync(
           connection,
           "mantenimiento_equipo",
           {
-            grupo_datos: grupoDatos,
-            codigo_ticket: codigoTicket,
+            grupo_datos:
+              grupoDatos,
+
+            codigo_ticket:
+              codigoTicket,
           }
         );
 
@@ -323,6 +444,7 @@ export async function sincronizarMantenimiento({
             r.idLocal ??
             r.id ??
             null,
+
           idServidor:
             existente.id,
         });
@@ -330,25 +452,19 @@ export async function sincronizarMantenimiento({
         continue;
       }
 
-      const costoManoObra =
-        Number(
-          r.costoManoObra ??
-          r.costo_mano_obra ??
-          0
-        ) || 0;
-
       const insertado =
         await insertarRegistroSync(
           connection,
           "mantenimiento_equipo",
           {
-            grupo_datos: grupoDatos,
-
-            equipo_id:
-              equipoId,
+            grupo_datos:
+              grupoDatos,
 
             codigo_ticket:
               codigoTicket,
+
+            equipo_id:
+              equipoId,
 
             fecha_mantenimiento:
               normalizarFecha(
@@ -372,18 +488,30 @@ export async function sincronizarMantenimiento({
               null,
 
             costo_mano_obra:
-              costoManoObra,
+              r.costoManoObra ??
+              r.costo_mano_obra ??
+              0,
 
             costo_productos:
+              r.costoProductos ??
+              r.costo_productos ??
               0,
 
             costo_total_estimado:
-              costoManoObra,
+              r.costoTotalEstimado ??
+              r.costo_total_estimado ??
+              0,
 
             estado_ticket:
               r.estadoTicket ??
               r.estado_ticket ??
               "En espera",
+
+            estado_equipo:
+              r.estadoEquipo ??
+              r.estado_equipo ??
+              equipo.estado_operativo ??
+              "Mantenimiento",
 
             creado_por_colaborador_id:
               r.creadoPorColaboradorId ??
@@ -401,6 +529,10 @@ export async function sincronizarMantenimiento({
         idServidor:
           insertado.insertId,
       });
+
+      mantenimientosParaRecalcular.add(
+        insertado.insertId
+      );
     }
 
     for (const r of actualizar) {
@@ -819,16 +951,43 @@ export async function sincronizarMantenimiento({
         r.producto_id ??
         null;
 
-      const cantidad =
+      const cantidadRecibida =
         Number(r.cantidad);
 
-      if (
-        Number.isNaN(cantidad) ||
-        cantidad <= 0
-      ) {
-        throw new Error(
-          "La cantidad del producto de mantenimiento debe ser mayor a 0."
+      const cantidad =
+        Number.isFinite(cantidadRecibida) &&
+          cantidadRecibida > 0
+          ? cantidadRecibida
+          : 1;
+
+      const existente =
+        await buscarRegistroSync(
+          connection,
+          "mantenimiento_equipo_productos",
+          {
+            grupo_datos:
+              grupoDatos,
+
+            mantenimiento_equipo_id:
+              mantenimientoId,
+
+            producto_id:
+              productoId,
+          }
         );
+
+      if (existente) {
+        resultado.productosMantenimiento.creados.push({
+          idLocal:
+            r.idLocal ??
+            r.id ??
+            null,
+
+          idServidor:
+            existente.id,
+        });
+
+        continue;
       }
 
       const costoRecibido =
@@ -860,10 +1019,12 @@ export async function sincronizarMantenimiento({
       if (
         subtotalRecibido === undefined ||
         subtotalRecibido === null ||
-        Number.isNaN(subtotal)
+        Number.isNaN(subtotal) ||
+        subtotal <= 0
       ) {
         subtotal =
-          cantidad * costoUnitario;
+          cantidad *
+          costoUnitario;
       }
 
       const insertado =
@@ -905,6 +1066,18 @@ export async function sincronizarMantenimiento({
         idServidor:
           insertado.insertId,
       });
+
+      await descontarProductoMantenimientoTerminado(
+        connection,
+        {
+          mantenimientoId,
+          productoId,
+          cantidad,
+          grupoDatos,
+          creadoPorColaboradorId,
+          insertarRegistroSync,
+        }
+      );
 
       mantenimientosParaRecalcular.add(
         mantenimientoId
