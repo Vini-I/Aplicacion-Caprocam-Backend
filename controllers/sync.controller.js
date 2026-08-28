@@ -927,13 +927,37 @@ export async function subirCambios(req, res) {
       }
     }
 
-    return error(
-      res,
-      "Error al subir los cambios. Se revirtieron todos los cambios.",
-      err,
-      500
-    );
+    return error(res, "Error durante la subida de cambios.", err, 500);
   } finally {
     if (connection) connection.release();
+  }
+}
+
+export async function validarORenovarToken(req, res) {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return error(res, 'Token requerido', null, 401);
+
+    try {
+      jwt.verify(token, JWT_SECRET);
+      return exito(res, 'Token valido', { token });
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        const decoded = jwt.verify(token, JWT_SECRET, { ignoreExpiration: true });
+        if (!decoded.esColaborador) {
+            return error(res, 'Token invalido', null, 403);
+        }
+        const { iat, exp, ...payload } = decoded;
+        const nuevoToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "4h" });
+        res.setHeader('X-Renewed-Token', nuevoToken);
+        res.setHeader('Access-Control-Expose-Headers', 'X-Renewed-Token');
+        return exito(res, 'Token renovado', { token: nuevoToken });
+      }
+      return error(res, 'Token invalido', null, 401);
+    }
+  } catch (err) {
+    return error(res, 'Error al validar token', err, 500);
   }
 }
