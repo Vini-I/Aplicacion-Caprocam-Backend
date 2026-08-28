@@ -689,6 +689,94 @@ export async function subirCambios(req, res) {
       }
     }
 
+
+    if (cambios.siembras) {
+      const { crear = [], actualizar = [], eliminar = [] } = cambios.siembras;
+
+      resultado.siembras = {
+        creados: [],
+        actualizados: 0,
+        eliminados: 0,
+      };
+
+      for (const r of crear) {
+        const estanqueId = r.estanque_id ?? r.estanqueId ?? null;
+        const grupoDatosVal = r.grupo_datos ?? grupoDatos;
+        
+        const existente = estanqueId
+          ? await buscarRegistroSync(connection, "siembras", {
+              estanque_id: estanqueId,
+              estado: "Activa",
+              grupo_datos: grupoDatosVal,
+            })
+          : null;
+
+        if (existente) {
+          resultado.siembras.creados.push({
+            idLocal: r.id ?? r.idLocal ?? null,
+            idServidor: existente.id,
+          });
+          continue;
+        }
+
+        const insertado = await insertarRegistroSync(connection, "siembras", {
+          grupo_datos: grupoDatos,
+          lote_larva_id: r.lote_larva_id ?? r.loteLarvaId ?? null,
+          precria_id: r.precria_id ?? r.precriaId ?? null,
+          finca_id: r.finca_id ?? r.fincaId ?? null,
+          estanque_id: estanqueId,
+          fecha_siembra: normalizarFecha(r.fecha_siembra ?? r.fechaSiembra),
+          tecnica_cultivo: r.tecnica_cultivo ?? r.tecnicaCultivo ?? null,
+          densidad_poblacional: r.densidad_poblacional ?? r.densidadPoblacional ?? null,
+          cantidad_sembrada: r.cantidad_sembrada ?? r.cantidadSembrada ?? null,
+          pl_siembra: r.pl_siembra ?? r.plSiembra ?? null,
+          duracion_ciclo: r.duracion_ciclo ?? r.duracionCiclo ?? null,
+          estado: r.estado ?? "Activa",
+          creado_por_colaborador_id: creadoPorColaboradorId,
+          activo: 1,
+        });
+
+        resultado.siembras.creados.push({
+          idLocal: r.id ?? r.idLocal ?? null,
+          idServidor: insertado.insertId,
+        });
+      }
+
+      for (const r of actualizar) {
+        const idReal = r.servidor_id ?? r.servidorId ?? r.id;
+
+        const actualizado = await actualizarRegistroSync(
+          connection,
+          "siembras",
+          {
+            lote_larva_id: r.lote_larva_id ?? r.loteLarvaId,
+            precria_id: r.precria_id ?? r.precriaId,
+            finca_id: r.finca_id ?? r.fincaId,
+            estanque_id: r.estanque_id ?? r.estanqueId,
+            fecha_siembra: normalizarFecha(r.fecha_siembra ?? r.fechaSiembra),
+            tecnica_cultivo: r.tecnica_cultivo ?? r.tecnicaCultivo,
+            densidad_poblacional: r.densidad_poblacional ?? r.densidadPoblacional,
+            cantidad_sembrada: r.cantidad_sembrada ?? r.cantidadSembrada,
+            pl_siembra: r.pl_siembra ?? r.plSiembra,
+            duracion_ciclo: r.duracion_ciclo ?? r.duracionCiclo,
+            estado: r.estado,
+          },
+          {
+            id: idReal,
+            grupo_datos: grupoDatos,
+          }
+        );
+
+        resultado.siembras.actualizados += actualizado.affectedRows ?? 0;
+      }
+
+      for (const id of eliminar) {
+        await eliminarLogicoSync(connection, "siembras", id, grupoDatos);
+        resultado.siembras.eliminados++;
+      }
+    }
+
+
     if (cambios.alimentacion) {
       resultado.alimentacion =
         await sincronizarAlimentacion({
