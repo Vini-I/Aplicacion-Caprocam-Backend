@@ -380,7 +380,7 @@ export async function toggle(id, grupoDatos, esGlobal = false) {
 
     if (!actual) return null;
 
-    const estabaEncendido = actual.estado === "Encendido";
+    const estabaEncendido = String(actual.estado).toLowerCase() === "encendido";
 
     // Validar que no se pueda encender si está en Mantenimiento o Inactivo
     if (!estabaEncendido && (actual.estadoOperativo === "Mantenimiento" || actual.estadoOperativo === "Inactivo")) {
@@ -394,9 +394,9 @@ export async function toggle(id, grupoDatos, esGlobal = false) {
         let sql = `
             UPDATE equipos
             SET estado = 'Apagado',
-                horas_actuales = ROUND(horas_actuales + (TIMESTAMPDIFF(SECOND, fecha_ultimo_encendido, NOW()) / 3600.0), 2),
+                horas_actuales = ROUND(COALESCE(horas_actuales, 0) + (TIMESTAMPDIFF(SECOND, COALESCE(fecha_ultimo_encendido, NOW()), NOW()) / 3600.0), 2),
                 estado_operativo = IF(
-                    horas_mantenimiento IS NOT NULL AND horas_mantenimiento > 0 AND ROUND(horas_actuales + (TIMESTAMPDIFF(SECOND, fecha_ultimo_encendido, NOW()) / 3600.0), 2) >= horas_mantenimiento,
+                    horas_mantenimiento IS NOT NULL AND horas_mantenimiento > 0 AND ROUND(COALESCE(horas_actuales, 0) + (TIMESTAMPDIFF(SECOND, COALESCE(fecha_ultimo_encendido, NOW()), NOW()) / 3600.0), 2) >= horas_mantenimiento,
                     'Mantenimiento',
                     estado_operativo
                 ),

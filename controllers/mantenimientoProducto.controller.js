@@ -45,7 +45,7 @@ export async function getProductosByMantenimiento(req, res) {
         if (esGlobal && !req.query.grupoDatos) {
             const [rows] = await pool.query(
                 `SELECT mp.*, mp.grupo_datos AS grupoDatos, p.nombre AS nombreProducto
-                 FROM mantenimiento_productos mp
+                 FROM mantenimiento_equipo_productos mp
                  LEFT JOIN productos p ON mp.producto_id = p.id
                  WHERE mp.mantenimiento_equipo_id = ?
                    AND mp.activo = TRUE AND mp.deleted_at IS NULL`,
