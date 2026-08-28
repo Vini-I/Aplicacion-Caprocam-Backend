@@ -48,11 +48,15 @@ export class FisicoQuimicaDTO {
         - grupoDatos: Grupo de datos.
         - fincaId: Identificador de la finca.
         - estanqueId: Identificador del estanque.
-        - fecha: Fecha de la lectura.
-        - ph: Arreglo de mediciones de pH.
-        - salinidad: Arreglo de mediciones de salinidad.
-        - temperatura: Arreglo de mediciones de temperatura.
-        - oxigenoDisuelto: Arreglo de mediciones de oxigeno.
+        - fecha: Fecha real en que se realizaron las mediciones.
+        - ph: Arreglo de mediciones de pH. Cada medicion contiene
+          valor y etiqueta; horaMedicion es opcional.
+        - salinidad: Arreglo de mediciones de salinidad. Cada medicion
+          contiene valor y etiqueta; horaMedicion es opcional.
+        - temperatura: Arreglo de mediciones de temperatura. Cada
+          medicion contiene valor y etiqueta; horaMedicion es opcional.
+        - oxigenoDisuelto: Arreglo de mediciones de oxigeno. Cada
+          medicion contiene valor, etiqueta y horaMedicion.
         - creadoPorUsuarioId: Usuario web que registro la
         lectura, resuelto por obtenerContextoPeticion.
         - creadoPorColaboradorId: Colaborador movil que

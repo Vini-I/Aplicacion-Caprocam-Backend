@@ -9,6 +9,7 @@ Modulo: Compradores
 Descripcion:
 Capa de datos del modulo de compradores.
 Conectado a MySQL via pool. Usa borrado logico y auditoria dual.
+Mantiene integridad referencial con el historial de ventas.
 //////////////////////////////////////////////////////////
 */
 
@@ -124,15 +125,15 @@ export async function create(dto, grupoDatos) {
             [dto.cedula, grupoDatos]
         );
         if (existente.length > 0) {
-            throw new Error('Ya existe un comprador registrado con esta cedula.');
+            throw new Error('Ya existe un comprador registrado con esta cédula.');
         }
     }
 
     const [result] = await pool.query(
         `INSERT INTO compradores 
-            (grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado,
+            (grupo_datos, nombre, cedula, telefono, correo, direccion, notas, estado, activo,
              creado_por_usuario_id, creado_por_colaborador_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, "ACTIVO", ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, "ACTIVO", TRUE, ?, ?)`,
         [
             grupoDatos,
             dto.nombre,
@@ -169,7 +170,7 @@ export async function update(id, dto, grupoDatos) {
             [dto.cedula, grupoDatos, id]
         );
         if (existente.length > 0) {
-            throw new Error('Ya existe otro comprador registrado con esta cedula.');
+            throw new Error('Ya existe otro comprador registrado con esta cédula.');
         }
     }
 
@@ -209,7 +210,7 @@ export async function remove(id, grupoDatos) {
 
     await pool.query(
         `UPDATE compradores
-         SET estado = "INACTIVO", deleted_at = CURRENT_TIMESTAMP
+         SET estado = "INACTIVO", activo = FALSE, deleted_at = CURRENT_TIMESTAMP
          WHERE id = ? AND grupo_datos = ?`,
         [id, grupoDatos]
     );

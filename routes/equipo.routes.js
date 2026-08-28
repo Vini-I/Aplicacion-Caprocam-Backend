@@ -31,7 +31,8 @@ import {
     getEquipoById,
     createEquipo,
     updateEquipo,
-    deleteEquipo
+    deleteEquipo,
+    toggleEquipo
 } from "../controllers/equipo.controller.js";
 
 /*
@@ -53,6 +54,7 @@ router.get("/:id",  verificarAuth, getEquipoById);
 router.post("/",    verificarAuth, validarBodyEquipo, createEquipo);
 router.put("/:id",  verificarAuth, validarBodyEquipo, updateEquipo);
 router.delete("/:id", verificarAuth, deleteEquipo);
+router.put("/:id/toggle",   verificarAuth, toggleEquipo);
 
 /*
 //////////////////////////////////////////////////////////
@@ -61,3 +63,4 @@ EXPORT
 */
 
 export default router;
+

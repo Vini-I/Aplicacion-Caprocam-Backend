@@ -9,6 +9,7 @@ Modulo: Productos
 Descripcion:
 Recibe las peticiones HTTP de productos, delega al modelo.
 Soporta GETs globales para Administrador Caprocam (22776226).
+Aplica captura de errores por duplicados y validación de fechas.
 //////////////////////////////////////////////////////////
 */
 
@@ -102,7 +103,13 @@ export async function createProducto(req, res) {
 
         return exito(res, 'Producto creado correctamente.', nuevo, 201);
     } catch (err) {
-        return error(res, 'Error al crear producto.', err);
+        if (err.code === 'ER_DUP_ENTRY' || err.message?.includes('ER_DUP_ENTRY')) {
+            return error(res, 'Ya existe un producto registrado con este código.', null, 400);
+        }
+        if (err.message?.includes('fecha')) {
+            return error(res, err.message, null, 400);
+        }
+        return error(res, err.message || 'Error al crear producto.', err);
     }
 }
 
@@ -121,7 +128,13 @@ export async function updateProducto(req, res) {
 
         return exito(res, 'Producto actualizado correctamente.', actualizado);
     } catch (err) {
-        return error(res, 'Error al actualizar producto.', err);
+        if (err.code === 'ER_DUP_ENTRY' || err.message?.includes('ER_DUP_ENTRY')) {
+            return error(res, 'Ya existe un producto registrado con este código.', null, 400);
+        }
+        if (err.message?.includes('fecha')) {
+            return error(res, err.message, null, 400);
+        }
+        return error(res, err.message || 'Error al actualizar producto.', err);
     }
 }
 

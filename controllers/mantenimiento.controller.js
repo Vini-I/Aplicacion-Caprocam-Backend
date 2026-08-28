@@ -113,7 +113,7 @@ export async function getMantenimientoById(req, res) {
                         costo_productos AS costoProductos,
                         costo_total_estimado AS costoTotalEstimado,
                         estado_ticket AS estadoTicket, activo
-                 FROM mantenimientos WHERE id = ? AND activo = TRUE AND deleted_at IS NULL`,
+                 FROM mantenimiento_equipo WHERE id = ? AND activo = TRUE AND deleted_at IS NULL`,
                 [req.params.id]
             );
             if (rows.length === 0)
