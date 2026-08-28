@@ -3,12 +3,9 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: procedencia.controller.js
-Autor: Oscar Mario / Marco Vásquez
-Fecha: 18/08/2026
+Autor: Oscar Mario / Marco Vásquez / Joan Campos
+Fecha: 25/08/2026
 Modulo: Procedencia
-Descripcion:
-Controlador HTTP para el modulo de procedencia.
-Soporta GETs globales para Administrador Caprocam (22776226).
 //////////////////////////////////////////////////////////
 */
 
@@ -19,6 +16,17 @@ import { exito, error } from "../common/respuestaJson.js";
 import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 export async function getProcedencias(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion GET para obtener todas las procedencias.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Lista de procedencias.
+    */
     try {
         const user = req.user ?? null;
         const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
@@ -40,6 +48,17 @@ export async function getProcedencias(req, res) {
 }
 
 export async function getProcedenciaById(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion GET para obtener una procedencia por ID.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Procedencia solicitada.
+    */
     try {
         const user = req.user ?? null;
         const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
@@ -65,6 +84,17 @@ export async function getProcedenciaById(req, res) {
 }
 
 export async function createProcedencia(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion POST para crear una procedencia.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Procedencia creada.
+    */
     try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
             obtenerContextoPeticion(req);
@@ -85,6 +115,17 @@ export async function createProcedencia(req, res) {
 }
 
 export async function updateProcedencia(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion PUT para actualizar una procedencia.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Procedencia actualizada.
+    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
 
@@ -105,8 +146,26 @@ export async function updateProcedencia(req, res) {
 }
 
 export async function deleteProcedencia(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion DELETE para borrar (logico) una procedencia.
+    Valida previamente que no este asignada a lotes de larva.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Confirmacion de eliminacion o error 409 si esta en uso.
+    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
+        
+        const enUso = await ProcedenciaModel.estaEnUso(req.params.id, grupoDatos);
+        if (enUso) {
+            return error(res, "No se puede eliminar esta procedencia porque está asignada a uno o más lotes de larva.", null, 409);
+        }
+
         const eliminado = await ProcedenciaModel.remove(req.params.id, grupoDatos);
         if (!eliminado) return error(res, "Procedencia no encontrada.", null, 404);
         return exito(res, "Procedencia eliminada correctamente.", null);

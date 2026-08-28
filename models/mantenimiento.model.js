@@ -146,10 +146,133 @@ export async function create(dto, grupoDatos) {
     return findById(result.insertId, grupoDatos);
 }
 
-export async function update(id, dto, grupoDatos) {
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES DE INVENTARIO
+//////////////////////////////////////////////////////////
+*/
+
+async function registrarMovimientoInventario(connection, {
+    grupoDatos,
+    productoId,
+    tipoMovimiento,
+    cantidad,
+    observacion,
+    creadoPorUsuarioId,
+    creadoPorColaboradorId,
+}) {
+    const cantidadMovimiento = Number(cantidad);
+
+    if (Number.isNaN(cantidadMovimiento) || cantidadMovimiento <= 0) {
+        const err = new Error(
+            'La cantidad del movimiento de inventario debe ser mayor que cero.'
+        );
+        err.status = 422;
+        throw err;
+    }
+
+    const [rows] = await connection.query(
+        `SELECT i.id, i.cantidad, p.nombre AS nombre_producto
+         FROM inventario i
+         LEFT JOIN productos p ON i.producto_id = p.id
+         WHERE i.producto_id = ?
+           AND i.grupo_datos = ?
+           AND i.activo = TRUE
+           AND i.deleted_at IS NULL
+         LIMIT 1
+         FOR UPDATE`,
+        [productoId, grupoDatos]
+    );
+
+    if (!rows.length) {
+        const err = new Error(
+            'No existe un registro de inventario activo para el producto seleccionado.'
+        );
+        err.status = 422;
+        throw err;
+    }
+
+    const inventario = rows[0];
+    const cantidadActual = Number(inventario.cantidad);
+    const nombreProd = inventario.nombre_producto || `ID ${productoId}`;
+
+    let cantidadNueva;
+
+    switch (tipoMovimiento) {
+        case 'Entrada':
+            cantidadNueva = cantidadActual + cantidadMovimiento;
+            break;
+
+        case 'Salida':
+            cantidadNueva = cantidadActual - cantidadMovimiento;
+
+            if (cantidadNueva < 0) {
+                const err = new Error(
+                    `No hay suficiente stock para el producto "${nombreProd}". ` +
+                    `Disponible: ${cantidadActual}, requerido: ${cantidadMovimiento}.`
+                );
+                err.status = 409;
+                throw err;
+            }
+            break;
+
+        case 'Ajuste':
+            cantidadNueva = cantidadMovimiento;
+            break;
+
+        default: {
+            const err = new Error(
+                `Tipo de movimiento de inventario invalido: ${tipoMovimiento}`
+            );
+            err.status = 422;
+            throw err;
+        }
+    }
+
+    await connection.query(
+        `UPDATE inventario
+         SET cantidad = ?, version = version + 1
+         WHERE id = ?`,
+        [cantidadNueva, inventario.id]
+    );
+
+    await connection.query(
+        `INSERT INTO movimientos_inventario (
+            grupo_datos,
+            inventario_id,
+            producto_id,
+            tipo_movimiento,
+            cantidad,
+            observacion,
+            creado_por_usuario_id,
+            creado_por_colaborador_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            grupoDatos,
+            inventario.id,
+            productoId,
+            tipoMovimiento,
+            cantidadMovimiento,
+            observacion ?? null,
+            creadoPorUsuarioId ?? null,
+            creadoPorColaboradorId ?? null,
+        ]
+    );
+
+    return {
+        inventarioId: inventario.id,
+        cantidadAnterior: cantidadActual,
+        cantidadNueva,
+    };
+}
+
+export async function update(id, dto, grupoDatos, contexto = {}) {
     /*
     Descripcion:
-    Actualiza un ticket de mantenimiento e incrementa version.
+    Actualiza un ticket de mantenimiento dentro de una transaccion.
+    Si cambia a 'Terminado', descuenta stock de sus productos.
+    Si cambia de 'Terminado' a otro estado, revierte el stock (Entrada).
     codigoTicket no se puede modificar.
     costoProductos no se toca aqui — lo maneja recalcularCostos.
 
@@ -157,56 +280,184 @@ export async function update(id, dto, grupoDatos) {
     - id:         ID del ticket.
     - dto:        Objeto MantenimientoDTO con los nuevos datos.
     - grupoDatos: Grupo de datos del usuario en sesion.
+    - contexto:   Objeto con creadoPorUsuarioId y creadoPorColaboradorId.
 
     Retorna:
     - El ticket actualizado o null si no existe.
     */
-    const [result] = await pool.query(
-        `UPDATE mantenimiento_equipo
-         SET equipo_id = ?, fecha_mantenimiento = ?, titulo_ticket = ?,
-             descripcion_ticket = ?, tipo_personal = ?, costo_mano_obra = ?,
-             costo_total_estimado = costo_productos + ?,
-             estado_ticket = ?, version = version + 1
-         WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
-        [
-            dto.equipoId,
-            dto.fechaMantenimiento,
-            dto.tituloTicket,
-            dto.descripcionTicket,
-            dto.tipoPersonal,
-            dto.costoManoObra,
-            dto.costoManoObra,
-            dto.estadoTicket,
-            id,
-            grupoDatos,
-        ]
-    );
-    if (result.affectedRows === 0) return null;
-    return findById(id, grupoDatos);
+    const { creadoPorUsuarioId, creadoPorColaboradorId } = contexto;
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        const [filas] = await connection.query(
+            `SELECT * FROM mantenimiento_equipo
+             WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
+             FOR UPDATE`,
+            [id, grupoDatos]
+        );
+
+        if (filas.length === 0) {
+            await connection.rollback();
+            return null;
+        }
+
+        const actual = mapearMantenimiento(filas[0]);
+        const estadoAnterior = actual.estadoTicket;
+        const nuevoEstado = dto.estadoTicket;
+
+        // Si cambia a 'Terminado' y antes no estaba 'Terminado': descontar stock
+        if (nuevoEstado === 'Terminado' && estadoAnterior !== 'Terminado') {
+            const [prods] = await connection.query(
+                `SELECT producto_id, cantidad FROM mantenimiento_equipo_productos
+                 WHERE mantenimiento_equipo_id = ? AND grupo_datos = ?
+                   AND activo = TRUE AND deleted_at IS NULL`,
+                [id, grupoDatos]
+            );
+
+            for (const prod of prods) {
+                await registrarMovimientoInventario(connection, {
+                    grupoDatos,
+                    productoId: prod.producto_id,
+                    tipoMovimiento: 'Salida',
+                    cantidad: prod.cantidad,
+                    observacion: `Salida automatica por finalizacion de ticket de mantenimiento #${actual.codigoTicket}.`,
+                    creadoPorUsuarioId,
+                    creadoPorColaboradorId,
+                });
+            }
+        }
+
+        // Si cambia de 'Terminado' a otro estado: revertir stock (Entrada)
+        if (estadoAnterior === 'Terminado' && nuevoEstado !== 'Terminado') {
+            const [prods] = await connection.query(
+                `SELECT producto_id, cantidad FROM mantenimiento_equipo_productos
+                 WHERE mantenimiento_equipo_id = ? AND grupo_datos = ?
+                   AND activo = TRUE AND deleted_at IS NULL`,
+                [id, grupoDatos]
+            );
+
+            for (const prod of prods) {
+                await registrarMovimientoInventario(connection, {
+                    grupoDatos,
+                    productoId: prod.producto_id,
+                    tipoMovimiento: 'Entrada',
+                    cantidad: prod.cantidad,
+                    observacion: `Reversion automatica de stock por reapertura de ticket de mantenimiento #${actual.codigoTicket}.`,
+                    creadoPorUsuarioId,
+                    creadoPorColaboradorId,
+                });
+            }
+        }
+
+        const [result] = await connection.query(
+            `UPDATE mantenimiento_equipo
+             SET equipo_id = ?, fecha_mantenimiento = ?, titulo_ticket = ?,
+                 descripcion_ticket = ?, tipo_personal = ?, costo_mano_obra = ?,
+                 costo_total_estimado = costo_productos + ?,
+                 estado_ticket = ?, version = version + 1
+             WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL`,
+            [
+                dto.equipoId,
+                dto.fechaMantenimiento,
+                dto.tituloTicket,
+                dto.descripcionTicket,
+                dto.tipoPersonal,
+                dto.costoManoObra,
+                dto.costoManoObra,
+                dto.estadoTicket,
+                id,
+                grupoDatos,
+            ]
+        );
+
+        if (result.affectedRows === 0) {
+            await connection.rollback();
+            return null;
+        }
+
+        await connection.commit();
+        return findById(id, grupoDatos);
+    } catch (err) {
+        await connection.rollback();
+        throw err;
+    } finally {
+        connection.release();
+    }
 }
 
-export async function remove(id, grupoDatos) {
+export async function remove(id, grupoDatos, contexto = {}) {
     /*
     Descripcion:
-    Borrado logico del ticket.
+    Borrado logico del ticket dentro de una transaccion.
+    Si el ticket estaba 'Terminado', revierte el stock de sus productos.
 
     Parametros:
     - id:         ID del ticket.
     - grupoDatos: Grupo de datos del usuario en sesion.
+    - contexto:   Objeto con creadoPorUsuarioId y creadoPorColaboradorId.
 
     Retorna:
     - El ticket antes de ser desactivado, o null si no existe.
     */
-    const mantenimiento = await findById(id, grupoDatos);
-    if (!mantenimiento) return null;
+    const { creadoPorUsuarioId, creadoPorColaboradorId } = contexto;
+    const connection = await pool.getConnection();
 
-    await pool.query(
-        `UPDATE mantenimiento_equipo
-         SET activo = FALSE, deleted_at = CURRENT_TIMESTAMP, version = version + 1
-         WHERE id = ? AND grupo_datos = ?`,
-        [id, grupoDatos]
-    );
-    return mantenimiento;
+    try {
+        await connection.beginTransaction();
+
+        const [filas] = await connection.query(
+            `SELECT * FROM mantenimiento_equipo
+             WHERE id = ? AND grupo_datos = ? AND activo = TRUE AND deleted_at IS NULL
+             FOR UPDATE`,
+            [id, grupoDatos]
+        );
+
+        if (filas.length === 0) {
+            await connection.rollback();
+            return null;
+        }
+
+        const mantenimiento = mapearMantenimiento(filas[0]);
+
+        // Si el ticket a eliminar estaba 'Terminado', revertir el stock de sus productos
+        if (mantenimiento.estadoTicket === 'Terminado') {
+            const [prods] = await connection.query(
+                `SELECT producto_id, cantidad FROM mantenimiento_equipo_productos
+                 WHERE mantenimiento_equipo_id = ? AND grupo_datos = ?
+                   AND activo = TRUE AND deleted_at IS NULL`,
+                [id, grupoDatos]
+            );
+
+            for (const prod of prods) {
+                await registrarMovimientoInventario(connection, {
+                    grupoDatos,
+                    productoId: prod.producto_id,
+                    tipoMovimiento: 'Entrada',
+                    cantidad: prod.cantidad,
+                    observacion: `Reversion de stock por eliminacion de ticket de mantenimiento #${mantenimiento.codigoTicket}.`,
+                    creadoPorUsuarioId,
+                    creadoPorColaboradorId,
+                });
+            }
+        }
+
+        await connection.query(
+            `UPDATE mantenimiento_equipo
+             SET activo = FALSE, deleted_at = CURRENT_TIMESTAMP, version = version + 1
+             WHERE id = ? AND grupo_datos = ?`,
+            [id, grupoDatos]
+        );
+
+        await connection.commit();
+        return mantenimiento;
+    } catch (err) {
+        await connection.rollback();
+        throw err;
+    } finally {
+        connection.release();
+    }
 }
 
 export async function recalcularCostos(mantenimientoId, grupoDatos) {

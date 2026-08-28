@@ -632,7 +632,8 @@ async function obtenerDetallesPorLecturas(
             lectura_id,
             tipo_medicion,
             etiqueta,
-            valor
+            valor,
+            hora_medicion
         FROM fisico_quimico_detalle
         WHERE lectura_id IN (${marcadores})
         AND deleted_at IS NULL
@@ -673,7 +674,7 @@ async function insertarDetalles(
     }
 
     const marcadores = detalles
-        .map(() => '(?, ?, ?, ?, ?, ?)')
+        .map(() => '(?, ?, ?, ?, ?, ?, ?)')
         .join(', ');
 
     const valores = detalles.flat();
@@ -685,6 +686,7 @@ async function insertarDetalles(
             tipo_medicion,
             etiqueta,
             valor,
+            hora_medicion,
             creado_por_usuario_id,
             creado_por_colaborador_id
         )
@@ -777,6 +779,7 @@ function agregarMediciones(
             tipoMedicion,
             String(medicion.etiqueta),
             Number(medicion.valor),
+            medicion.horaMedicion ?? null,
             creadoPorUsuarioId ?? null,
             creadoPorColaboradorId ?? null
         ]);
@@ -811,7 +814,8 @@ function agruparDetalles(rows) {
 
         const medicion = {
             valor: Number(row.valor),
-            etiqueta: row.etiqueta
+            etiqueta: row.etiqueta,
+            horaMedicion: row.hora_medicion ?? null
         };
 
         if (row.tipo_medicion === TIPO_PH) {

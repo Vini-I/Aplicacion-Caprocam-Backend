@@ -187,28 +187,94 @@ export async function update(codigoCBO, grupoDatos, dto){
     return await findByIdCBO(codigoCBO, grupoDatos);
 }
 
-export async function remove(codigoCBO, grupoDatos){
+export async function remove(fincaId, grupoDatos) {
     /*
     Descripcion:
-    Elimina un registro de finca existente.
+    Elimina un registro de finca existente, marcándolo 
+    como inactivo y estableciendo la fecha de eliminación.
 
-    Parametros:
-    - codigoCBO: Codigo CBO de la finca a eliminar.
+    Parametros: 
+    - fincaId: ID de la finca a eliminar.
+    - grupoDatos: Grupo de datos al que pertenece la finca.
 
     Retorna:
-    - El registro de finca eliminado, o null si no se encuentra.
+    - true si la finca fue eliminada, false si no se encontró.
     */
 
-    const finca=await findByIdCBO(codigoCBO, grupoDatos);
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
 
-    if(!finca) return null;
+        await connection.execute(
+            `UPDATE estanques 
+             SET activo = FALSE, deleted_at = CURRENT_TIMESTAMP 
+             WHERE finca_id = ? AND grupo_datos = ? AND deleted_at IS NULL`,
+            [fincaId, grupoDatos]
+        );
 
-    await pool.execute(
-        `UPDATE fincas
-        SET deleted_at = NOW()
-        WHERE codigo_cbo = ?
-        AND grupo_datos = ?`,
-        [codigoCBO, grupoDatos]
-    );
-    return finca;
+        const [result] = await connection.execute(
+            `UPDATE fincas 
+             SET activo = FALSE, deleted_at = CURRENT_TIMESTAMP 
+             WHERE id = ? AND grupo_datos = ? AND deleted_at IS NULL`,
+            [fincaId, grupoDatos]
+        );
+
+        await connection.commit();
+        return result.affectedRows > 0;
+    } catch (err) {
+        await connection.rollback();
+        throw err;
+    } finally {
+        connection.release();
+    }
+}
+
+/*
+//////////////////////////////////////////////////////////
+FUNCIONES SECUNDARIAS
+//////////////////////////////////////////////////////////
+*/
+
+export async function tieneEstanquesOcupados(fincaId, grupoDatos) {
+    /*
+    Descripcion:
+    Verifica si una finca tiene estanques ocupados por siembras o precrías activas.
+
+    Parametros:
+    - fincaId: ID de la finca a verificar.
+    - grupoDatos: Grupo de datos al que pertenece la finca.
+
+    Retorna:
+    - true si la finca tiene estanques ocupados, false en caso contrario.
+    */
+
+    const query = `
+        SELECT COUNT(*) AS ocupados
+        FROM estanques e
+        WHERE e.finca_id = ? 
+          AND e.grupo_datos = ? 
+          AND e.activo = TRUE 
+          AND e.deleted_at IS NULL
+          AND (
+            EXISTS (
+                SELECT 1 FROM siembras s 
+                WHERE s.estanque_id = e.id 
+                  AND s.grupo_datos = ? 
+                  AND s.estado = 'Activa' 
+                  AND s.activo = TRUE 
+                  AND s.deleted_at IS NULL
+            )
+            OR EXISTS (
+                SELECT 1 FROM precrias p 
+                WHERE p.estanque_id = e.id 
+                  AND p.grupo_datos = ? 
+                  AND p.estado = 'Activa' 
+                  AND p.activo = TRUE 
+                  AND p.deleted_at IS NULL
+            )
+          );
+    `;
+
+    const [rows] = await pool.query(query, [fincaId, grupoDatos, grupoDatos, grupoDatos]);
+    return rows[0].ocupados > 0;
 }

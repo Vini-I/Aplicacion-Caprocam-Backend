@@ -8,7 +8,7 @@ Fecha: 13/08/2026
 Modulo: Sincronizacion
 Descripcion:
 DTO para la descarga de catalogos del modulo de sincronizacion.
-Estructura y empaqueta la base de datos filtrada por el 
+Estructura y empaqueta la base de datos filtrada por el
 contexto del colaborador para poblar el SQLite local.
 //////////////////////////////////////////////////////////
 */
@@ -18,6 +18,7 @@ contexto del colaborador para poblar el SQLite local.
 DTO DE DESCARGA MASIVA
 //////////////////////////////////////////////////////////
 */
+
 export class DescargaCatalogosDTO {
   constructor({
     fincas,
@@ -28,74 +29,84 @@ export class DescargaCatalogosDTO {
     inventario,
     equipos,
     tareas,
+    mantenimientos,
+    mantenimientoTareas,
+    mantenimientoProductos,
     laboratorios,
     procedencias,
     proveedoresLarva,
     lotesLarva,
     precrias,
     siembras,
+    enfermedades,
+    parasitologias,
+    fisicoQuimica,
+    detalleFisicoQuimica,
+    crecimientos,
+    calculosCrecimiento,
+    usuarios,
+    trazabilidad,
     colaboradorId,
     grupoDatos,
   }) {
-        /*
-        Descripcion:
-        Empaqueta todos los catalogos en un objeto estructurado.
+    this.fincas = fincas ?? [];
+    this.estanques = estanques ?? [];
+    this.proveedores = proveedores ?? [];
+    this.productos = productos ?? [];
+    this.compradores = compradores ?? [];
+    this.inventario = inventario ?? [];
+    this.equipos = equipos ?? [];
+    this.tareas = tareas ?? [];
 
-        Parametros:
-        - fincas:        Array de fincas del grupo.
-        - estanques:     Array de estanques del grupo.
-        - proveedores:   Array de proveedores del grupo.
-        - productos:     Array de productos del grupo.
-        - compradores:   Array de compradores del grupo.
-        - inventario:    Array de inventario del grupo.
-        - equipos:       Array de equipos del grupo.
-        - tareas:        Array de tareas del grupo.
-        - laboratorios:  Array de laboratorios del grupo.
-        - procedencias:  Array de procedencias del grupo.
-        - proveedoresLarva: Array de proveedores de larvas del grupo.
-        - lotesLarva:    Array de lotes de larvas del grupo.
-        - precrias:      Array de precrias del grupo.
-        - siembras:      Array de siembras del grupo.
-        - colaboradorId: ID del colaborador que descarga.
-        - grupoDatos:    Grupo de datos del colaborador.
+    this.mantenimientos = mantenimientos ?? [];
+    this.mantenimientoTareas = mantenimientoTareas ?? [];
+    this.mantenimientoProductos = mantenimientoProductos ?? [];
 
-        Retorna:
-        Objeto con todos los arreglos y metadatos de descarga.
-        */
-
-    this.fincas           = fincas           ?? [];
-    this.estanques        = estanques        ?? [];
-    this.proveedores      = proveedores      ?? [];
-    this.productos        = productos        ?? [];
-    this.compradores      = compradores      ?? [];
-    this.inventario       = inventario       ?? [];
-    this.equipos          = equipos          ?? [];
-    this.tareas           = tareas           ?? [];
-    this.laboratorios     = laboratorios     ?? [];
-    this.procedencias     = procedencias     ?? [];
+    this.laboratorios = laboratorios ?? [];
+    this.procedencias = procedencias ?? [];
     this.proveedoresLarva = proveedoresLarva ?? [];
-    this.lotesLarva       = lotesLarva       ?? [];
-    this.precrias         = precrias         ?? [];
-    this.siembras         = siembras         ?? [];
+    this.lotesLarva = lotesLarva ?? [];
+    this.precrias = precrias ?? [];
+    this.siembras = siembras ?? [];
+    this.enfermedades = enfermedades ?? [];
+    this.parasitologias = parasitologias ?? [];
+    this.fisicoQuimica = fisicoQuimica ?? [];
+    this.detalleFisicoQuimica = detalleFisicoQuimica ?? [];
+    this.crecimientos = crecimientos ?? [];
+    this.calculosCrecimiento = calculosCrecimiento ?? [];
+    this.usuarios = usuarios ?? [];
+    this.trazabilidad = trazabilidad ?? [];
+
     this._meta = {
       grupoDatos,
       colaboradorId,
       fechaSincronizacion: new Date().toISOString(),
       totales: {
-        fincas:           this.fincas.length,
-        estanques:        this.estanques.length,
-        proveedores:      this.proveedores.length,
-        productos:        this.productos.length,
-        compradores:      this.compradores.length,
-        inventario:       this.inventario.length,
-        equipos:          this.equipos.length,
-        tareas:           this.tareas.length,
-        laboratorios:     this.laboratorios.length,
-        procedencias:     this.procedencias.length,
+        fincas: this.fincas.length,
+        estanques: this.estanques.length,
+        proveedores: this.proveedores.length,
+        productos: this.productos.length,
+        compradores: this.compradores.length,
+        inventario: this.inventario.length,
+        equipos: this.equipos.length,
+        tareas: this.tareas.length,
+        mantenimientos: this.mantenimientos.length,
+        mantenimientoTareas: this.mantenimientoTareas.length,
+        mantenimientoProductos: this.mantenimientoProductos.length,
+        laboratorios: this.laboratorios.length,
+        procedencias: this.procedencias.length,
         proveedoresLarva: this.proveedoresLarva.length,
-        lotesLarva:       this.lotesLarva.length,
-        precrias:         this.precrias.length,
-        siembras:         this.siembras.length,
+        lotesLarva: this.lotesLarva.length,
+        precrias: this.precrias.length,
+        siembras: this.siembras.length,
+        enfermedades: this.enfermedades.length,
+        parasitologias: this.parasitologias.length,
+        fisicoQuimica: this.fisicoQuimica.length,
+        detalleFisicoQuimica: this.detalleFisicoQuimica.length,
+        crecimientos: this.crecimientos.length,
+        calculosCrecimiento: this.calculosCrecimiento.length,
+        usuarios: this.usuarios.length,
+        trazabilidad: this.trazabilidad.length,
       },
     };
   }

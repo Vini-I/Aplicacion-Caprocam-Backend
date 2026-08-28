@@ -3,12 +3,9 @@
 CABEZA DE ARCHIVO
 //////////////////////////////////////////////////////////
 Archivo: laboratorio.controller.js
-Autor: Oscar Mario-Joan Campos / Marco Vásquez
-Fecha: 18/08/2026
+Autor: Oscar Mario-Joan Campos / Marco Vásquez / Joan Campos
+Fecha: 25/08/2026
 Modulo: Laboratorio
-Descripcion:
-Controlador HTTP para el modulo de laboratorio.
-Soporta GETs globales para Administrador Caprocam (22776226).
 //////////////////////////////////////////////////////////
 */
 
@@ -19,6 +16,17 @@ import { exito, error } from "../common/respuestaJson.js";
 import { obtenerContextoPeticion } from "../common/contextoPeticion.js";
 
 export async function getLaboratorios(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion GET para obtener todos los laboratorios.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Lista de laboratorios.
+    */
     try {
         const user = req.user ?? null;
         const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
@@ -40,6 +48,17 @@ export async function getLaboratorios(req, res) {
 }
 
 export async function getLaboratorioById(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion GET para obtener un laboratorio por ID.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Laboratorio solicitado.
+    */
     try {
         const user = req.user ?? null;
         const esGlobal = Boolean(user?.accesoGlobal || Number(user?.grupoDatos) === 22776226);
@@ -65,6 +84,17 @@ export async function getLaboratorioById(req, res) {
 }
 
 export async function createLaboratorio(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion POST para crear un laboratorio.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Laboratorio creado.
+    */
     try {
         const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
             obtenerContextoPeticion(req);
@@ -85,6 +115,17 @@ export async function createLaboratorio(req, res) {
 }
 
 export async function updateLaboratorio(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion PUT para actualizar un laboratorio.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Laboratorio actualizado.
+    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
 
@@ -105,8 +146,26 @@ export async function updateLaboratorio(req, res) {
 }
 
 export async function deleteLaboratorio(req, res) {
+    /*
+    Descripcion:
+    Maneja la peticion DELETE para borrar (logico) un laboratorio.
+    Valida previamente que no este asignado a lotes de larva.
+    
+    Parametros:
+    - req: Objeto de peticion Express.
+    - res: Objeto de respuesta Express.
+
+    Retorna:
+    - Confirmacion de eliminacion o error 409 si esta en uso.
+    */
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
+        
+        const enUso = await LaboratorioModel.estaEnUso(req.params.id, grupoDatos);
+        if (enUso) {
+            return error(res, "No se puede eliminar este laboratorio porque está asignado a uno o más lotes de larva.", null, 409);
+        }
+
         const eliminado = await LaboratorioModel.remove(req.params.id, grupoDatos);
         if (!eliminado) return error(res, "Laboratorio no encontrado.", null, 404);
         return exito(res, "Laboratorio eliminado correctamente.", null);

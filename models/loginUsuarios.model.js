@@ -265,6 +265,49 @@ export async function findAllColaboradores() {
     return rows.map(mapearColaborador);
 }
 
+export async function findUsuariosSync(grupoDatos) {
+    const [rows] = await pool.execute(
+        `
+        SELECT
+            id,
+            uuid,
+            grupo_datos,
+            nombre,
+            apellidos,
+            email,
+            nombre_usuario,
+            activo,
+            fecha_creacion,
+            fecha_actualizacion,
+            deleted_at,
+            version
+        FROM usuarios
+        WHERE grupo_datos = ?
+          AND activo = TRUE
+          AND deleted_at IS NULL
+        ORDER BY id DESC
+        `,
+        [grupoDatos]
+    );
+
+    return rows.map((row) => {
+        return {
+            id: row.id,
+            uuid: row.uuid,
+            grupoDatos: row.grupo_datos,
+            nombre: row.nombre,
+            apellidos: row.apellidos,
+            email: row.email,
+            nombreUsuario: row.nombre_usuario,
+            activo: Boolean(row.activo),
+            fechaCreacion: row.fecha_creacion,
+            fechaActualizacion: row.fecha_actualizacion,
+            deletedAt: row.deleted_at,
+            version: row.version,
+        };
+    });
+}
+
 function mapearUsuario(row) {
     return {
         id: row.id,

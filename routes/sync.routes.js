@@ -26,6 +26,7 @@ import {
     loginColaborador,
     descargarCatalogos,
     subirCambios,
+    validarORenovarToken,
 } from '../controllers/sync.controller.js';
 
 /*
@@ -45,6 +46,7 @@ Sin proteccion: el colaborador aun no tiene token.
 */
 
 router.post('/colab', loginColaborador);
+router.get('/validate-token', validarORenovarToken);
 
 /*
 //////////////////////////////////////////////////////////
