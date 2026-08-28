@@ -691,11 +691,25 @@ export async function sincronizarAlimentacion({
         }
       );
 
+    /*
+    Si el registro ya existe en servidor, se considera
+    resuelto para efectos del sync.
+
+    No se vuelve a descontar inventario porque esa
+    alimentacion ya fue procesada anteriormente.
+    */
     if (duplicado) {
-      throw crearError(
-        "Ya existe un registro de alimentacion para ese estanque en esa fecha y hora.",
-        409
-      );
+      resultado.creados.push({
+        idLocal:
+          registro.idLocal ??
+          registro.id ??
+          null,
+
+        idServidor:
+          duplicado.id,
+      });
+
+      continue;
     }
 
     if (
