@@ -269,3 +269,8 @@ export function isFechaValida(fecha) {
         fechaObj.getDate() === dia
     );
 }
+export function isIdentificadorValido(identificador) {
+    if (isEmpty(identificador)) return false;
+    const str = String(identificador).trim();
+    return str.length > 0 && str.length <= 50;
+}

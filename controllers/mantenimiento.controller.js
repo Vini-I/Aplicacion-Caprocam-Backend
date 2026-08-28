@@ -187,7 +187,8 @@ export async function createMantenimiento(req, res) {
 
 export async function updateMantenimiento(req, res) {
     try {
-        const { grupoDatos } = obtenerContextoPeticion(req);
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
         const {
             equipoId,
             fechaMantenimiento,
@@ -234,7 +235,12 @@ export async function updateMantenimiento(req, res) {
             costoManoObra: costoManoObra ?? 0,
             estadoTicket,
         });
-        const actualizado = await MantenimientoModel.update(req.params.id, dto, grupoDatos);
+        const actualizado = await MantenimientoModel.update(
+            req.params.id,
+            dto,
+            grupoDatos,
+            { creadoPorUsuarioId, creadoPorColaboradorId }
+        );
 
         if (!actualizado)
             return error(res, 'Mantenimiento no encontrado.', null, 404);
@@ -248,20 +254,31 @@ export async function updateMantenimiento(req, res) {
         }
         return exito(res, 'Mantenimiento actualizado correctamente.', actualizado);
     } catch (err) {
+        if (err.status) {
+            return error(res, err.message, err, err.status);
+        }
         return error(res, 'Error al actualizar mantenimiento.', err);
     }
 }
 
 export async function deleteMantenimiento(req, res) {
     try {
-        const { grupoDatos } = obtenerContextoPeticion(req);
-        const eliminado = await MantenimientoModel.remove(req.params.id, grupoDatos);
+        const { grupoDatos, creadoPorUsuarioId, creadoPorColaboradorId } =
+            obtenerContextoPeticion(req);
+        const eliminado = await MantenimientoModel.remove(
+            req.params.id,
+            grupoDatos,
+            { creadoPorUsuarioId, creadoPorColaboradorId }
+        );
 
         if (!eliminado)
             return error(res, 'Mantenimiento no encontrado.', null, 404);
 
         return exito(res, 'Mantenimiento eliminado correctamente.', eliminado);
     } catch (err) {
+        if (err.status) {
+            return error(res, err.message, err, err.status);
+        }
         return error(res, 'Error al eliminar mantenimiento.', err);
     }
 }
