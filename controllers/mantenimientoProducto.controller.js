@@ -70,6 +70,19 @@ export async function agregarProducto(req, res) {
         const { grupoDatos } = obtenerContextoPeticion(req);
         const { mantenimientoEquipoId, productoId, cantidad } = req.body;
 
+        const ticket = await MantenimientoModel.findById(mantenimientoEquipoId, grupoDatos);
+        if (!ticket)
+            return error(res, 'El mantenimiento indicado no existe.', null, 404);
+
+        if (ticket.estadoTicket === 'Terminado') {
+            return error(
+                res,
+                'No se pueden agregar productos a un ticket en estado Terminado. Debe reabrir el ticket para realizar modificaciones.',
+                null,
+                422
+            );
+        }
+
         const cantNum = Number(cantidad);
         if (isNaN(cantNum) || cantNum <= 0)
             return error(res, 'La cantidad debe ser un numero mayor a 0.', null, 400);
@@ -125,6 +138,16 @@ export async function actualizarProducto(req, res) {
         if (!existente)
             return error(res, 'Registro no encontrado.', null, 404);
 
+        const ticket = await MantenimientoModel.findById(existente.mantenimientoEquipoId, grupoDatos);
+        if (ticket && ticket.estadoTicket === 'Terminado') {
+            return error(
+                res,
+                'No se pueden modificar productos de un ticket en estado Terminado. Debe reabrir el ticket para realizar modificaciones.',
+                null,
+                422
+            );
+        }
+
         let costoNum = req.body.costoUnitario !== undefined
             ? Number(req.body.costoUnitario)
             : Number(existente.costoUnitario);
@@ -163,6 +186,20 @@ export async function actualizarProducto(req, res) {
 export async function eliminarProducto(req, res) {
     try {
         const { grupoDatos } = obtenerContextoPeticion(req);
+        const existente = await MantenimientoProductoModel.findById(req.params.id, grupoDatos);
+        if (!existente)
+            return error(res, 'Registro no encontrado.', null, 404);
+
+        const ticket = await MantenimientoModel.findById(existente.mantenimientoEquipoId, grupoDatos);
+        if (ticket && ticket.estadoTicket === 'Terminado') {
+            return error(
+                res,
+                'No se pueden eliminar productos de un ticket en estado Terminado. Debe reabrir el ticket para realizar modificaciones.',
+                null,
+                422
+            );
+        }
+
         const eliminado = await MantenimientoProductoModel.remove(
             req.params.id,
             grupoDatos

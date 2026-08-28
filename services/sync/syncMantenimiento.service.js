@@ -445,6 +445,20 @@ export async function sincronizarMantenimiento({
         );
       }
 
+      // Consultar estado anterior antes de actualizar
+      const [filasTicket] = await connection.execute(
+        `SELECT estado_ticket, codigo_ticket
+         FROM mantenimiento_equipo
+         WHERE id = ?
+         AND grupo_datos = ?
+         AND activo = TRUE
+         AND deleted_at IS NULL
+         LIMIT 1`,
+        [idReal, grupoDatos]
+      );
+      const estadoAnterior = filasTicket[0]?.estado_ticket;
+      const codigoTicket = filasTicket[0]?.codigo_ticket;
+
       const actualizado =
         await actualizarRegistroSync(
           connection,
@@ -492,6 +506,118 @@ export async function sincronizarMantenimiento({
 
       resultado.mantenimientos.actualizados +=
         actualizado.affectedRows ?? 0;
+
+      // Si pasa a Terminado y antes no lo estaba: descontar stock
+      if (
+        estadoTicket === "Terminado" &&
+        estadoAnterior &&
+        estadoAnterior !== "Terminado"
+      ) {
+        const [prods] = await connection.execute(
+          `SELECT producto_id, cantidad
+           FROM mantenimiento_equipo_productos
+           WHERE mantenimiento_equipo_id = ?
+           AND grupo_datos = ?
+           AND activo = TRUE
+           AND deleted_at IS NULL`,
+          [idReal, grupoDatos]
+        );
+
+        for (const p of prods) {
+          const [invRows] = await connection.execute(
+            `SELECT id
+             FROM inventario
+             WHERE producto_id = ?
+             AND grupo_datos = ?
+             AND activo = TRUE
+             AND deleted_at IS NULL
+             LIMIT 1`,
+            [p.producto_id, grupoDatos]
+          );
+
+          if (invRows.length > 0) {
+            await connection.execute(
+              `UPDATE inventario
+               SET cantidad = cantidad - ?,
+                   version = version + 1
+               WHERE id = ?
+               AND grupo_datos = ?
+               AND deleted_at IS NULL`,
+              [p.cantidad, invRows[0].id, grupoDatos]
+            );
+
+            await insertarRegistroSync(
+              connection,
+              "movimientos_inventario",
+              {
+                grupo_datos: grupoDatos,
+                inventario_id: invRows[0].id,
+                producto_id: p.producto_id,
+                tipo_movimiento: "Salida",
+                cantidad: p.cantidad,
+                observacion: `Salida automatica por sincronizacion de mantenimiento #${codigoTicket ?? idReal}.`,
+                creado_por_colaborador_id: creadoPorColaboradorId,
+              }
+            );
+          }
+        }
+      }
+
+      // Si cambia de Terminado a otro estado: revertir stock (Entrada)
+      if (
+        estadoAnterior === "Terminado" &&
+        estadoTicket &&
+        estadoTicket !== "Terminado"
+      ) {
+        const [prods] = await connection.execute(
+          `SELECT producto_id, cantidad
+           FROM mantenimiento_equipo_productos
+           WHERE mantenimiento_equipo_id = ?
+           AND grupo_datos = ?
+           AND activo = TRUE
+           AND deleted_at IS NULL`,
+          [idReal, grupoDatos]
+        );
+
+        for (const p of prods) {
+          const [invRows] = await connection.execute(
+            `SELECT id
+             FROM inventario
+             WHERE producto_id = ?
+             AND grupo_datos = ?
+             AND activo = TRUE
+             AND deleted_at IS NULL
+             LIMIT 1`,
+            [p.producto_id, grupoDatos]
+          );
+
+          if (invRows.length > 0) {
+            await connection.execute(
+              `UPDATE inventario
+               SET cantidad = cantidad + ?,
+                   version = version + 1
+               WHERE id = ?
+               AND grupo_datos = ?
+               AND deleted_at IS NULL`,
+              [p.cantidad, invRows[0].id, grupoDatos]
+            );
+
+            await insertarRegistroSync(
+              connection,
+              "movimientos_inventario",
+              {
+                grupo_datos: grupoDatos,
+                inventario_id: invRows[0].id,
+                producto_id: p.producto_id,
+                tipo_movimiento: "Entrada",
+                cantidad: p.cantidad,
+                observacion: `Reversion automatica de stock por sincronizacion de mantenimiento #${codigoTicket ?? idReal}.`,
+                creado_por_colaborador_id: creadoPorColaboradorId,
+              }
+            );
+          }
+        }
+      }
 
       if (
         nuevoEstadoEquipo !==
