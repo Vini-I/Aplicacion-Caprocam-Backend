@@ -47,6 +47,8 @@ import * as PrecriaModel from "../models/preCria.model.js";
 import * as SiembraModel from "../models/siembra.model.js";
 import * as EnfermedadesModel from "../models/enfermedades.model.js";
 import * as ParasitologiasModel from "../models/parasitologias.model.js";
+import * as TrazabilidadModel from "../models/trazabilidad.model.js";
+import * as LoginUsuariosModel from "../models/loginUsuarios.model.js";
 
 import {
   sincronizarTrazabilidad,
@@ -510,6 +512,8 @@ export async function descargarCatalogos(req, res) {
       detalleFisicoQuimica,
       crecimientos,
       calculosCrecimiento,
+      usuarios,
+      trazabilidad,
     ] = await Promise.all([
       FincaModel.findAll(grupoDatos),
       EstanquesModel.findAll({ grupoDatos }),
@@ -534,6 +538,8 @@ export async function descargarCatalogos(req, res) {
       obtenerDetalleFisicoQuimicaSync(grupoDatos),
       obtenerCrecimientosSync(grupoDatos),
       obtenerCalculosCrecimientoSync(grupoDatos),
+      LoginUsuariosModel.findUsuariosSync(grupoDatos),
+      TrazabilidadModel.findAll(grupoDatos),
     ]);
 
     return exito(
@@ -563,6 +569,8 @@ export async function descargarCatalogos(req, res) {
         detalleFisicoQuimica,
         crecimientos,
         calculosCrecimiento,
+        usuarios,
+        trazabilidad,
         colaboradorId,
         grupoDatos,
       })

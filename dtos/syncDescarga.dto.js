@@ -44,6 +44,8 @@ export class DescargaCatalogosDTO {
     detalleFisicoQuimica,
     crecimientos,
     calculosCrecimiento,
+    usuarios,
+    trazabilidad,
     colaboradorId,
     grupoDatos,
   }) {
@@ -72,6 +74,8 @@ export class DescargaCatalogosDTO {
     this.detalleFisicoQuimica = detalleFisicoQuimica ?? [];
     this.crecimientos = crecimientos ?? [];
     this.calculosCrecimiento = calculosCrecimiento ?? [];
+    this.usuarios = usuarios ?? [];
+    this.trazabilidad = trazabilidad ?? [];
 
     this._meta = {
       grupoDatos,
@@ -101,6 +105,8 @@ export class DescargaCatalogosDTO {
         detalleFisicoQuimica: this.detalleFisicoQuimica.length,
         crecimientos: this.crecimientos.length,
         calculosCrecimiento: this.calculosCrecimiento.length,
+        usuarios: this.usuarios.length,
+        trazabilidad: this.trazabilidad.length,
       },
     };
   }
