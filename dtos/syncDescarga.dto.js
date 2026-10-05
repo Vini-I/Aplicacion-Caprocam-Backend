@@ -46,6 +46,11 @@ export class DescargaCatalogosDTO {
     calculosCrecimiento,
     usuarios,
     trazabilidad,
+    alimentacion,
+    densidadPoblacional,
+    detalleTirosDensidad,
+    raleos,
+    ventas,
     colaboradorId,
     grupoDatos,
   }) {
@@ -76,6 +81,11 @@ export class DescargaCatalogosDTO {
     this.calculosCrecimiento = calculosCrecimiento ?? [];
     this.usuarios = usuarios ?? [];
     this.trazabilidad = trazabilidad ?? [];
+    this.alimentacion = alimentacion ?? [];
+    this.densidadPoblacional = densidadPoblacional ?? [];
+    this.detalleTirosDensidad = detalleTirosDensidad ?? [];
+    this.raleos = raleos ?? [];
+    this.ventas = ventas ?? [];
 
     this._meta = {
       grupoDatos,
@@ -107,6 +117,11 @@ export class DescargaCatalogosDTO {
         calculosCrecimiento: this.calculosCrecimiento.length,
         usuarios: this.usuarios.length,
         trazabilidad: this.trazabilidad.length,
+        alimentacion: this.alimentacion.length,
+        densidadPoblacional: this.densidadPoblacional.length,
+        detalleTirosDensidad: this.detalleTirosDensidad.length,
+        raleos: this.raleos.length,
+        ventas: this.ventas.length,
       },
     };
   }
