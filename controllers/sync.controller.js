@@ -49,6 +49,10 @@ import * as EnfermedadesModel from "../models/enfermedades.model.js";
 import * as ParasitologiasModel from "../models/parasitologias.model.js";
 import * as TrazabilidadModel from "../models/trazabilidad.model.js";
 import * as LoginUsuariosModel from "../models/loginUsuarios.model.js";
+import * as AlimentacionModel from "../models/alimentacion.model.js";
+import * as DensidadModel from "../models/densidadPoblacional.model.js";
+import * as RaleoModel from "../models/raleo.model.js";
+import * as VentasModel from "../models/mantVentas.model.js";
 
 import {
   sincronizarTrazabilidad,
@@ -430,6 +434,23 @@ async function obtenerCalculosCrecimientoSync(
   return filas;
 }
 
+async function obtenerDetalleTirosDensidadSync(grupoDatos) {
+  const [filas] = await pool.execute(
+    `SELECT dt.*
+     FROM densidad_detalle_tiros dt
+     INNER JOIN densidad_poblacional dp ON dp.id = dt.densidad_id
+     WHERE dp.grupo_datos = ?
+       AND dp.activo = TRUE
+       AND dp.deleted_at IS NULL
+       AND dt.activo = TRUE
+       AND dt.deleted_at IS NULL
+     ORDER BY dt.id ASC`,
+    [grupoDatos]
+  );
+
+  return filas;
+}
+
 /*
 //////////////////////////////////////////////////////////
 FUNCIONES PRINCIPALES
@@ -514,6 +535,11 @@ export async function descargarCatalogos(req, res) {
       calculosCrecimiento,
       usuarios,
       trazabilidad,
+      alimentacion,
+      densidadPoblacional,
+      detalleTirosDensidad,
+      raleos,
+      ventas,
     ] = await Promise.all([
       FincaModel.findAll(grupoDatos),
       EstanquesModel.findAll({ grupoDatos }),
@@ -540,6 +566,11 @@ export async function descargarCatalogos(req, res) {
       obtenerCalculosCrecimientoSync(grupoDatos),
       LoginUsuariosModel.findUsuariosSync(grupoDatos),
       TrazabilidadModel.findAll(grupoDatos),
+      AlimentacionModel.findAll({ grupoDatos }),
+      DensidadModel.findAll({ grupoDatos }),
+      obtenerDetalleTirosDensidadSync(grupoDatos),
+      RaleoModel.findAll(grupoDatos),
+      VentasModel.findAll(grupoDatos),
     ]);
 
     return exito(
@@ -571,6 +602,11 @@ export async function descargarCatalogos(req, res) {
         calculosCrecimiento,
         usuarios,
         trazabilidad,
+        alimentacion,
+        densidadPoblacional,
+        detalleTirosDensidad,
+        raleos,
+        ventas,
         colaboradorId,
         grupoDatos,
       })
