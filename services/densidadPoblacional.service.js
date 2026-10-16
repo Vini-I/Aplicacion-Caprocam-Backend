@@ -64,7 +64,7 @@ export const M2_POR_HECTAREA = 10000;
 // Tope de tiros aceptado en un mismo registro. Coincide con el
 // MAX_TIROS del formulario (useDatosConteo.js) para que la app y
 // el backend rechacen exactamente lo mismo.
-export const MAX_TIROS = 20;
+export const MAX_TIROS = 100;
 
 /*
 //////////////////////////////////////////////////////////
